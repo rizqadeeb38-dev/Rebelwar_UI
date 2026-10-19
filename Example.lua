@@ -4,7 +4,8 @@
     2) Run this file in your executor.
 ]]
 
-local UI = loadstring(game:HttpGet("PUT_YOUR_REBELUI_LINK_HERE"))()
+local UI = loadstring(game:HttpGet("loadstring(game:HttpGet("https://raw.githubusercontent.com/rizqadeeb38-dev/Rebelwar_UI/main/Example.lua"))()
+"))()
 
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
