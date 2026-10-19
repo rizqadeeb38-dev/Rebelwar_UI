@@ -43,7 +43,7 @@ Free · Keyless · Built for mobile (touch) and PC · Made by prorizz196
 Paste this into your executor and run it. It opens a panel that shows **every** element, every kind of toggle and the top bar:
 
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/rizqadeeb38-dev/Rebelwar_UI/main/Example.lua"))()
+loadstring(game:HttpGet("https://flowauth.net/v1/ui/RebelUI.lua"))()
 ```
 
 ### Use the library in your own script
