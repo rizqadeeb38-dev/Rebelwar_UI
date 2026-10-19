@@ -2,7 +2,7 @@
     RebelUI v1.2  ·  made by prorizz196
     A small, mobile-friendly UI library for Roblox executors.
 
-    local UI  = loadstring(game:HttpGet("loadstring(game:HttpGet("https://raw.githubusercontent.com/rizqadeeb38-dev/Rebelwar_UI/main/source.lua"))()
+    local UI  = loadstring(game:HttpGet("https://raw.githubusercontent.com/rizqadeeb38-dev/Rebelwar_UI/main/source.lua"))()
 "))()
     local Win = UI:CreateWindow({ Title = "Rebelwar", Subtitle = "my panel" })
     local Tab = Win:CreateTab("Main")
