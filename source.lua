@@ -1,5 +1,5 @@
 --[[
-    RebelUI v1.2  ·  made by prorizz196
+    RebelUI v1.0  ·  made by prorizz196
     A small, mobile-friendly UI library for Roblox executors.
 
     local UI  = loadstring(game:HttpGet("https://raw.githubusercontent.com/rizqadeeb38-dev/Rebelwar_UI/main/source.lua"))()
