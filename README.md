@@ -51,7 +51,7 @@ loadstring(game:HttpGet("https://flowauth.net/v1/ui/RebelUI.lua"))()
 The library is the file `source.lua` in this repo. Load it with one line:
 
 ```lua
-local UI = loadstring(game:HttpGet("https://raw.githubusercontent.com/rizqadeeb38-dev/Rebelwar_UI/main/source.lua"))()
+local UI = loadstring(game:HttpGet("https://flowauth.net/v1/ui/RebelUI-lua1.lua"))()
 
 local Win = UI:CreateWindow({ Title = "My Panel", Subtitle = "made by me" })
 local Tab = Win:CreateTab("Main")
