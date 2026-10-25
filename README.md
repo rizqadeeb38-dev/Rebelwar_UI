@@ -1,38 +1,38 @@
-<div align="center">
-
 # 🪓🔥 RebelUI
 
-**Make your own Roblox executor panel. Toggles, sliders, tabs with image icons, color pickers and more.**
+**A mobile-friendly panel library for Roblox executors. The same panel, top bar, toggles and loading screen as the Rebelwar Hub.**
 
-Free · Keyless · Built for mobile (touch) and PC · Made by prorizz196
+![Version](https://img.shields.io/badge/RebelUI-v1.0.0-e94b35)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Platform](https://img.shields.io/badge/works%20on-mobile%20%7C%20PC-blue)
 
-[![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/Kq7N4gzH22)
-[![License: MIT](https://img.shields.io/badge/License-MIT-red.svg)](LICENSE)
-![Version](https://img.shields.io/badge/RebelUI-v1.1-e94b35)
+RebelUI gives you a finished panel in a few lines: a spinning-ring window with embers, tabs that have a **Roblox image next to the name** and their own header, **every kind of toggle** (name, description, icon, color, locked, key, checkbox), sliders, dropdowns, color pickers, notifications, a **top bar** where the player chooses what shows (FPS, Timer, Logo and more), a **loading screen**, 12 themes that change live, and saving.
 
-</div>
+Made by **prorizz196**. Discord: https://discord.gg/Kq7N4gzH22
 
 ---
 
 ## Contents
 
 1. [Quick start](#quick-start)
-2. [The window](#the-window)
-3. [The top bar: FPS, logo, timer and more](#the-top-bar)
-4. [Tabs: image icon, name and their own header](#tabs)
-5. [All toggles](#all-toggles)
-6. [Sliders, choice bars and progress bars](#sliders-choice-bars-and-progress-bars)
-7. [Buttons, dropdowns, inputs, keybinds](#buttons-dropdowns-inputs-keybinds)
-8. [Colors](#colors)
-9. [Text and images](#text-and-images)
-10. [Notifications](#notifications)
-11. [Themes and your own colors](#themes-and-your-own-colors)
-12. [Flags and saving settings](#flags-and-saving-settings)
-13. [Mobile tips](#mobile-tips)
-14. [**Build it yourself: how every piece is made**](#build-it-yourself)
-15. [Common mistakes](#common-mistakes)
-
-> **Two ways to use this page.** Sections 1 to 13 show how to *use* the finished library, `source.lua`. Section 14 shows how to *build* each piece from scratch with plain Roblox code, so you can make your own.
+2. [The loading screen](#the-loading-screen)
+3. [The window](#the-window)
+4. [The top bar](#the-top-bar)
+5. [Tabs](#tabs)
+6. [All toggles](#all-toggles)
+7. [Sliders, choices and progress bars](#sliders-choices-and-progress-bars)
+8. [Buttons, dropdowns, inputs, keybinds](#buttons-dropdowns-inputs-keybinds)
+9. [Colors](#colors)
+10. [Text and images](#text-and-images)
+11. [Notifications](#notifications)
+12. [Themes and your own colors](#themes-and-your-own-colors)
+13. [The ready-made Settings tab](#the-ready-made-settings-tab)
+14. [Flags and saving settings](#flags-and-saving-settings)
+15. [Mobile tips](#mobile-tips)
+16. [Build it yourself](#build-it-yourself) (how every piece is made, step by step)
+17. [Common mistakes](#common-mistakes)
+18. [What is new in v1.0.0](#what-is-new-in-v100)
+19. [Files in this repo](#files-in-this-repo)
 
 ---
 
@@ -40,38 +40,112 @@ Free · Keyless · Built for mobile (touch) and PC · Made by prorizz196
 
 ### Try the demo first
 
-Paste this into your executor and run it. It opens a panel that shows **every** element, every kind of toggle and the top bar:
+Paste this into your executor. It shows the loading screen, then a panel with every element:
 
 ```lua
-loadstring(game:HttpGet("https://flowauth.net/v1/ui/RebelUI.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/rizqadeeb38-dev/Rebelwar_UI/main/Example.lua"))()
 ```
+
+The demo is `Example.lua` in this repo. Read it next to this tutorial, it uses everything.
 
 ### Use the library in your own script
 
-The library is the file `source.lua` in this repo. Load it with one line:
-
 ```lua
-local UI = loadstring(game:HttpGet("https://flowauth.net/v1/ui/RebelUI-lua1.lua"))()
+local UI = loadstring(game:HttpGet("https://raw.githubusercontent.com/rizqadeeb38-dev/Rebelwar_UI/main/source.lua"))()
 
-local Win = UI:CreateWindow({ Title = "My Panel", Subtitle = "made by me" })
-local Tab = Win:CreateTab("Main")
+local Win = UI:CreateWindow({ Title = "My Panel", Subtitle = "made by me", Icon = 114659273298746 })
+local Bar = Win:CreateBar({ Items = { "FPS", "Logo", "Timer" }, Logo = 114659273298746 })
 
-Tab:Toggle({ Name = "Infinite jump", Callback = function(on) print(on) end })
-Tab:Slider({ Name = "Walk speed", Min = 16, Max = 100, Default = 16, Callback = function(v) print(v) end })
+local Main = Win:CreateTab({ Name = "Main", Icon = 78400891408621, Title = "Main hub", Description = "Your first tab." })
+
+Main:Toggle({
+	Name = "Infinite jump",
+	Description = "Jump again in the air",
+	Callback = function(on)
+		print("infinite jump:", on)
+	end,
+})
+Main:Slider({ Name = "Walk speed", Min = 16, Max = 80, Default = 16, Callback = function(v) print(v) end })
+Main:Button({ Name = "Say hi", Callback = function() Win:Notify({ Title = "Hi", Text = "It works!" }) end })
+
+Win:CreateSettingsTab({ Bar = Bar }) -- themes, top bar choices, notifications, saving
 ```
 
-Run it. A panel appears. `Example.lua` in this repo is the demo above: it uses **every** element once, so open it next to this page and copy the parts you like.
+That is a full panel. Tap the top bar (or press **RightShift** on a keyboard) to hide or show it. Drag the bar or the panel title to move them.
 
-**Every callback gets the new value.** A toggle gives `true` or `false`, a slider gives a number, a dropdown gives the chosen text, and so on. Errors inside your callback are caught and printed with `warn`, so one bad callback never breaks the panel.
+---
 
-**Every element returns an object** with `:Get()` and `:Set(value)`:
+## The loading screen
+
+A full-screen intro: a slowly zooming banner, rising embers, a logo with a spinning ring, a shining title and a loading bar that fills as you load. It is optional. Use it like this:
 
 ```lua
-local jump = Tab:Toggle({ Name = "Infinite jump" })
-jump:Set(true)          -- turns it on and runs the callback
-jump:Set(true, true)    -- turns it on silently (no callback)
-print(jump:Get())       --> true
+local Load = UI:Loading({
+	Title = "Rebelwar",
+	Subtitle = "made by prorizz196",
+	Logo = 114659273298746,     -- round logo with the spinning ring
+	Banner = 125144167121839,   -- zooming picture behind everything
+	Footer = "discord.gg/Kq7N4gzH22  |  v1.0.0",
+})
+
+Load:Badge("Murder Mystery 2") -- small pill at the top (a game name, "Supported" ...)
+Load:Status("Loading images...")
+Load:Preload({ 114659273298746, 125144167121839 }, 0, 0.6) -- bar goes 0% -> 60% while images load
+
+Load:Status("Building the panel...")
+Load:Progress(0.8)
+-- ... create your window, tabs and toggles here ...
+
+Load:Status("Ready!")
+Load:Finish() -- fills the bar, fades out, then returns
 ```
+
+### Options
+
+| Option | What it does | Default |
+|---|---|---|
+| `Title` | Big shining title | `"RebelUI"` |
+| `Subtitle` | Small capital letters under the title | none |
+| `Logo` | Roblox image id for the round logo | none |
+| `Banner` | Roblox image id for the background picture | none (plain dark) |
+| `Footer` | Text at the bottom. `false` hides it | `"RebelUI v1.0.0"` |
+| `Theme` | Any theme name. It colors the glow, bar and title | `"Red"` |
+| `Name` | Name of the ScreenGui | `"RebelUI_Loading"` |
+
+### Methods
+
+| Method | What it does |
+|---|---|
+| `Load:Progress(0.5)` | Moves the bar to 50% (a number from 0 to 1). The bar glides there smoothly |
+| `Load:Status("text")` | Changes the line above the bar. The text slides in |
+| `Load:Badge("text", color)` | Shows a pill at the top. The color is optional |
+| `Load:Preload({ ids }, from, to)` | Loads images ahead of time. While it works the bar moves from `from` to `to` (0 to 1). Stops waiting after 5 seconds |
+| `Load:Run({ {"text", fn}, ... })` | Runs your steps one by one. It shows each text, runs the function and fills the bar. A step that errors only prints a warning |
+| `Load:Fail("text")` | Turns the bar grey and shows the text in red. Use it when something is wrong. Then call `Load:Destroy()` |
+| `Load:Finish()` | Fills the bar, fades everything out and removes it. It waits about one second, so code after it runs when the screen is gone |
+| `Load:Destroy()` | Removes the screen at once, no fade |
+
+### A loading screen that does real work
+
+`Run` is the easiest way. Each step is `{ "text shown", function }`:
+
+```lua
+local Load = UI:Loading({ Title = "My Hub", Logo = 114659273298746 })
+local Win
+
+Load:Run({
+	{ "Loading images", function() Load:Preload({ 114659273298746 }, 0, 0.5) end },
+	{ "Building the panel", function()
+		Win = UI:CreateWindow({ Title = "My Hub", Open = false })
+		Win:CreateTab({ Name = "Main" })
+	end },
+	{ "Almost there", function() task.wait(0.3) end },
+})
+Load:Finish()
+Win:Toggle(true) -- open the panel after the loading screen is gone
+```
+
+> Tip: create the window with `Open = false` while the loading screen is up, then call `Win:Toggle(true)` after `Load:Finish()`. The panel then pops open exactly when the intro fades.
 
 ---
 
@@ -80,175 +154,173 @@ print(jump:Get())       --> true
 ```lua
 local Win = UI:CreateWindow({
 	Title = "Rebelwar",
-	Subtitle = "my panel",
-	Icon = "rbxassetid://114659273298746",
+	Subtitle = "made by prorizz196",
+	Icon = 114659273298746,
 	Theme = "Red",
-	Width = 540,
-	Height = 360,
-	ToggleKey = Enum.KeyCode.RightShift,
 })
 ```
 
-| Option | What it does | Default |
-|---|---|---|
-| `Title` | Big text in the title bar | `"RebelUI"` |
-| `Subtitle` | Small text on the right of the title bar | none |
-| `Icon` | A small logo left of the title. Roblox image id (see [Text and images](#text-and-images)) | none |
-| `Theme` | `Red`, `Blue`, `Green`, `Purple`, `Orange`, `Pink`, `Mono`, or a theme you added | `"Red"` |
-| `Width`, `Height` | Size in pixels. It shrinks to fit small phone screens | `540`, `360` |
-| `ToggleKey` | Key that hides and shows the panel (PC) | `RightShift` |
-| `Name` | Name of the `ScreenGui` | `"RebelUI"` |
-
-| Window method | What it does |
-|---|---|
-| `Win:CreateTab(...)` | Adds a tab ([see Tabs](#tabs)) |
-| `Win:Notify({...})` | Shows a notification ([see Notifications](#notifications)) |
-| `Win:SetTheme("Blue")` | Changes the theme |
-| `Win:SetAccent(Color3)` | Uses your own color as the accent |
-| `Win:Toggle()` / `Win:Toggle(true)` / `Win:Toggle(false)` | Shows, hides or flips the panel |
-| `Win:Destroy()` | Removes the panel |
-| `Win.Flags` | Table of every element that has a `Flag` |
-
-**Want a top bar with FPS, a logo and a timer?** See [The top bar](#the-top-bar).
-
-**Title bar:** drag it to move the panel (mouse or finger). **–** hides it and shows a round **R** button. Tap **R** to bring the panel back; you can drag the **R** button around too. **×** closes the panel for good.
-
----
-
-## The top bar
-
-The top bar is a small round bar at the top of the screen. It shows live information (FPS, a logo, a timer and more). **Tap it to open or close the panel. Drag it to move it.** Players can choose what it shows.
-
-```lua
-local Bar = Win:CreateBar({
-	Items = { "FPS", "Logo", "Timer" },          -- what to show (or use Preset = "Classic")
-	Logo = "rbxassetid://114659273298746",       -- the picture for the "Logo" item
-})
-```
-
-When a bar exists, the round **R** button is not needed, because the bar does its job.
-
-### What the bar can show
-
-| Item | Shows | Example |
-|---|---|---|
-| `"FPS"` | Frames per second | `FPS 60` |
-| `"Ping"` | Network ping | `Ping 45ms` |
-| `"Logo"` | Your logo picture (or a red **R** if you give none) | |
-| `"Title"` | The window title | `Rebelwar` |
-| `"Timer"` | How long the script has been running | `Time 00:12:30` |
-| `"Clock"` | The time on the player's device | `Clock 14:05` |
-| `"Players"` | Players in the server | `Players 12/30` |
-| `"Memory"` | Memory used by the game | `Mem 840MB` |
-| `"Executor"` | The executor's name, if it tells us | `Exec Delta` |
-| `"Game"` | The game's name | |
-
-The items always appear in this order: FPS, Ping, Logo, Title, Timer, Clock, Players, Memory, Executor, Game. So `{ "Timer", "Logo", "FPS" }` still shows `FPS | Logo | Timer`.
-
-### Ready-made styles
-
-| Preset | Shows |
-|---|---|
-| `"Classic"` | FPS, Logo, Timer |
-| `"Minimal"` | Logo |
-| `"Gamer"` | FPS, Ping, Clock |
-| `"Info"` | Logo, Title, Players, Executor |
-| `"Full"` | everything |
+The window has: a **logo and title** in the corner, a **tab list** on the left, the **page** on the right with a glowing line under the page title, a **player card** (your avatar and name) at the bottom left, a minimise `-` button and a close `X` button. A bright ring spins around the panel and small embers float up behind it.
 
 ### Options
 
 | Option | What it does | Default |
 |---|---|---|
-| `Items` | List of items to show | the `Preset` |
-| `Preset` | One of the styles above | `"Classic"` |
-| `Logo` | Image for the `"Logo"` item (id or `rbxassetid://`) | a red **R** |
-| `Title` | Text for the `"Title"` item | the window title |
-| `Visible` | Start shown or hidden | `true` |
-| `Position` | A `UDim2` for where the bar starts | top center |
+| `Title` | Name in the corner | `"RebelUI"` |
+| `Subtitle` | Small text under the title | none |
+| `Icon` | Roblox image id for the small logo (also used on the round open button) | none |
+| `Theme` | `Red`, `Crimson`, `Blue`, `Green`, `Purple`, `Orange`, `Pink`, `Gold`, `Cyber`, `Blood`, `Ice`, `Mono`, or a theme you added | `"Red"` |
+| `Width`, `Height` | Panel size in pixels (it shrinks to fit small screens) | `420`, `340` |
+| `Open` | `false` keeps the panel closed at the start | `true` |
+| `ToggleKey` | Key that shows or hides the panel on a keyboard | `Enum.KeyCode.RightShift` |
+| `Profile` | `false` hides the player card at the bottom left | `true` |
+| `Name` | Name of the ScreenGui (a second window with the same name replaces the first) | `"RebelUI"` |
+| `Sound` | Soft click sounds | `false` |
+| `Toasts` | Show notification cards | `true` |
+| `ConfirmClose` | `true` asks you to tap `X` twice | `false` |
+| `Position` | Where the panel starts, as a `UDim2` | center |
+
+### Methods
+
+| Method | What it does |
+|---|---|
+| `Win:CreateTab(...)` | Adds a tab. See [Tabs](#tabs) |
+| `Win:CreateBar(...)` | Adds the top bar. See [The top bar](#the-top-bar) |
+| `Win:CreateSettingsTab(...)` | Adds a finished Settings tab. See [the Settings tab](#the-ready-made-settings-tab) |
+| `Win:Notify(...)` | Shows a notification card. See [Notifications](#notifications) |
+| `Win:Toggle()` | Shows or hides the panel. `Win:Toggle(true)` opens, `Win:Toggle(false)` closes |
+| `Win:SetTheme("Blue")` | Changes the whole theme live |
+| `Win:SetAccent(Color3)` | Makes a theme from any color |
+| `Win:SetScale(1.2)` | Makes the panel bigger or smaller (0.5 to 1.6) |
+| `Win:SetTransparency(0.3)` | Makes the panel see-through (0 to 0.9) |
+| `Win:Save(file)` / `Win:Load(file)` | Save or load every element that has a `Flag`. See [saving](#flags-and-saving-settings) |
+| `Win:Destroy()` | Removes the whole panel and stops everything |
+
+### Fields you can change
+
+```lua
+Win.Toasts = false        -- no notification cards
+Win.ToggleToasts = true   -- a card every time a toggle flips
+Win.Sound = true          -- click sounds
+Win.NotifyTime = 3        -- seconds a card stays
+Win.ConfirmClose = true   -- tap X twice
+Win.OnDestroy = function() print("closed") end -- runs when the panel is closed (clean up here)
+Win.Flags.myflag:Get()    -- read any element that has Flag = "myflag"
+```
+
+---
+
+## The top bar
+
+A small pill at the top of the screen. **Tap it to open or close the panel. Drag it to move it.** On a phone it replaces the round open button.
+
+```lua
+local Bar = Win:CreateBar({
+	Items = { "FPS", "Logo", "Timer" },   -- what it shows
+	Logo = 114659273298746,               -- the picture used by the "Logo" item
+})
+```
+
+### What the bar can show
+
+| Item | Shows |
+|---|---|
+| `FPS` | Your frames per second |
+| `Ping` | Your ping in ms |
+| `Logo` | Your logo (a little pulse) |
+| `Title` | The window title |
+| `Timer` | How long you have been playing (`00:12:30`) |
+| `Clock` | The time of day |
+| `Players` | Players in the server (`8/12`) |
+| `Memory` | Memory used in MB |
+| `Executor` | The name of your executor |
+| `Game` | The game name |
+
+Items always appear in the order of this table. The list is also in `UI.BarItems`.
+
+### Ready-made styles
+
+| Preset | Items |
+|---|---|
+| `Classic` | FPS, Logo, Timer |
+| `Minimal` | Logo |
+| `Gamer` | FPS, Ping, Clock |
+| `Info` | Logo, Title, Players, Executor |
+| `Full` | everything |
+
+```lua
+local Bar = Win:CreateBar({ Preset = "Gamer" })
+```
+
+### Options
+
+| Option | What it does | Default |
+|---|---|---|
+| `Items` | List of item names | the `Classic` preset |
+| `Preset` | A preset name (used when you give no `Items`) | `"Classic"` |
+| `Logo` | Image id for the `Logo` item | none (shows an `R`) |
+| `Visible` | `false` starts hidden | `true` |
+| `Position` | A `UDim2` | top center |
 
 ### Methods
 
 ```lua
-Bar:SetItems({ "FPS", "Ping", "Timer" })   -- choose what to show
-Bar:SetPreset("Gamer")                      -- use a ready-made style
-Bar:Add("Clock")                            -- show one more item
-Bar:Remove("Timer")                         -- hide one item
-print(table.concat(Bar:GetItems(), ", "))   -- what is shown now
-Bar:SetLogo("rbxassetid://123456")          -- change the logo
-Bar:Show(false)                             -- hide the bar (Bar:Show(true) shows it)
-Bar:Destroy()                               -- remove the bar (the round R button comes back)
+Bar:SetItems({ "FPS", "Ping", "Players" })  -- replace what it shows
+Bar:SetPreset("Full")                       -- use a preset
+Bar:Add("Clock")                            -- add one item
+Bar:Remove("Timer")                         -- remove one item
+Bar:GetItems()                              -- { "FPS", "Ping", ... }
+Bar:SetLogo(114659273298746)                -- change the logo picture
+Bar:Show(false)                             -- hide or show the whole bar
+Bar:ResetPosition()                         -- put it back at the top
+Bar:Destroy()                               -- remove it (the round open button comes back)
+Bar.OnChange = function(items) print(#items) end
 ```
 
 ### Let the player choose (one line)
 
-`Tab:BarSettings(Bar)` adds the controls to a tab for you: a **Show top bar** toggle, a **Bar style** choice bar (Classic, Minimal, Gamer, Info, Full) and a **Bar items** multi-select list (tick any items you like).
+`Tab:BarSettings(Bar)` adds the controls that let the player pick what shows: a **Show top bar** toggle, a **Bar style** choice (the presets) and a multi-select **Bar items** list ("ADD MORE" is just ticking more boxes).
 
 ```lua
-local Settings = Win:CreateTab({ Name = "Settings", Title = "Settings", Description = "Theme and top bar" })
+local Settings = Win:CreateTab({ Name = "Settings", Icon = 81306187910490 })
 Settings:BarSettings(Bar)
 ```
 
-Want your own version? Build the same controls yourself with a [choice bar](#sliders-choice-bars-and-progress-bars) and a [multi dropdown](#buttons-dropdowns-inputs-keybinds), and call `Bar:SetItems(list)` inside their callbacks.
+Use `Settings:BarSettings(Bar, { Section = "My bar", Preset = "Info" })` to rename the section or pick a start style. `Win:CreateSettingsTab({ Bar = Bar })` already does this for you.
 
 ---
 
 ## Tabs
 
-A tab is a button in the left list, with its own scrolling page. Make a tab three ways, from simple to full:
-
 ```lua
--- 1. just a name
-local Main = Win:CreateTab("Main")
-
--- 2. name + image icon next to it
-local Player = Win:CreateTab("Player", "rbxassetid://119001011624125")
-
--- 3. everything: icon, and the tab's own header ("text hub") at the top of its page
-local Hub = Win:CreateTab({
-	Name = "Hub",
-	Icon = "rbxassetid://106575470880507",
-	Title = "Rebelwar Hub",
-	Description = "Keyless, simple, powerful.",
+local Farm = Win:CreateTab({
+	Name = "Auto Farm",
+	Icon = 78400891408621,          -- picture next to the name
+	Title = "💰 AUTO FARM",         -- the tab's own header (the "text hub")
+	Description = "Collect coins on your own.",
 })
 ```
 
-| Tab option | What it does |
+| Option | What it does |
 |---|---|
-| `Name` | The text on the tab button |
-| `Icon` | An image shown **next to** the name. It turns the accent color when the tab is selected |
-| `Title` | Adds a header card at the top of the page with this big title |
-| `Description` | The small text under the title in the header |
-| `HeaderIcon` | A different image for the header card. It defaults to `Icon` |
+| `Name` | Text on the tab button and the page title |
+| `Icon` | A Roblox image id. It shows next to the name and is dimmed until the tab is selected |
+| `Title`, `Description` | If you give either, a header card appears at the top of the page |
+| `HeaderIcon` | Picture for the header card (defaults to `Icon`) |
 
-| Tab method | What it does |
-|---|---|
-| `Tab:Select()` | Opens the tab from code |
-| `Tab:SetName("New")` | Renames the tab |
-| `Tab:SetIcon(id)` | Changes the tab's icon |
-| `Tab.HeaderObj:SetTitle("x")` / `:SetText("y")` | Edits the header made by `Title`/`Description` |
+The short form works too: `Win:CreateTab("Main", 78400891408621)`.
 
-The first tab you create opens by itself.
+**Tab methods:** `Tab:Select()`, `Tab:SetName("New")`, `Tab:SetIcon(123)`, plus every element below (`Tab:Toggle`, `Tab:Slider`, ...). The first tab you create is selected automatically. The selected tab glows with the theme color and its page slides in.
 
 ---
 
 ## All toggles
 
-A toggle is the most-used element, so it has the most options.
-
 ```lua
 local t = Tab:Toggle({
 	Name = "Infinite jump",
-	Description = "Jump again in the air.",
-	Icon = "rbxassetid://71415024616002",
-	Default = false,
-	Style = "Switch",
-	Color = Color3.fromRGB(60, 200, 110),
-	Locked = false,
-	Key = Enum.KeyCode.X,
-	Flag = "infjump",
-	Callback = function(on)
-		print("infinite jump:", on)
-	end,
+	Description = "Jump again in the air",
+	Callback = function(on) print(on) end,
 })
 ```
 
@@ -256,174 +328,132 @@ local t = Tab:Toggle({
 
 | Option | What it does | Default |
 |---|---|---|
-| `Name` | The toggle's text | `"Toggle"` |
-| `Description` | A second, smaller line of text under the name (makes the row taller) | none |
-| `Icon` | A Roblox image on the left of the row | none |
-| `Default` | `true` starts it on | `false` |
-| `Style` | `"Switch"` (sliding switch) or `"Checkbox"` (a box with a tick) | `"Switch"` |
-| `Color` | A `Color3` used only for this toggle when it is on. Without it the toggle follows the theme | theme accent |
-| `Locked` | `true` greys it out and ignores taps until you unlock it | `false` |
-| `Key` | A key that flips it (PC). A small `[X]` tag shows on the row | none |
-| `Flag` | A name. `Win.Flags.<name>` then gives you this toggle from anywhere | none |
-| `Callback` | `function(on)` runs every time it changes | none |
+| `Name` | The label | `"Toggle"` |
+| `Description` | Small second line under the name | none |
+| `Icon` | Roblox image id shown on the left | none |
+| `Default` | `true` starts ON | `false` |
+| `Style` | `"Switch"` (pill) or `"Checkbox"` | `"Switch"` |
+| `Color` | A `Color3` used when ON (instead of the theme color) | theme color |
+| `Locked` | `true` stops it from being changed | `false` |
+| `Key` | An `Enum.KeyCode` that flips it on a keyboard | none |
+| `Flag` | A name so you can read or save it later | none |
+| `Callback` | `function(on)` called when it changes | none |
 
-The callback does **not** run when the toggle is created, even with `Default = true`. If you need the starting state, read `t:Get()` yourself.
+> A toggle with `Default = true` calls your `Callback(true)` once at the start, so your feature really starts ON.
 
 ### Every toggle method
 
 | Method | What it does |
 |---|---|
-| `t:Get()` | Returns `true` or `false` |
-| `t:Set(true)` | Sets it and runs the callback |
-| `t:Set(true, true)` | Sets it **silently** (no callback) |
-| `t:Toggle()` | Flips it (does nothing while locked) |
-| `t:Lock(true)` / `t:Lock(false)` | Locks or unlocks it. Check `t.Locked` |
-| `t:SetName("New name")` | Changes the text |
-| `t:SetDescription("New text")` | Changes the description (needs a `Description` at creation) |
-| `t:SetColor(Color3)` | Changes this toggle's on-color |
+| `t:Set(true)` | Turn it on or off (runs `Callback`). `t:Set(true, true)` changes it without running `Callback` |
+| `t:Get()` | `true` or `false` |
+| `t:Toggle()` | Flip it (a locked toggle shows a warning card instead) |
+| `t:Lock(true)` / `t:Lock(false)` | Lock or unlock |
+| `t:SetName("x")`, `t:SetDescription("x")` | Change the text |
+| `t:SetColor(Color3)` | Change its ON color |
 
-### The eight kinds of toggle
+### The kinds of toggle
 
 ```lua
 -- 1. Plain
 Tab:Toggle({ Name = "Plain switch" })
 
 -- 2. Name + description
-Tab:Toggle({ Name = "With a description", Description = "A line of small text.", Default = true })
+Tab:Toggle({ Name = "God mode", Description = "Take no damage" })
 
--- 3. With an image icon
-Tab:Toggle({ Name = "With an icon", Icon = "rbxassetid://71415024616002" })
+-- 3. With a Roblox image icon
+Tab:Toggle({ Name = "ESP", Description = "See everyone", Icon = 71415024616002 })
 
--- 4. Checkbox
-Tab:Toggle({ Name = "Checkbox style", Style = "Checkbox", Default = true })
+-- 4. Checkbox style
+Tab:Toggle({ Name = "Remember me", Style = "Checkbox", Default = true })
 
--- 5. Own color
-Tab:Toggle({ Name = "Green when on", Color = Color3.fromRGB(60, 200, 110) })
+-- 5. Its own color (green when ON)
+Tab:Toggle({ Name = "Good vibes", Color = Color3.fromRGB(60, 210, 90), Default = true })
 
--- 6. Keybind
-Tab:Toggle({ Name = "Toggle with a key", Key = Enum.KeyCode.X })
+-- 6. A key flips it (PC)
+Tab:Toggle({ Name = "Speed", Description = "Press X", Key = Enum.KeyCode.X })
 
--- 7. Locked, then unlocked later
-local locked = Tab:Toggle({ Name = "Locked", Locked = true })
+-- 7. Locked, and unlock it later
+local locked = Tab:Toggle({ Name = "VIP only", Description = "Locked for now", Locked = true })
 Tab:Button({ Name = "Unlock", Callback = function() locked:Lock(false) end })
 
--- 8. All of them together
+-- 8. A toggle that really does something
+local infJump = false
 Tab:Toggle({
-	Name = "Everything",
-	Description = "Icon, description, key and its own color.",
-	Icon = "rbxassetid://71415024616002",
-	Style = "Switch",
-	Color = Color3.fromRGB(255, 150, 50),
-	Key = Enum.KeyCode.Z,
-	Flag = "everything",
+	Name = "Infinite jump",
+	Flag = "infjump",
+	Callback = function(on) infJump = on end,
 })
+game:GetService("UserInputService").JumpRequest:Connect(function()
+	local char = game.Players.LocalPlayer.Character
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	if infJump and hum then
+		hum:ChangeState(Enum.HumanoidStateType.Jumping)
+	end
+end)
 ```
 
-### Making a toggle do something
-
-The toggle only tells you "on" or "off". You write what happens:
-
-```lua
--- a feature that needs a loop: use the value
-local running = false
-Tab:Toggle({
-	Name = "Auto jump",
-	Callback = function(on)
-		running = on
-		task.spawn(function()
-			while running do
-				local hum = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-				if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
-				task.wait(0.5)
-			end
-		end)
-	end,
-})
-
--- a feature that needs an event: connect when on, disconnect when off
-local conn
-Tab:Toggle({
-	Name = "Print every frame",
-	Callback = function(on)
-		if on then
-			conn = game:GetService("RunService").Heartbeat:Connect(function() print("tick") end)
-		elseif conn then
-			conn:Disconnect()
-			conn = nil
-		end
-	end,
-})
-```
+When a toggle flips, the knob stretches, the switch glows, the row tints and the text says **ON** or **OFF**. Turn on `Win.ToggleToasts = true` (or the **Toggle pop-ups** switch in the Settings tab) to also get a small card each time.
 
 ---
 
-## Sliders, choice bars and progress bars
+## Sliders, choices and progress bars
 
 ### Slider
 
 ```lua
 local speed = Tab:Slider({
-	Name = "Walk speed",
+	Name = "Walk speed (16-80)",
 	Min = 16,
-	Max = 100,
+	Max = 80,
 	Default = 16,
-	Step = 1,
-	Suffix = " studs/s",
-	Flag = "speed",
-	Callback = function(v)
-		local hum = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-		if hum then hum.WalkSpeed = v end
-	end,
+	Step = 1,        -- snaps to this size (0.1 works too)
+	Suffix = "",     -- text after the number, like "%" or "s"
+	Callback = function(v) print(v) end,
 })
+speed:Set(40)   -- move it from code
+speed:Get()     -- the number
 ```
 
-| Option | What it does | Default |
-|---|---|---|
-| `Name` | Text above the bar | `"Slider"` |
-| `Min`, `Max` | The range | `0`, `100` |
-| `Default` | Starting value | `Min` |
-| `Step` | Rounds to this step (`5` gives 5, 10, 15...). Decimals work: `0.1` | `1` |
-| `Suffix` | Text after the number (`"%"`, `"°"`, `" studs"`) | none |
-| `Flag` | Name for `Win.Flags` | none |
-| `Callback` | `function(number)`. It runs while you drag, when the value changes | none |
-
-Methods: `speed:Get()`, `speed:Set(50)`, `speed:Set(50, true)` (silent). Values outside the range are clamped.
+Drag anywhere along the bar. While your finger is on it the page does not scroll.
 
 ### Choice bar
 
-A **bar of buttons where you choose one**. Good for 2 to 4 short options.
+A bar of buttons where one is chosen.
 
 ```lua
-local diff = Tab:Choice({
+local mode = Tab:Choice({
 	Name = "Difficulty",
 	Options = { "Easy", "Normal", "Hard" },
-	Default = "Normal",
-	Callback = function(choice)
-		print("chosen:", choice)
-	end,
+	Default = "Normal",     -- use false to start with nothing chosen
+	Callback = function(choice) print(choice) end,
 })
+mode:Set("Hard")
+mode:Get()
 ```
 
-| Option | What it does |
-|---|---|
-| `Name` | Text above the bar |
-| `Options` | A list of texts. Each becomes a button, equal width |
-| `Default` | The starting choice. Without it, the first option is chosen |
-| `Callback` | `function(choice)`. It runs only when the choice **changes** |
+### Cycle picker (the `<  option  >` arrows)
 
-Methods: `diff:Get()`, `diff:Set("Hard")`, `diff:Set("Hard", true)`. Unknown names are ignored. The chosen button uses the theme color.
+Good for long lists like themes, because it takes one row.
+
+```lua
+local theme = Tab:Cycle({
+	Name = "Theme Mode",
+	Description = "12 themes - tap the arrows",
+	Options = UI.Themes,
+	Default = "Red",                       -- a name or a number
+	Callback = function(name, index) Win:SetTheme(name) end,
+})
+theme:Set("Blue")   -- or theme:Set(3)
+```
 
 ### Progress bar
 
-A read-only bar. You decide when it moves, from your own code:
+A read-only bar you fill from your code.
 
 ```lua
-local bar = Tab:Progress({ Name = "Loading", Min = 0, Max = 100, Default = 0, Suffix = "%" })
-
-for i = 0, 100, 10 do
-	bar:Set(i)
-	task.wait(0.1)
-end
+local coins = Tab:Progress({ Name = "Coins", Min = 0, Max = 40, Suffix = " / 40" })
+coins:Set(12)
 ```
 
 ---
@@ -432,54 +462,52 @@ end
 
 ### Button
 
+A shiny gradient button with a spinning ring, a moving shine, a squish when pressed and a ripple when clicked.
+
 ```lua
-Tab:Button({ Name = "Say hello", Callback = function() Win:Notify({ Title = "Hello" }) end })
+local b = Tab:Button({
+	Name = "Teleport to spawn",
+	Description = "Optional second line",  -- makes it a little taller
+	Callback = function() print("clicked") end,
+})
+b:Fire()                  -- press it from code
+b:SetName("New name")
 ```
 
 ### Dropdown (one choice or many)
 
 ```lua
--- single choice
-local mode = Tab:Dropdown({
+Tab:Dropdown({
 	Name = "Mode",
 	Options = { "Easy", "Normal", "Hard" },
 	Default = "Normal",
 	Callback = function(choice) print(choice) end,
 })
 
--- multi choice: the callback gets a table like { Speed = true, Fly = true }
-local feats = Tab:Dropdown({
+local many = Tab:Dropdown({
 	Name = "Features",
 	Options = { "Speed", "Jump", "Fly", "Fog" },
 	Multi = true,
-	Callback = function(set)
+	Default = { "Jump" },
+	Callback = function(set) -- a table like { Speed = true, Fly = true }
 		for name in pairs(set) do print("on:", name) end
 	end,
 })
+many:Set({ "Speed", "Fly" }) -- choose from code
+many:Refresh({ "A", "B" })   -- replace the options
+many:Close()
 ```
-
-| Option / method | What it does |
-|---|---|
-| `Options` | The list of texts |
-| `Default` | Starting choice (single) |
-| `Multi = true` | Allows several choices. `:Get()` returns a table `{ Name = true }` |
-| `d:Set("Normal")` / `d:Set({ "Speed", "Fly" })` | Sets the choice (a list for multi) |
-| `d:Refresh({ "new", "options" })` | Replaces the list of options |
-| `d:Close()` | Closes the list |
 
 ### Input (text box)
 
 ```lua
 Tab:Input({
 	Name = "Player name",
-	Placeholder = "type here",
-	Default = "",
-	Clear = false,
-	Callback = function(text) print("typed:", text) end,
+	Placeholder = "type a name",
+	Clear = false,          -- true empties the box after Enter
+	Callback = function(text) print(text) end,
 })
 ```
-
-The callback runs when the player finishes typing (presses enter or closes the keyboard), not on every letter. `Clear = true` empties the box after each entry.
 
 ### Keybind
 
@@ -487,43 +515,27 @@ The callback runs when the player finishes typing (presses enter or closes the k
 Tab:Keybind({
 	Name = "Action key",
 	Default = Enum.KeyCode.F,
-	Callback = function() print("pressed") end,
-	Changed = function(key) print("rebound to", key.Name) end,
+	Callback = function() print("pressed") end,     -- when the key is pressed
+	Changed = function(key) print(key.Name) end,    -- when the player picks a new key
 })
 ```
-
-Press the button, then press a key to rebind. `Escape` keeps the old key. `Callback` runs when the bound key is pressed. `Changed` runs when the player picks a new key. Keybinds are for PC, so give phone players a button too.
 
 ---
 
 ## Colors
 
 ```lua
-local color = Tab:Color({
-	Name = "ESP color",
-	Default = Color3.fromRGB(233, 75, 53),
-	Callback = function(c)
-		print("color:", c)
-	end,
+local c = Tab:Color({
+	Name = "Murderer color",
+	Default = Color3.fromRGB(235, 40, 50),
+	Callback = function(color) print(color) end,
 })
+c:Set(Color3.fromRGB(0, 255, 0))
+c:GetHex()       -- "#00FF00"
+c:SetHex("#FF8800")
 ```
 
-The color element has everything a player needs to choose a color:
-
-- **Hue bar** (the rainbow): which color.
-- **Saturation bar**: from white to full color.
-- **Brightness bar**: from black to bright.
-- **Preview** box and a **hex box** (`#E94B35`). Type a hex code and press enter.
-- **Nine preset swatches** at the bottom: tap one to jump to it.
-
-| Method | What it does |
-|---|---|
-| `color:Get()` | Returns a `Color3` |
-| `color:GetHex()` | Returns text like `"#E94B35"` |
-| `color:Set(Color3)` | Sets the color and runs the callback (`:Set(c, true)` is silent) |
-| `color:SetHex("#00FF00")` | Sets from a hex code. Bad codes are ignored |
-
-The callback runs while the player drags a bar, so keep it fast (set a property, don't make a new part every call).
+The row shows the color as a small pill and its hex code. **Tap the pill** to open the picker: a rainbow hue bar, a saturation bar, a brightness bar and nine preset swatches. You can also type a hex code in the box.
 
 ---
 
@@ -531,175 +543,142 @@ The callback runs while the player drags a bar, so keep it fast (set a property,
 
 ### Roblox images (asset ids)
 
-Anywhere RebelUI takes an image, you can write it three ways. They all mean the same thing:
+Anywhere a picture is expected (`Icon`, `Logo`, `Image`, `Banner`) you can give the number from the Roblox website, or the long form. All three are the same:
 
 ```lua
-Icon = "rbxassetid://114659273298746"
-Icon = "114659273298746"
-Icon = 114659273298746
+Icon = 78400891408621
+Icon = "78400891408621"
+Icon = "rbxassetid://78400891408621"
 ```
 
-Use the **image asset id** from the Roblox website or Creator Hub. This works for the window `Icon`, tab `Icon`, toggle `Icon`, header `Icon` and the `Image` element.
+Upload your pictures to Roblox as **Decal/Image** assets you own and use the asset id. If a picture does not show, the id is wrong or it is not public.
 
 ### Image
 
 ```lua
-local pic = Tab:Image({
-	Image = "rbxassetid://125144167121839",
-	Height = 120,
-	Caption = "Rebelwar banner",
-	Crop = true,
-})
-
-pic:Set("rbxassetid://114659273298746")   -- swap the picture later
-pic:SetCaption("New caption")
+Tab:Image({ Image = 125144167121839, Height = 110, Caption = "My banner", Crop = true })
 ```
 
-| Option | What it does | Default |
-|---|---|---|
-| `Image` | The asset id | none |
-| `Height` | Height in pixels | `120` |
-| `Caption` | Small centered text under the image | none |
-| `Crop` | `true` fills the box and crops. `false` fits the whole picture inside | `false` |
+`Crop = true` fills the box and crops the edges. `false` fits the whole picture.
 
-### Header (a tab's own text hub)
-
-A banner card with a big title, small text and an icon.
+### Header (a card with a title, text and picture)
 
 ```lua
-local hub = Tab:Header({
-	Title = "Rebelwar Hub",
-	Text = "Keyless, simple, powerful.",
-	Icon = "rbxassetid://114659273298746",
-})
-hub:SetTitle("New title")
-hub:SetText("New text")
+Tab:Header({ Title = "Welcome", Text = "Everything you need is here.", Icon = 114659273298746 })
 ```
-
-(`CreateTab({ Title = ..., Description = ... })` makes this same header for you at the top of the page.)
 
 ### Section, Label, Paragraph, Divider
 
 ```lua
-Tab:Section("Movement")                       -- small accent-colored heading
-Tab:Divider()                                 -- a thin line
-local l = Tab:Label("A plain line of text.")  -- l:Set("new text"), l:Get()
-local p = Tab:Paragraph({ Title = "Note", Text = "A titled block of text that grows to fit." })
-p:Set("New title", "New text")
+Tab:Section("⚡ MOVEMENT")              -- a colored heading
+Tab:Label("A small grey note.")          -- plain text, wraps
+Tab:Paragraph({ Title = "Tip", Text = "A titled block of text. It grows to fit." })
+Tab:Divider()                            -- a thin line
 ```
 
 ---
 
 ## Notifications
 
+Small cards that slide up from the bottom, stack, and have a bar that shrinks until they go away.
+
 ```lua
-Win:Notify({ Title = "Saved", Text = "Settings were saved.", Duration = 4, Type = "success" })
-Win:Notify("Just text works too")
+Win:Notify({ Title = "Saved", Text = "Your settings are saved.", Type = "success", Duration = 4 })
+Win:Notify("Just a line of text")
 ```
 
 | Option | What it does | Default |
 |---|---|---|
 | `Title` | Bold first line | `"Rebelwar"` |
-| `Text` | Second line (wraps) | none |
-| `Duration` | Seconds on screen | `4` |
-| `Type` | `"success"` (green), `"warn"` (yellow), `"error"` (red). Without it the card uses the theme color | theme |
-
-Cards slide in from the right and stack if there are several.
+| `Text` | Smaller second line (wraps) | none |
+| `Type` | `"success"` (green), `"warn"` (yellow), `"error"` (red), or none (theme color) | none |
+| `Duration` | Seconds on screen | `Win.NotifyTime` (4) |
 
 ---
 
 ## Themes and your own colors
 
+Twelve themes are built in. `Red` is the exact Rebelwar Hub look.
+
+| Theme | Color |
+|---|---|
+| `Red` | Rebelwar red (default) |
+| `Crimson` | Deep red |
+| `Blue` | Bright blue |
+| `Green` | Green |
+| `Purple` | Purple |
+| `Orange` | Orange |
+| `Pink` | Hot pink |
+| `Gold` | Gold |
+| `Cyber` | Cyan |
+| `Blood` | Dark blood red |
+| `Ice` | Ice blue |
+| `Mono` | Grey / white |
+
 ```lua
-Win:SetTheme("Blue")                                -- built-in: Red, Blue, Green, Purple, Orange, Pink, Mono
-
-UI:AddTheme("Gold", Color3.fromRGB(255, 200, 0))    -- make your own theme once...
-Win:SetTheme("Gold")                                -- ...then use it
-
-Win:SetAccent(Color3.fromRGB(10, 200, 10))          -- or set any color directly, any time
+Win:SetTheme("Cyber")                          -- everything recolors live
+Win:SetAccent(Color3.fromRGB(255, 120, 0))     -- build a theme from any color
+UI:AddTheme("Mint", Color3.fromRGB(80, 230, 180))
+Win:SetTheme("Mint")
+print(table.concat(UI.Themes, ", "))           -- all names, includes ones you added
 ```
 
-- `UI.Themes` is the list of theme names, so a dropdown can show them: `Tab:Dropdown({ Name = "Theme", Options = UI.Themes, Callback = function(n) Win:SetTheme(n) end })`.
-- Everything repaints live: tabs, toggles, sliders, bars, headers, buttons, the window outline and the **R** button.
-- Toggles with their own `Color` keep that color.
+A theme changes the accent glow, the spinning ring, the panel and side gradients, the rows, the top bar, the buttons and the tabs.
 
-**A theme picker with your own color:**
+---
+
+## The ready-made Settings tab
+
+One line gives you a full Settings tab, the same one the Rebelwar Hub has:
 
 ```lua
-Tab:Color({
-	Name = "Accent color",
-	Default = Color3.fromRGB(233, 75, 53),
-	Callback = function(c) Win:SetAccent(c) end,
+Win:CreateSettingsTab({
+	Bar = Bar,                          -- adds the top bar choices (optional)
+	Icon = 81306187910490,              -- tab picture (optional)
+	-- Name = "Settings", Title = "...", Description = "...", File = "my_settings.json"
 })
 ```
+
+It contains: a **Theme** cycle (12 themes) · an **Accent color** picker · **Panel size** · **See-through** · the **top bar choices** (show bar, style, items) · **Notifications**, **Toggle pop-ups**, **Sound effects**, **Notification time** · **Confirm on close** · **Reset position** · **Save settings** · **Load settings** · **Unload panel**.
 
 ---
 
 ## Flags and saving settings
 
-Give elements a `Flag`, and you can read all of them from one place:
+Give an element a `Flag` and you can read it from anywhere, and save it.
 
 ```lua
-Tab:Toggle({ Name = "ESP", Flag = "esp" })
-Tab:Slider({ Name = "Range", Flag = "range", Min = 10, Max = 500, Default = 100 })
+Tab:Toggle({ Name = "Auto farm", Flag = "farm" })
+Tab:Slider({ Name = "Speed", Min = 16, Max = 80, Default = 16, Flag = "speed" })
 
-print(Win.Flags.esp:Get(), Win.Flags.range:Get())
+print(Win.Flags.farm:Get())       -- true / false
+Win.Flags.speed:Set(50)           -- move it from code
+
+Win:Save()   -- writes "<Title>_settings.json" (needs an executor with writefile). Returns true if it worked
+Win:Load()   -- reads it back and applies it (your Callbacks run). Returns true if a file was found
 ```
 
-Saving and loading with the executor's file functions:
-
-```lua
-local HttpService = game:GetService("HttpService")
-
-local function save()
-	local data = {}
-	for name, element in pairs(Win.Flags) do
-		local v = element:Get()
-		if typeof(v) == "Color3" then v = { v.R, v.G, v.B } end   -- JSON can't store a Color3
-		data[name] = v
-	end
-	writefile("mypanel.json", HttpService:JSONEncode(data))
-end
-
-local function load()
-	if not (isfile and isfile("mypanel.json")) then return end
-	local data = HttpService:JSONDecode(readfile("mypanel.json"))
-	for name, v in pairs(data) do
-		local element = Win.Flags[name]
-		if element then
-			if type(v) == "table" and #v == 3 then v = Color3.new(v[1], v[2], v[3]) end
-			element:Set(v)
-		end
-	end
-end
-```
-
-Call `load()` after you create the elements, and `save()` from a button. This covers toggles, sliders, colors, inputs and single dropdowns. A multi dropdown stores a table, so convert it to a list before you save it.
+Put `Win:Load()` at the end of your script to bring a player's settings back. `Win:Save("my_file.json")` uses your own file name. Toggles, sliders, choices, cycles, dropdowns (one or many), text boxes, keybinds, colors and the theme are saved.
 
 ---
 
 ## Mobile tips
 
-- Every drag works with a **finger**, not only a mouse.
-- The panel **shrinks to fit** small screens. Use a `Width` and `Height` that are not too big.
-- Phones have no keyboard, so **hiding** the panel leaves a round **R** button. Tap it to open the panel again. You can drag the **R** button.
-- Sliders and color bars **stop the page scrolling** while your finger is on them.
-- Give phone players a button or toggle for anything that only has a keybind.
-- Test on your phone, not only on a computer.
-
----
-
----
+- The panel is made small on purpose (420 x 340) with text sizes that stay readable on a phone. Use **Panel size** in Settings (or `Win:SetScale(1.2)`) to enlarge.
+- Always make a way to open the panel without a keyboard: the **top bar** (tap it) or the round open button that shows when there is no bar.
+- Sliders and color bars lock page scrolling while a finger is on them, so they do not fight with scrolling.
+- Keep descriptions short. Long names are cut with `...` to keep rows tidy.
+- Test with the panel smaller than the screen. If you set a big `Width`, RebelUI shrinks it to fit.
 
 ## Build it yourself
 
-This part shows how every piece is made with plain Roblox code: `Instance.new`, `TweenService` and `UserInputService`. There are no tricks. If you understand the toggle and the slider, you understand the whole library.
+This part shows how every piece is made with plain Roblox code: `Instance.new`, `TweenService` and `UserInputService`. There are no tricks. If you understand the toggle and the slider, you understand the whole library. (The real RebelUI adds the spinning ring, embers and shine on top of these same ideas.)
 
 The steps build on each other. Paste the helpers from Step 1 first, then the window from Step 2, and after that you can add any later step to see it work. Everything works with a **finger** and a mouse.
 
 Window dragging is a short extra at the end ([Bonus: dragging the window](#bonus-dragging-the-window)), so the steps can start with the pieces you care about.
 
-**Quick map:** 1 helpers · 2 window · 3 button · 4 toggle (+ 6 upgrades: description, icon, checkbox, color, locked, key) · 5 slider · 6 choice bar · 7 dropdown · 8 text box · 9 keybind · 10 color picker · 11 tabs (+ icons, headers, Roblox images) · 12 notifications · 13 themes · 14 top bar (FPS, logo, timer, choose what shows).
+**Quick map:** 1 helpers · 2 window · 3 button · 4 toggle (+ 6 upgrades: description, icon, checkbox, color, locked, key) · 5 slider · 6 choice bar · 7 dropdown · 8 text box · 9 keybind · 10 color picker · 11 tabs (+ icons, headers, Roblox images) · 12 notifications · 13 themes · 14 top bar (FPS, logo, timer, choose what shows) · 15 loading screen.
 
 
 ### Step 1: the three ideas and two helpers
@@ -1550,24 +1529,98 @@ end)
 
 ---
 
+
+### Step 15: a loading screen
+
+A loading screen is one full-screen `Frame` on a `ScreenGui` with a high `DisplayOrder`, a bar whose width you tween, and a fade at the end.
+
+```lua
+local TweenService = game:GetService("TweenService")
+local gui = Instance.new("ScreenGui")
+gui.IgnoreGuiInset = true
+gui.DisplayOrder = 10000
+gui.ResetOnSpawn = false
+gui.Parent = (gethui and gethui()) or game:GetService("CoreGui")
+
+local root = Instance.new("Frame")
+root.Size = UDim2.fromScale(1, 1)
+root.BackgroundColor3 = Color3.fromRGB(8, 3, 5)
+root.BorderSizePixel = 0
+root.Parent = gui
+
+local title = Instance.new("TextLabel")
+title.AnchorPoint = Vector2.new(0.5, 0.5)
+title.Position = UDim2.fromScale(0.5, 0.42)
+title.Size = UDim2.fromOffset(340, 60)
+title.BackgroundTransparency = 1
+title.Text = "Rebelwar"
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 44
+title.TextColor3 = Color3.fromRGB(255, 50, 60)
+title.Parent = root
+
+local track = Instance.new("Frame")
+track.AnchorPoint = Vector2.new(0.5, 0.5)
+track.Position = UDim2.fromScale(0.5, 0.8)
+track.Size = UDim2.fromOffset(300, 14)
+track.BackgroundColor3 = Color3.fromRGB(18, 7, 9)
+track.BorderSizePixel = 0
+track.Parent = root
+Instance.new("UICorner", track).CornerRadius = UDim.new(0, 7)
+
+local fill = Instance.new("Frame")
+fill.Size = UDim2.fromScale(0, 1)
+fill.BackgroundColor3 = Color3.fromRGB(235, 40, 50)
+fill.BorderSizePixel = 0
+fill.Parent = track
+Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 7)
+
+-- move the bar a little at a time while you load things
+for i = 1, 10 do
+	TweenService:Create(fill, TweenInfo.new(0.2), { Size = UDim2.fromScale(i / 10, 1) }):Play()
+	task.wait(0.25)
+end
+
+-- fade everything out, then remove it
+TweenService:Create(root, TweenInfo.new(0.5), { BackgroundTransparency = 1 }):Play()
+TweenService:Create(title, TweenInfo.new(0.5), { TextTransparency = 1 }):Play()
+TweenService:Create(fill, TweenInfo.new(0.5), { BackgroundTransparency = 1 }):Play()
+TweenService:Create(track, TweenInfo.new(0.5), { BackgroundTransparency = 1 }):Play()
+task.wait(0.6)
+gui:Destroy()
+```
+
+RebelUI's `UI:Loading` adds a zooming banner, embers, a logo with a spinning ring, a shining title, a smooth bar with a moving shimmer, status text, a badge, `Preload` and `Run`. Use it when you do not want to build this yourself.
+
+---
+
 ## Common mistakes
 
 | Problem | Cause and fix |
 |---|---|
-| Nothing appears | The `ScreenGui` has no parent, or the executor has no `gethui`. Use `CoreGui` as a fallback. |
-| A slider jumps or scrolls the page | Missing `ScrollingEnabled = false` while dragging. |
-| The toggle looks right but does nothing | You changed the colors but forgot to run your feature in the callback. |
-| It works on PC but not on a phone | You only handled `MouseButton1`. Add `Enum.UserInputType.Touch`. |
-| Everything is stuck at the top-left | `Position` was never set. Use `AnchorPoint` plus `Position`. |
-| Rows overlap | Give the page a `UIListLayout` and do not set row positions by hand. |
-| A callback does nothing and no error shows | Errors in callbacks are caught. RebelUI prints them with `warn`, so check the console. |
+| Nothing appears | The executor blocked the script, or an error stopped it. Check the console. RebelUI uses `gethui()` and falls back to `CoreGui` |
+| "attempt to index nil" on `Win` | The line that creates the window failed (often the `loadstring` link). Make sure the repo is public and the file name is exactly `source.lua` on the `main` branch |
+| The panel never opens after a loading screen | You created it with `Open = false` and forgot `Win:Toggle(true)` |
+| A picture does not show | The asset id is wrong or the image is not public. Try the number from the Roblox website |
+| A toggle does nothing | The toggle only calls your `Callback`. Put your feature inside it |
+| My toggle starts ON but the feature is off | Use `Default = true` with a `Callback`. RebelUI calls it once with `true` at the start |
+| Settings do not save | `Win:Save()` needs an executor with `writefile`. Check that `Flag` is set on the elements you want saved |
+| A callback fails with no message | Errors inside callbacks are caught and printed with `warn`. Look in the console |
+| The panel is too big on my phone | Use **Panel size** in Settings, `Win:SetScale(0.8)`, or a smaller `Width` and `Height` |
 
-## What to learn next
+---
 
-1. Save settings with `writefile` and load them with `readfile` (turn the toggles and sliders into a table, then `HttpService:JSONEncode`).
-2. Add a search box that hides rows whose names don't match.
-3. Make your own element, such as a progress bar or a two-button row. Copy the toggle function, change the visual, and keep `:Set` and `:Get`.
+## What is new in v1.0.0
 
+- **The Rebelwar Hub look**: spinning ring, thin black ring, embers, glowing tab marker, player card, shiny buttons, pill toggles with ON/OFF, stacked notification cards.
+- **`UI:Loading`**: the full loading screen with `Preload` and `Run`.
+- **Top bar** in the Hub style, with 10 items, 5 presets and `Tab:BarSettings`.
+- **Tabs** with an image next to the name, their own header, and a slide-in page.
+- **Toggles**: switch or checkbox, description, icon, color, locked (with a warning card), key, flag.
+- **`Tab:Cycle`** (the `<  option  >` picker) and a better color picker (tap to open).
+- **`Win:CreateSettingsTab`**: a finished Settings tab in one line.
+- **12 themes** that recolor everything live, `SetAccent`, `AddTheme`, `SetScale`, `SetTransparency`.
+- **`Win:Save()` and `Win:Load()`** for every element with a `Flag`.
 
 ---
 
@@ -1575,9 +1628,10 @@ end)
 
 | File | What it is |
 |---|---|
-| `source.lua` | The library. Load it with `loadstring(game:HttpGet("https://raw.githubusercontent.com/rizqadeeb38-dev/Rebelwar_UI/main/source.lua"))()` |
-| `Example.lua` | The demo panel. It uses every element and every kind of toggle. Copy parts of it into your own script |
+| `source.lua` | The library (RebelUI v1.0.0). Load it with `loadstring(game:HttpGet("https://raw.githubusercontent.com/rizqadeeb38-dev/Rebelwar_UI/main/source.lua"))()` |
+| `Example.lua` | The demo panel with the loading screen. It uses every element and every kind of toggle. Copy parts into your own script |
 | `README.md` | This tutorial |
+| `LICENSE` | MIT license |
 
 ## Help and community
 
