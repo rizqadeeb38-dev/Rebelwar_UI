@@ -19,7 +19,14 @@
     Elements: Section, Label, Divider, Button, Toggle, Slider, Dropdown, Input, Keybind,
               Color, Header, Image, Progress, Paragraph, Choice, Cycle
     Window:   CreateTab, CreateBar, CreateSettingsTab, Notify, SetTheme, SetAccent, SetScale,
-              SetTransparency, Toggle, Save, Load, Destroy
+              SetOpacity, SetSize, SetToggleKey, Toggle, Save, Load, Destroy,
+              SaveProfile, LoadProfile, DeleteProfile, ListProfiles, SetAutoLoad, AutoLoad
+    Library:  Loading, CreateWindow, KeyGate, AddTheme
+    Also: search box, drag-to-resize, named profiles, key gate, notification buttons and icons,
+          dialogs, collapsible sections, keybind modes, number boxes, tab dividers,
+          settings export / import, panel opacity (100% by default).
+    More Window methods: Dialog, CreateTabDivider, CreateKeybindList, Export, Import
+    More elements: Notice (warning box). Every element: tooltip, :SetVisible, :Destroy, :DependsOn
     Every element returns an object with :Get() and :Set(value).
 ]]
 
@@ -320,7 +327,7 @@ local function fadeOut(root, dur)
 end
 
 function RebelUI:Loading(o)
-	-- Title, Subtitle, Logo, Banner, Badge, Footer, Theme, Name
+	-- Title, Subtitle, Logo, Banner, Footer, Theme, Name, Timeout
 	-- Returns L with :Progress(0-1) :Status(text) :Badge(text) :Preload({ids}) :Run(steps) :Fail(text) :Finish()
 	o = o or {}
 	local theme = THEMES[o.Theme or "Red"] or THEMES.Red
@@ -651,6 +658,14 @@ function RebelUI:Loading(o)
 		sg:Destroy()
 	end
 	L.Gui = sg
+	-- safety net: if your script never calls Finish, the screen removes itself so it can never trap the player
+	local limit = o.Timeout or 40
+	task.delay(limit, function()
+		if alive and sg.Parent then
+			warn("[RebelUI] the loading screen was still open after " .. limit .. "s and was closed. Call Load:Finish().")
+			L:Destroy()
+		end
+	end)
 	return L
 end
 
@@ -663,6 +678,7 @@ function RebelUI:CreateWindow(o)
 		_tabs = {},
 		_spin = {},
 		_frame = {},
+		_keybinds = {},
 		Flags = {},
 		Open = false,
 		Sound = o.Sound == true,
@@ -670,6 +686,8 @@ function RebelUI:CreateWindow(o)
 		NotifyTime = 4,
 		ConfirmClose = o.ConfirmClose == true,
 		Scale = 1,
+		Opacity = 100,
+		ToggleKey = o.ToggleKey or Enum.KeyCode.RightShift,
 	}, Window)
 	local themeName = THEMES[o.Theme or "Red"] and (o.Theme or "Red") or "Red"
 	win.Theme = THEMES[themeName]
@@ -682,6 +700,9 @@ function RebelUI:CreateWindow(o)
 
 	local cam = workspace.CurrentCamera
 	local vp = cam and cam.ViewportSize or Vector2.new(800, 500)
+	if vp.X < 200 or vp.Y < 150 then
+		vp = Vector2.new(800, 450) -- some executors report 0 right after joining
+	end
 	local width = math.floor(math.min(o.Width or 420, math.max(300, vp.X * 0.9)))
 	local height = math.floor(math.min(o.Height or 340, math.max(200, vp.Y * 0.85)))
 	win._baseSize = { width, height }
@@ -810,8 +831,32 @@ function RebelUI:CreateWindow(o)
 		BackgroundTransparency = 1,
 	}, main)
 	local pageTitle = label(content, "", 12, C.Text, true)
-	pageTitle.Size = UDim2.new(1, -54, 0, 22)
+	local hasSearch = o.Search ~= false
+	pageTitle.Size = UDim2.new(1, hasSearch and -166 or -54, 0, 22)
 	pageTitle.Position = UDim2.fromOffset(4, 4)
+	if hasSearch then
+		local sb = new("TextBox", {
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, -56, 0, 6),
+			Size = UDim2.fromOffset(104, 18),
+			BorderSizePixel = 0,
+			Text = "",
+			PlaceholderText = "Search...",
+			PlaceholderColor3 = C.Dim,
+			TextColor3 = C.Text,
+			TextSize = 10,
+			Font = Enum.Font.Gotham,
+			ClearTextOnFocus = false,
+			ZIndex = 8,
+		}, content)
+		corner(sb, 9)
+		new("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 6) }, sb)
+		win:_bind(sb, "BackgroundColor3", "Inset")
+		win._search = sb
+		sb:GetPropertyChangedSignal("Text"):Connect(function()
+			win:_filter(sb.Text)
+		end)
+	end
 	local underline = new("Frame", {
 		Size = UDim2.new(1, -58, 0, 2),
 		Position = UDim2.fromOffset(4, 26),
@@ -860,10 +905,7 @@ function RebelUI:CreateWindow(o)
 	local fab = new("TextButton", {
 		Position = UDim2.new(0, 12, 0.5, -22),
 		Size = UDim2.fromOffset(44, 44),
-		Text = o.Icon and "" or "R",
-		TextSize = 20,
-		Font = Enum.Font.GothamBlack,
-		TextColor3 = C.Text,
+		Text = "",
 		BackgroundColor3 = Color3.new(1, 1, 1),
 		BorderSizePixel = 0,
 		Visible = false,
@@ -872,8 +914,19 @@ function RebelUI:CreateWindow(o)
 	}, gui)
 	corner(fab, 22)
 	local fabG = new("UIGradient", { Rotation = 90 }, fab)
-	local fabRing = new("UIStroke", { Thickness = 2 }, fab)
+	local fabRing = new("UIStroke", { Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, fab)
 	win:_ring(fabRing)
+	if not o.Icon then
+		new("TextLabel", {
+			BackgroundTransparency = 1,
+			Size = UDim2.fromScale(1, 1),
+			Text = "R",
+			TextSize = 20,
+			Font = Enum.Font.GothamBlack,
+			TextColor3 = C.Text,
+			ZIndex = 21,
+		}, fab)
+	end
 	if o.Icon then
 		local fi = new("ImageLabel", {
 			BackgroundTransparency = 1,
@@ -987,6 +1040,55 @@ function RebelUI:CreateWindow(o)
 		end
 	end)
 
+	-- ---------- drag the corner to resize the panel
+	if o.Resizable ~= false then
+		local grip = new("TextButton", {
+			AnchorPoint = Vector2.new(1, 1),
+			Position = UDim2.new(1, -2, 1, -2),
+			Size = UDim2.fromOffset(22, 22),
+			BackgroundTransparency = 1,
+			Text = "",
+			AutoButtonColor = false,
+			ZIndex = 12,
+		}, main)
+		local lines = {}
+		for k = 1, 2 do
+			local ln = new("Frame", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromOffset(15 - (k - 1) * 4, 15 - (k - 1) * 4),
+				Size = UDim2.fromOffset(k == 1 and 10 or 6, 2),
+				Rotation = -45,
+				BorderSizePixel = 0,
+				BackgroundTransparency = 0.25,
+				ZIndex = 13,
+			}, grip)
+			corner(ln, 1)
+			lines[k] = ln
+		end
+		win:_onTheme(function(t)
+			for _, ln in ipairs(lines) do
+				ln.BackgroundColor3 = t.Glow
+			end
+		end)
+		local rs, sm, ss = false, nil, nil
+		grip.InputBegan:Connect(function(i)
+			if isPress(i) then
+				rs, sm, ss = true, i.Position, main.AbsoluteSize / math.max(panelScale.Scale, 0.01)
+			end
+		end)
+		win._conns[#win._conns + 1] = UIS.InputChanged:Connect(function(i)
+			if rs and isMove(i) then
+				local d = (i.Position - sm) / math.max(panelScale.Scale, 0.01)
+				win:SetSize(ss.X + d.X, ss.Y + d.Y)
+			end
+		end)
+		win._conns[#win._conns + 1] = UIS.InputEnded:Connect(function(i)
+			if rs and isPress(i) then
+				rs = false
+			end
+		end)
+	end
+
 	-- ---------- buttons and keys
 	local armed = false
 	closeBtn.MouseButton1Click:Connect(function()
@@ -1003,14 +1105,14 @@ function RebelUI:CreateWindow(o)
 	miniBtn.MouseButton1Click:Connect(function()
 		win:Toggle(false)
 	end)
-	local key = o.ToggleKey or Enum.KeyCode.RightShift
 	win._conns[#win._conns + 1] = UIS.InputBegan:Connect(function(i, processed)
-		if not processed and i.KeyCode == key then
+		if not processed and i.KeyCode == win.ToggleKey then
 			win:Toggle()
 		end
 	end)
 
 	win._orderTabs = 0
+	win:SetOpacity(o.Opacity or 100)
 	if o.Open ~= false then
 		win:Toggle(true)
 	else
@@ -1085,10 +1187,36 @@ function Window:SetScale(s)
 end
 
 function Window:SetTransparency(t)
-	-- 0 to 0.6: see-through panel
+	-- 0 to 0.9: see-through panel (SetOpacity is the same thing as a percent)
 	t = math.clamp(tonumber(t) or 0, 0, 0.9)
 	self.Main.BackgroundTransparency = t
 	self._side.BackgroundTransparency = t
+end
+
+function Window:SetOpacity(pct)
+	-- 10 to 100. 100 = solid panel (the default)
+	pct = math.clamp(tonumber(pct) or 100, 10, 100)
+	self.Opacity = pct
+	self:SetTransparency(1 - pct / 100)
+end
+
+function Window:SetSize(w, h)
+	-- the size of the panel in pixels (before UI size scaling). It stays inside the screen.
+	local cam = workspace.CurrentCamera
+	local vp = cam and cam.ViewportSize or Vector2.new(800, 500)
+	if vp.X < 200 or vp.Y < 150 then
+		vp = Vector2.new(800, 450)
+	end
+	local s = math.max(self.Scale, 0.01)
+	w = math.clamp(tonumber(w) or self._baseSize[1], 320, math.max(320, vp.X * 0.96 / s))
+	h = math.clamp(tonumber(h) or self._baseSize[2], 240, math.max(240, vp.Y * 0.96 / s))
+	self.Main.Size = UDim2.fromOffset(math.floor(w), math.floor(h))
+end
+
+function Window:SetToggleKey(k)
+	if typeof(k) == "EnumItem" then
+		self.ToggleKey = k
+	end
 end
 
 function Window:Destroy()
@@ -1112,7 +1240,8 @@ function Window:Notify(o)
 	end
 	o = o or {}
 	if self.Toasts == false then
-		return
+		local nop = function() end
+		return { SetTitle = nop, SetText = nop, Progress = nop, Close = nop }
 	end
 	self._noteN = (self._noteN or 0) + 1
 	local dur = o.Duration or self.NotifyTime or 4
@@ -1141,38 +1270,220 @@ function Window:Notify(o)
 		PaddingRight = UDim.new(0, 12),
 	}, card)
 	new("UIListLayout", { Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder }, card)
-	local h = label(card, o.Title or "Rebelwar", 11, C.Text, true)
+	local hparent = card
+	if o.Icon then
+		hparent = new("Frame", { Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, ZIndex = 31, LayoutOrder = 1 }, card)
+		new("ImageLabel", {
+			Size = UDim2.fromOffset(16, 16),
+			Position = UDim2.fromOffset(0, 1),
+			BackgroundTransparency = 1,
+			Image = asset(o.Icon),
+			ZIndex = 32,
+		}, hparent)
+	end
+	local h = label(hparent, o.Title or "Rebelwar", 11, C.Text, true)
 	h.Size = UDim2.new(1, 0, 0, 14)
 	h.ZIndex = 31
 	h.LayoutOrder = 1
-	if o.Text then
-		local b = label(card, o.Text, 9, C.Dim, false)
-		b.TextWrapped = true
-		b.TextTruncate = Enum.TextTruncate.None
-		b.Size = UDim2.new(1, 0, 0, 0)
-		b.AutomaticSize = Enum.AutomaticSize.Y
-		b.ZIndex = 31
-		b.LayoutOrder = 2
+	if o.Icon then
+		h.Size = UDim2.new(1, -22, 0, 18)
+		h.Position = UDim2.fromOffset(22, 0)
 	end
-	local line = new("Frame", { Size = UDim2.new(1, 0, 0, 2), BorderSizePixel = 0, ZIndex = 31, LayoutOrder = 3 }, card)
+	local b = label(card, o.Text or "", 9, C.Dim, false)
+	b.TextWrapped = true
+	b.TextTruncate = Enum.TextTruncate.None
+	b.Size = UDim2.new(1, 0, 0, 0)
+	b.AutomaticSize = Enum.AutomaticSize.Y
+	b.ZIndex = 31
+	b.LayoutOrder = 2
+	b.Visible = o.Text ~= nil
+	local dismiss
+	local btns = {}
+	if type(o.Actions) == "table" and #o.Actions > 0 then
+		local arow = new("Frame", { Size = UDim2.new(1, 0, 0, 24), BackgroundTransparency = 1, ZIndex = 31, LayoutOrder = 3 }, card)
+		new("UIListLayout", {
+			FillDirection = Enum.FillDirection.Horizontal,
+			Padding = UDim.new(0, 5),
+			VerticalAlignment = Enum.VerticalAlignment.Center,
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}, arow)
+		for n, a in ipairs(o.Actions) do
+			if n > 3 then
+				break
+			end
+			local b = new("TextButton", {
+				Size = UDim2.new(1 / math.min(#o.Actions, 3), -4, 0, 20),
+				BorderSizePixel = 0,
+				Text = tostring(a.Name or "OK"),
+				TextColor3 = C.Text,
+				TextSize = 10,
+				Font = Enum.Font.GothamBold,
+				AutoButtonColor = false,
+				ZIndex = 32,
+				LayoutOrder = n,
+			}, arow)
+			corner(b, 6)
+			btns[#btns + 1] = b
+			b.MouseButton1Click:Connect(function()
+				safe(a.Callback)
+				if dismiss then
+					dismiss()
+				end
+			end)
+		end
+	end
+	local line = new("Frame", { Size = UDim2.new(1, 0, 0, 2), BorderSizePixel = 0, ZIndex = 31, LayoutOrder = 4 }, card)
 	corner(line, 1)
 	local function paint(t)
 		cg.Color = ColorSequence.new(t.BG0, t.B1)
 		local c = kinds[o.Type or ""] or t.Accent
 		st.Color = kinds[o.Type or ""] or t.Glow
 		line.BackgroundColor3 = c
+		for _, b in ipairs(btns) do
+			b.BackgroundColor3 = c:Lerp(Color3.new(0, 0, 0), 0.45)
+		end
 	end
 	paint(self.Theme)
 	tween(card, 0.35, { Position = UDim2.new(0, 0, 0, 0) }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-	tween(line, dur, { Size = UDim2.new(0, 0, 0, 2) }, Enum.EasingStyle.Linear)
-	task.delay(dur, function()
-		if card.Parent then
-			local o2 = tween(card, 0.25, { Position = UDim2.new(0, -290, 0, 0) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-			o2.Completed:Connect(function()
-				wrap:Destroy()
+	local persistent = dur <= 0 or dur == math.huge -- Duration = 0 stays until Close()
+	if persistent then
+		line.Size = UDim2.new(0, 0, 0, 2)
+	else
+		tween(line, dur, { Size = UDim2.new(0, 0, 0, 2) }, Enum.EasingStyle.Linear)
+	end
+	local closing = false
+	dismiss = function()
+		if closing or not card.Parent then
+			return
+		end
+		closing = true
+		local o2 = tween(card, 0.25, { Position = UDim2.new(0, -290, 0, 0) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		o2.Completed:Connect(function()
+			wrap:Destroy()
+		end)
+	end
+	if not persistent then
+		task.delay(dur, dismiss)
+	end
+	-- the card can be changed while it is on screen: n:SetTitle, n:SetText, n:Progress(0 to 1), n:Close()
+	return {
+		SetTitle = function(_, t)
+			h.Text = tostring(t)
+		end,
+		SetText = function(_, t)
+			b.Text = tostring(t)
+			b.Visible = true
+		end,
+		Progress = function(_, v)
+			line.Size = UDim2.new(math.clamp(tonumber(v) or 0, 0, 1), 0, 0, 2)
+		end,
+		Close = function()
+			dismiss()
+		end,
+	}
+end
+
+-- ============================================================ dialog (a pop-up question with buttons)
+function Window:Dialog(o)
+	-- Title, Text, Buttons = { { Name = "Yes", Callback = fn }, { Name = "No" } }  (up to 3, tapping one closes it)
+	o = o or {}
+	if self._dialog and self._dialog.Parent then
+		self._dialog:Destroy()
+	end
+	local t = self.Theme
+	local back = new("TextButton", {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Color3.new(0, 0, 0),
+		BackgroundTransparency = 1,
+		Text = "",
+		AutoButtonColor = false,
+		BorderSizePixel = 0,
+		ZIndex = 60,
+	}, self.Gui)
+	self._dialog = back
+	tween(back, 0.2, { BackgroundTransparency = 0.45 })
+	local card = new("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(280, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		Active = true,
+		ZIndex = 61,
+	}, back)
+	corner(card, 12)
+	new("UIGradient", { Rotation = 90, Color = ColorSequence.new(t.BG0, t.BG1) }, card)
+	new("UIStroke", { Color = t.Glow, Thickness = 1.5 }, card)
+	new("UIPadding", {
+		PaddingTop = UDim.new(0, 12),
+		PaddingBottom = UDim.new(0, 12),
+		PaddingLeft = UDim.new(0, 14),
+		PaddingRight = UDim.new(0, 14),
+	}, card)
+	new("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }, card)
+	local sc = new("UIScale", { Scale = 0.75 }, card)
+	tween(sc, 0.3, { Scale = 1 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+	local h = label(card, o.Title or "Are you sure?", 14, t.Glow, true)
+	h.Font = Enum.Font.GothamBlack
+	h.Size = UDim2.new(1, 0, 0, 20)
+	h.ZIndex = 62
+	h.LayoutOrder = 1
+	if o.Text then
+		local b = label(card, o.Text, 10, C.Dim, false)
+		b.TextWrapped = true
+		b.TextTruncate = Enum.TextTruncate.None
+		b.Size = UDim2.new(1, 0, 0, 0)
+		b.AutomaticSize = Enum.AutomaticSize.Y
+		b.ZIndex = 62
+		b.LayoutOrder = 2
+	end
+	local row = new("Frame", { Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1, ZIndex = 62, LayoutOrder = 3 }, card)
+	new("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		Padding = UDim.new(0, 6),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		VerticalAlignment = Enum.VerticalAlignment.Bottom,
+	}, row)
+	local list = o.Buttons
+	if type(list) ~= "table" or #list == 0 then
+		list = { { Name = "OK" } }
+	end
+	local n = math.min(#list, 3)
+	local function close()
+		if back.Parent then
+			tween(back, 0.15, { BackgroundTransparency = 1 })
+			tween(sc, 0.15, { Scale = 0.8 })
+			task.delay(0.16, function()
+				back:Destroy()
 			end)
 		end
-	end)
+	end
+	for i = 1, n do
+		local a = list[i]
+		local first = i == 1
+		local btn = new("TextButton", {
+			Size = UDim2.new(1 / n, -6 * (n - 1) / n, 0, 30),
+			BackgroundColor3 = first and t.Accent or t.Item,
+			BorderSizePixel = 0,
+			Text = tostring(a.Name or "OK"),
+			TextColor3 = C.Text,
+			TextSize = 11,
+			Font = Enum.Font.GothamBold,
+			AutoButtonColor = false,
+			ZIndex = 63,
+			LayoutOrder = i,
+		}, row)
+		corner(btn, 8)
+		if first then
+			new("UIStroke", { Color = t.Glow, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, btn)
+		end
+		btn.MouseButton1Click:Connect(function()
+			self:_playClick()
+			close()
+			safe(a.Callback)
+		end)
+	end
+	return { Close = close }
 end
 
 function Window:_bind(obj, prop, key)
@@ -1181,7 +1492,243 @@ function Window:_bind(obj, prop, key)
 	end)
 end
 
+-- ============================================================ tooltips
+-- Hover (PC) or press and hold (phone) on an element that has Tooltip = "text".
+function Window:_tip(row, text)
+	local win = self
+	local token = 0
+	local function hide()
+		token += 1
+		if win._tipFrame then
+			win._tipFrame.Visible = false
+		end
+	end
+	local function show()
+		if not win.Gui then
+			return
+		end
+		if not win._tipFrame then
+			local f = new("Frame", {
+				Size = UDim2.fromOffset(190, 0),
+				AutomaticSize = Enum.AutomaticSize.Y,
+				BorderSizePixel = 0,
+				Visible = false,
+				ZIndex = 70,
+			}, win.Gui)
+			corner(f, 8)
+			local st = new("UIStroke", { Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, f)
+			new("UIPadding", {
+				PaddingTop = UDim.new(0, 6),
+				PaddingBottom = UDim.new(0, 6),
+				PaddingLeft = UDim.new(0, 8),
+				PaddingRight = UDim.new(0, 8),
+			}, f)
+			local l = label(f, "", 9, C.Text, false)
+			l.TextWrapped = true
+			l.TextTruncate = Enum.TextTruncate.None
+			l.Size = UDim2.new(1, 0, 0, 0)
+			l.AutomaticSize = Enum.AutomaticSize.Y
+			l.ZIndex = 71
+			win:_onTheme(function(t)
+				f.BackgroundColor3 = t.S0
+				st.Color = t.Glow
+			end)
+			win._tipFrame, win._tipLabel = f, l
+		end
+		win._tipLabel.Text = tostring(text)
+		local cam = workspace.CurrentCamera
+		local vp = cam and cam.ViewportSize or Vector2.new(800, 450)
+		local pos, size = row.AbsolutePosition, row.AbsoluteSize
+		local x = math.clamp(pos.X, 6, math.max(6, vp.X - 200))
+		local y = pos.Y - 40
+		if y < 6 then
+			y = pos.Y + size.Y + 6
+		end
+		win._tipFrame.Position = UDim2.fromOffset(x, y)
+		win._tipFrame.Visible = true
+	end
+	row.MouseEnter:Connect(function()
+		token += 1
+		local mine = token
+		task.delay(0.4, function()
+			if token == mine then
+				show()
+			end
+		end)
+	end)
+	row.MouseLeave:Connect(hide)
+	row.InputBegan:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.Touch then
+			token += 1
+			local mine = token
+			task.delay(0.6, function()
+				if token == mine then
+					show()
+				end
+			end)
+		end
+	end)
+	row.InputEnded:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.Touch then
+			local mine = token
+			task.delay(1.6, function()
+				if token == mine then
+					hide()
+				end
+			end)
+			token += 1
+		end
+	end)
+end
+
+-- ============================================================ keybind list (the keys that are set, on screen)
+function Window:CreateKeybindList(o)
+	-- Position (UDim2), Title, Visible. Lists every Keybind and every Toggle that has a Key.
+	o = o or {}
+	local win = self
+	local f = new("Frame", {
+		AnchorPoint = Vector2.new(1, 0),
+		Position = o.Position or UDim2.new(1, -12, 0, 56),
+		Size = UDim2.fromOffset(150, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		Active = true,
+		ZIndex = 40,
+		Visible = o.Visible ~= false,
+	}, win.Gui)
+	corner(f, 8)
+	local fg = new("UIGradient", { Rotation = 90 }, f)
+	local st = new("UIStroke", { Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, f)
+	new("UIPadding", {
+		PaddingTop = UDim.new(0, 6),
+		PaddingBottom = UDim.new(0, 7),
+		PaddingLeft = UDim.new(0, 9),
+		PaddingRight = UDim.new(0, 9),
+	}, f)
+	new("UIListLayout", { Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder }, f)
+	local title = label(f, o.Title or "Keybinds", 10, C.Text, true)
+	title.Size = UDim2.new(1, 0, 0, 16)
+	title.ZIndex = 41
+	title.LayoutOrder = 0
+	win:_onTheme(function(t)
+		fg.Color = ColorSequence.new(t.BG0, t.B1)
+		st.Color = t.Glow
+		title.TextColor3 = t.Glow
+	end)
+	-- drag it by the title
+	local dragging, sm, sp
+	local grab = new("TextButton", { Size = UDim2.new(1, 0, 0, 16), BackgroundTransparency = 1, Text = "", ZIndex = 42, LayoutOrder = 0 }, title)
+	grab.InputBegan:Connect(function(i)
+		if isPress(i) then
+			dragging, sm, sp = true, i.Position, f.Position
+		end
+	end)
+	win._conns[#win._conns + 1] = UIS.InputChanged:Connect(function(i)
+		if dragging and isMove(i) then
+			local d = i.Position - sm
+			f.Position = UDim2.new(sp.X.Scale, sp.X.Offset + d.X, sp.Y.Scale, sp.Y.Offset + d.Y)
+		end
+	end)
+	win._conns[#win._conns + 1] = UIS.InputEnded:Connect(function(i)
+		if isPress(i) then
+			dragging = false
+		end
+	end)
+	local rows, acc = {}, 1
+	local obj = {}
+	local function refresh()
+		for n, kb in ipairs(win._keybinds) do
+			local l = rows[kb]
+			if not l then
+				l = label(f, "", 9, C.Dim, false)
+				l.Size = UDim2.new(1, 0, 0, 14)
+				l.ZIndex = 41
+				rows[kb] = l
+			end
+			l.LayoutOrder = n
+			local on = kb.active and kb.active() or false
+			local okk, k = pcall(kb.key)
+			l.Text = tostring(kb.name) .. "   [" .. ((okk and k and k.Name) or "?") .. "]" .. (on and "  ON" or "")
+			l.TextColor3 = on and win.Theme.Glow or C.Dim
+		end
+	end
+	table.insert(win._frame, function(_, dt)
+		acc += dt or 0
+		if acc >= 0.25 and f.Visible then
+			acc = 0
+			refresh()
+		end
+	end)
+	refresh()
+	function obj:Show(v)
+		f.Visible = v ~= false
+	end
+	function obj:Destroy()
+		f:Destroy()
+	end
+	win._kbList = obj
+	return obj
+end
+
+-- ============================================================ search
+-- Types in the search box: rows on the current tab whose text matches stay, the rest hide.
+function Window:_filter(q)
+	q = tostring(q or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
+	local tab = self.CurrentTab
+	if not tab then
+		return
+	end
+	local hidden = tab._hidden or {}
+	tab._hidden = hidden
+	for _, obj in ipairs(hidden) do
+		if obj.Parent then
+			obj.Visible = true
+		end
+	end
+	table.clear(hidden)
+	for _, s in ipairs(tab._secs or {}) do
+		if s.apply and s.collapsed then
+			s.apply()
+		end
+	end
+	if q == "" then
+		return
+	end
+	local found = 0
+	for _, row in ipairs(tab.Page:GetChildren()) do
+		if row:IsA("GuiObject") then
+			local match = false
+			if row:IsA("Frame") or row:IsA("TextButton") then
+				for _, d in ipairs(row:GetDescendants()) do
+					if (d:IsA("TextLabel") or d:IsA("TextButton")) and d.Text ~= "" and d.Text:lower():find(q, 1, true) then
+						match = true
+						break
+					end
+				end
+			end
+			if match then
+				found += 1
+			else
+				row.Visible = false
+				table.insert(hidden, row)
+			end
+		end
+	end
+	return found
+end
+
 -- ============================================================ tabs
+function Window:CreateTabDivider(text)
+	-- a small caption between tabs in the side list, like "GAMES" or "SETTINGS"
+	local l = label(self._tabList, string.upper(tostring(text or "")), 8, C.Dim, true)
+	l.Size = UDim2.new(1, 0, 0, 16)
+	l.TextXAlignment = Enum.TextXAlignment.Left
+	new("UIPadding", { PaddingLeft = UDim.new(0, 6), PaddingTop = UDim.new(0, 4) }, l)
+	l.LayoutOrder = #self._tabs * 10 + 5
+	self:_bind(l, "TextColor3", "Glow")
+	return l
+end
+
 function Window:CreateTab(name, icon)
 	-- CreateTab("Main", 123456)  or  CreateTab({ Name=, Icon=, Title=, Description= })
 	local opts = type(name) == "table" and name or { Name = name, Icon = icon }
@@ -1196,7 +1743,7 @@ function Window:CreateTab(name, icon)
 		BackgroundTransparency = 1,
 		Text = "",
 		AutoButtonColor = false,
-		LayoutOrder = #win._tabs + 1,
+		LayoutOrder = (#win._tabs + 1) * 10,
 	}, win._tabList)
 	corner(btn, 8)
 	local bg = new("UIGradient", {}, btn)
@@ -1267,6 +1814,9 @@ function Window:CreateTab(name, icon)
 				other.Page.Visible = false
 				other._set(false)
 			end
+		end
+		if win._search and win._search.Text ~= "" then
+			win._search.Text = ""
 		end
 		page.Position = UDim2.fromOffset(0, 40)
 		page.Visible = true
@@ -1340,19 +1890,135 @@ local function register(self, o, obj)
 		self.Win.Flags[o.Flag] = obj
 	end
 	obj.Flag = o.Flag
+	local row
+	for _, c in ipairs(self.Page:GetChildren()) do
+		if c:IsA("GuiObject") and c.LayoutOrder == self._n then
+			row = c
+			break
+		end
+	end
+	obj.Row = row
+	if o.Tooltip and row then
+		self.Win:_tip(row, o.Tooltip)
+	end
+	local winRef = self.Win
+	function obj:DependsOn(other, value)
+		-- shows this element only while `other:Get() == value` (default true). Example: speed:DependsOn(toggle)
+		if value == nil then
+			value = true
+		end
+		local acc, last = 0, nil
+		local function check(_, dt)
+			acc += dt or 0
+			if last ~= nil and acc < 0.1 then
+				return
+			end
+			acc = 0
+			local ok, v = pcall(function()
+				return other:Get()
+			end)
+			local show = ok and v == value
+			if show ~= last then
+				last = show
+				if row and row.Parent then
+					row.Visible = show
+				end
+			end
+		end
+		table.insert(winRef._frame, check)
+		check(0, 1)
+		return self
+	end
+	if not obj.SetVisible then
+		function obj:SetVisible(v)
+			if row then
+				row.Visible = v ~= false
+			end
+		end
+	end
+	if not obj.Destroy then
+		local win = self.Win
+		function obj:Destroy()
+			if row then
+				row:Destroy()
+			end
+			if o.Flag and win.Flags[o.Flag] == self then
+				win.Flags[o.Flag] = nil
+			end
+		end
+	end
 	return obj
 end
 
 function Tab:Section(text)
-	local l = label(self.Page, text or "Section", 11, C.Text, true)
-	l.Size = UDim2.new(1, 0, 0, 18)
-	l.LayoutOrder = self:_next()
-	self.Win:_bind(l, "TextColor3", "Glow")
-	local obj = {}
-	function obj:Set(v)
-		l.Text = tostring(v)
+	-- Section("Name")  or  Section({ Name = "Name", Collapsible = true, Collapsed = false })
+	local o = type(text) == "table" and text or { Name = text }
+	local name = tostring(o.Name or "Section")
+	self._secs = self._secs or {}
+	if not o.Collapsible then
+		local l = label(self.Page, name, 11, C.Text, true)
+		l.Size = UDim2.new(1, 0, 0, 18)
+		l.LayoutOrder = self:_next()
+		self.Win:_bind(l, "TextColor3", "Glow")
+		table.insert(self._secs, { order = l.LayoutOrder })
+		local obj = {}
+		function obj:Set(v)
+			l.Text = tostring(v)
+		end
+		return register(self, {}, obj)
 	end
-	return obj
+	local tab = self
+	local b = new("TextButton", {
+		Size = UDim2.new(1, 0, 0, 20),
+		BackgroundTransparency = 1,
+		Text = "",
+		AutoButtonColor = false,
+		LayoutOrder = self:_next(),
+	}, self.Page)
+	local l = label(b, "", 11, C.Text, true)
+	l.Size = UDim2.fromScale(1, 1)
+	self.Win:_bind(l, "TextColor3", "Glow")
+	local sec = { order = b.LayoutOrder, collapsed = o.Collapsed == true }
+	table.insert(self._secs, sec)
+	local obj = {}
+	local function render()
+		l.Text = (sec.collapsed and ">  " or "v  ") .. name
+	end
+	function sec.apply()
+		local to = math.huge
+		for _, s in ipairs(tab._secs) do
+			if s.order > sec.order and s.order < to then
+				to = s.order
+			end
+		end
+		for _, c in ipairs(tab.Page:GetChildren()) do
+			if c:IsA("GuiObject") and c.LayoutOrder > sec.order and c.LayoutOrder < to then
+				c.Visible = not sec.collapsed
+			end
+		end
+	end
+	function obj:Set(v)
+		name = tostring(v)
+		render()
+	end
+	function obj:Collapse(state)
+		if state == nil then
+			state = not sec.collapsed
+		end
+		sec.collapsed = state
+		render()
+		sec.apply()
+	end
+	function obj:IsCollapsed()
+		return sec.collapsed
+	end
+	b.MouseButton1Click:Connect(function()
+		tab.Win:_playClick()
+		obj:Collapse()
+	end)
+	render()
+	task.defer(sec.apply) -- rows you add after the section are hidden too when it starts collapsed
+	return register(self, {}, obj)
 end
 
 function Tab:Divider()
@@ -1380,11 +2046,12 @@ function Tab:Label(text)
 	function obj:Get()
 		return l.Text
 	end
-	return obj
+	return register(self, {}, obj)
 end
 
 function Tab:Button(o)
 	-- Name, Description, Callback: a shiny gradient button with a spinning ring and a click ripple
+	-- Risky = true (red), DoubleClick = true (asks "Tap again"), Disabled = true, Tooltip = "text"
 	o = o or {}
 	local win = self.Win
 	local hasDesc = o.Description ~= nil
@@ -1402,7 +2069,11 @@ function Tab:Button(o)
 	local st = new("UIStroke", { ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Thickness = 1.5 }, b)
 	win:_ring(st)
 	win:_onTheme(function(t)
-		bg.Color = ColorSequence.new(t.Accent, t.Dark:Lerp(t.Accent, 0.35))
+		if o.Risky then
+			bg.Color = ColorSequence.new(C.Bad, C.Bad:Lerp(Color3.new(0, 0, 0), 0.5))
+		else
+			bg.Color = ColorSequence.new(t.Accent, t.Dark:Lerp(t.Accent, 0.35))
+		end
 	end)
 	local shine = new("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
@@ -1443,6 +2114,14 @@ function Tab:Button(o)
 		}, b)
 	end
 	local sc = new("UIScale", {}, b)
+	local disabled = o.Disabled == true
+	local armed = false
+	local nameText = o.Name or "Button"
+	local function look()
+		b.BackgroundTransparency = disabled and 0.55 or 0
+		lbl.TextTransparency = disabled and 0.5 or 0
+	end
+	look()
 	b.MouseButton1Down:Connect(function()
 		tween(sc, 0.08, { Scale = 0.95 })
 	end)
@@ -1450,6 +2129,22 @@ function Tab:Button(o)
 		tween(sc, 0.25, { Scale = 1 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 	end)
 	b.MouseButton1Click:Connect(function()
+		if disabled then
+			return
+		end
+		if o.DoubleClick and not armed then
+			armed = true
+			lbl.Text = "Tap again to confirm"
+			task.delay(2, function()
+				if armed then
+					armed = false
+					lbl.Text = nameText
+				end
+			end)
+			return
+		end
+		armed = false
+		lbl.Text = nameText
 		win:_playClick()
 		local r = new("Frame", {
 			AnchorPoint = Vector2.new(0.5, 0.5),
@@ -1472,6 +2167,7 @@ function Tab:Button(o)
 		safe(o.Callback)
 	end
 	function obj:SetName(n)
+		nameText = n
 		lbl.Text = n
 	end
 	function obj:SetDescription(d)
@@ -1479,7 +2175,11 @@ function Tab:Button(o)
 			dl.Text = d
 		end
 	end
-	return obj
+	function obj:SetDisabled(v)
+		disabled = v == true
+		look()
+	end
+	return register(self, o, obj)
 end
 
 function Tab:Toggle(o)
@@ -1676,6 +2376,15 @@ function Tab:Toggle(o)
 		obj:Toggle()
 	end)
 	if o.Key then
+		table.insert(win._keybinds, {
+			name = o.Name or "Toggle",
+			key = function()
+				return o.Key
+			end,
+			active = function()
+				return obj.Value
+			end,
+		})
 		win._conns[#win._conns + 1] = UIS.InputBegan:Connect(function(i, processed)
 			if not processed and i.KeyCode == o.Key then
 				obj:Toggle()
@@ -1738,7 +2447,7 @@ function Tab:Slider(o)
 		local rel = (obj.Value - min) / math.max(max - min, 1e-9)
 		fill.Size = UDim2.fromScale(rel, 1)
 		knob.Position = UDim2.new(rel, 0, 0.5, 0)
-		val.Text = tostring(obj.Value) .. suffix
+		val.Text = (o.Prefix or "") .. tostring(obj.Value) .. suffix
 	end
 	local function snap(v)
 		v = math.clamp(v, min, max)
@@ -1791,12 +2500,24 @@ function Tab:Slider(o)
 end
 
 function Tab:Dropdown(o)
-	-- Name, Options, Default, Multi, Flag, Callback(choice) (Multi gives { Speed = true, ... })
+	-- Name, Options (a list, or "Players" for everyone in the server), Default, Multi, Flag, Callback(choice) (Multi gives { Speed = true, ... })
+	-- Searchable: a search box inside the list (automatic when there are more than 7 options)
 	o = o or {}
 	local win = self.Win
-	local options = o.Options or {}
+	local function playerNames()
+		local out = {}
+		for _, pl in ipairs(Players:GetPlayers()) do
+			table.insert(out, pl.Name)
+		end
+		table.sort(out)
+		return out
+	end
+	local isPlayers = o.Options == "Players"
+	local options = isPlayers and playerNames() or o.Options or {}
 	local multi = o.Multi == true
+	local searchable = o.Searchable == true or (o.Searchable ~= false and #options > 7)
 	local HEAD, ITEM = 34, 24
+	local SH = searchable and 26 or 0
 	local row = self:_row(HEAD)
 	row.ClipsDescendants = true
 	local name = label(row, o.Name or "Dropdown", 11, C.Text, true)
@@ -1811,9 +2532,33 @@ function Tab:Dropdown(o)
 	arrow.Position = UDim2.new(1, -22, 0, 0)
 	arrow.Size = UDim2.fromOffset(14, HEAD)
 	local head = new("TextButton", { BackgroundTransparency = 1, Text = "", Size = UDim2.new(1, 0, 0, HEAD) }, row)
+	local items = {}
+	local sbox
+	if searchable then
+		sbox = new("TextBox", {
+			Position = UDim2.new(0, 6, 0, HEAD),
+			Size = UDim2.new(1, -12, 0, 22),
+			BorderSizePixel = 0,
+			Text = "",
+			PlaceholderText = "Search...",
+			PlaceholderColor3 = C.Dim,
+			TextColor3 = C.Text,
+			TextSize = 10,
+			Font = Enum.Font.Gotham,
+			ClearTextOnFocus = false,
+		}, row)
+		corner(sbox, 6)
+		win:_bind(sbox, "BackgroundColor3", "Item")
+		sbox:GetPropertyChangedSignal("Text"):Connect(function()
+			local q = sbox.Text:lower()
+			for v, b in pairs(items) do
+				b.Visible = q == "" or tostring(v):lower():find(q, 1, true) ~= nil
+			end
+		end)
+	end
 	local list = new("ScrollingFrame", {
-		Position = UDim2.new(0, 6, 0, HEAD),
-		Size = UDim2.new(1, -12, 1, -HEAD - 6),
+		Position = UDim2.new(0, 6, 0, HEAD + SH),
+		Size = UDim2.new(1, -12, 1, -HEAD - SH - 6),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		ScrollBarThickness = 2,
@@ -1823,7 +2568,6 @@ function Tab:Dropdown(o)
 	new("UIListLayout", { Padding = UDim.new(0, 2) }, list)
 
 	local obj = { Value = multi and {} or nil, Open = false }
-	local items = {}
 	local function selected(v)
 		if multi then
 			return obj.Value[v] == true
@@ -1879,8 +2623,11 @@ function Tab:Dropdown(o)
 	local function setOpen(open)
 		obj.Open = open
 		local shown = math.min(#options, 5)
-		tween(row, 0.18, { Size = UDim2.new(1, 0, 0, open and (HEAD + shown * (ITEM + 2) + 8) or HEAD) })
+		tween(row, 0.18, { Size = UDim2.new(1, 0, 0, open and (HEAD + SH + shown * (ITEM + 2) + 8) or HEAD) })
 		arrow.Text = open and "^" or "v"
+		if not open and sbox then
+			sbox.Text = ""
+		end
 	end
 	function obj:Close()
 		setOpen(false)
@@ -1928,11 +2675,27 @@ function Tab:Dropdown(o)
 		render()
 	end
 	win:_onTheme(render)
+	if isPlayers then
+		-- Options = "Players": the list follows who is in the server
+		local function again()
+			local keep = obj.Value
+			obj:Refresh(playerNames())
+			if not multi and keep ~= nil and items[keep] then
+				obj.Value = keep
+				render()
+			end
+		end
+		win._conns[#win._conns + 1] = Players.PlayerAdded:Connect(again)
+		win._conns[#win._conns + 1] = Players.PlayerRemoving:Connect(function()
+			task.delay(0.1, again)
+		end)
+	end
 	return register(self, o, obj)
 end
 
 function Tab:Input(o)
 	-- Name, Default, Placeholder, Clear, Flag, Callback(text)
+	-- Numeric = true: only numbers, Callback(number). Min / Max clamp it.
 	o = o or {}
 	local win = self.Win
 	local row = self:_row(36)
@@ -1955,17 +2718,41 @@ function Tab:Input(o)
 	corner(box, 6)
 	win:_bind(box, "BackgroundColor3", "Inset")
 	local obj = {}
+	local function value()
+		if not o.Numeric then
+			return box.Text
+		end
+		local n = tonumber(box.Text) or tonumber(o.Default) or 0
+		return math.clamp(n, o.Min or -math.huge, o.Max or math.huge)
+	end
+	if o.Numeric or o.MaxLength then
+		box:GetPropertyChangedSignal("Text"):Connect(function()
+			local clean = box.Text
+			if o.Numeric then
+				clean = (clean:gsub("[^%d%.%-]", ""))
+			end
+			if o.MaxLength and #clean > o.MaxLength then
+				clean = clean:sub(1, o.MaxLength)
+			end
+			if clean ~= box.Text then
+				box.Text = clean
+			end
+		end)
+	end
 	function obj:Set(v, silent)
 		box.Text = tostring(v)
 		if not silent then
-			safe(o.Callback, box.Text)
+			safe(o.Callback, value())
 		end
 	end
 	function obj:Get()
-		return box.Text
+		return value()
 	end
 	box.FocusLost:Connect(function()
-		safe(o.Callback, box.Text)
+		if o.Numeric then
+			box.Text = tostring(value())
+		end
+		safe(o.Callback, value())
 		if o.Clear then
 			box.Text = ""
 		end
@@ -1975,7 +2762,9 @@ end
 
 function Tab:Keybind(o)
 	-- Name, Default (Enum.KeyCode), Flag, Callback() when the key is pressed, Changed(key) when rebound
+	-- Mode: "Press" (default, Callback()), "Toggle" (Callback(true/false) each press), "Hold" (Callback(true) down, Callback(false) up)
 	o = o or {}
+	local mode = o.Mode or "Press"
 	local win = self.Win
 	local row = self:_row(36)
 	local name = label(row, o.Name or "Keybind", 11, C.Text, true)
@@ -1993,7 +2782,16 @@ function Tab:Keybind(o)
 	}, row)
 	corner(b, 6)
 	win:_bind(b, "BackgroundColor3", "Inset")
-	local obj = { Value = o.Default or Enum.KeyCode.F, Listening = false }
+	local obj = { Value = o.Default or Enum.KeyCode.F, Listening = false, State = false }
+	table.insert(win._keybinds, {
+		name = o.Name or "Keybind",
+		key = function()
+			return obj.Value
+		end,
+		active = function()
+			return obj.State
+		end,
+	})
 	local function render()
 		b.Text = obj.Listening and "press a key..." or obj.Value.Name
 	end
@@ -2019,9 +2817,25 @@ function Tab:Keybind(o)
 		if obj.Listening then
 			obj:Set(i.KeyCode == Enum.KeyCode.Escape and obj.Value or i.KeyCode)
 		elseif not processed and i.KeyCode == obj.Value then
-			safe(o.Callback)
+			if mode == "Toggle" then
+				obj.State = not obj.State
+				safe(o.Callback, obj.State)
+			elseif mode == "Hold" then
+				obj.State = true
+				safe(o.Callback, true)
+			else
+				safe(o.Callback)
+			end
 		end
 	end)
+	if mode == "Hold" then
+		win._conns[#win._conns + 1] = UIS.InputEnded:Connect(function(i)
+			if obj.State and i.KeyCode == obj.Value then
+				obj.State = false
+				safe(o.Callback, false)
+			end
+		end)
+	end
 	render()
 	return register(self, o, obj)
 end
@@ -2246,7 +3060,7 @@ function Tab:Header(o)
 			body.Text = t
 		end
 	end
-	return obj
+	return register(self, o, obj)
 end
 
 function Tab:Image(o)
@@ -2282,7 +3096,7 @@ function Tab:Image(o)
 			cap.Text = t
 		end
 	end
-	return obj
+	return register(self, o, obj)
 end
 
 function Tab:Progress(o)
@@ -2351,7 +3165,50 @@ function Tab:Paragraph(o)
 		t.Text = title or t.Text
 		b.Text = text or b.Text
 	end
-	return obj
+	return register(self, o, obj)
+end
+
+function Tab:Notice(o)
+	-- a colored box for warnings and tips. Type = "warn" (yellow), "error" (red), "success" (green) or none. Title, Text
+	o = o or {}
+	local kinds = { warn = C.Yellow, error = C.Bad, success = C.Green }
+	local row = self:_row(30)
+	row.AutomaticSize = Enum.AutomaticSize.Y
+	row.Size = UDim2.new(1, 0, 0, 0)
+	new("UIPadding", {
+		PaddingTop = UDim.new(0, 8),
+		PaddingBottom = UDim.new(0, 8),
+		PaddingLeft = UDim.new(0, 10),
+		PaddingRight = UDim.new(0, 10),
+	}, row)
+	new("UIListLayout", { Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder }, row)
+	local st = new("UIStroke", { Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, row)
+	local t = label(row, o.Title or "Note", 11, C.Text, true)
+	t.Size = UDim2.new(1, 0, 0, 14)
+	t.LayoutOrder = 1
+	local b = label(row, o.Text or "", 9, C.Dim, false)
+	b.TextWrapped = true
+	b.TextTruncate = Enum.TextTruncate.None
+	b.Size = UDim2.new(1, 0, 0, 0)
+	b.AutomaticSize = Enum.AutomaticSize.Y
+	b.LayoutOrder = 2
+	local kind = o.Type
+	local function paint()
+		local c = kinds[kind or ""] or self.Win.Theme.Glow
+		st.Color = c
+		t.TextColor3 = c
+	end
+	self.Win:_onTheme(paint)
+	local obj = {}
+	function obj:Set(title, text)
+		t.Text = title or t.Text
+		b.Text = text or b.Text
+	end
+	function obj:SetType(k)
+		kind = k
+		paint()
+	end
+	return register(self, o, obj)
 end
 
 function Tab:Choice(o)
@@ -2473,14 +3330,20 @@ function Tab:Cycle(o)
 			Size = UDim2.fromOffset(24, 24),
 			Position = UDim2.new(1, x, 0.5, -12),
 			BackgroundColor3 = C.White,
-			Text = txt,
-			TextColor3 = C.White,
-			Font = Enum.Font.GothamBold,
-			TextSize = 13,
+			Text = "",
 			AutoButtonColor = false,
 		}, row)
 		corner(b, 7)
 		local g = new("UIGradient", { Rotation = 90 }, b)
+		new("TextLabel", {
+			BackgroundTransparency = 1,
+			Size = UDim2.fromScale(1, 1),
+			Text = txt,
+			TextColor3 = C.White,
+			Font = Enum.Font.GothamBold,
+			TextSize = 13,
+			ZIndex = 2,
+		}, b)
 		win:_onTheme(function(t)
 			g.Color = ColorSequence.new(t.Accent, t.Dark:Lerp(t.Accent, 0.35))
 		end)
@@ -2922,11 +3785,7 @@ function Window:_file(file)
 	return (clean == "" and "RebelUI" or clean) .. "_settings.json"
 end
 
-function Window:Save(file)
-	-- saves every element that has a Flag. Needs an executor with writefile. Returns true on success.
-	if type(writefile) ~= "function" then
-		return false
-	end
+function Window:_collect()
 	local data = {}
 	for flag, obj in pairs(self.Flags) do
 		local ok, v = pcall(function()
@@ -2937,10 +3796,35 @@ function Window:Save(file)
 		end
 	end
 	data["__theme"] = self.ThemeName
+	return data
+end
+
+function Window:Save(file)
+	-- saves every element that has a Flag. Needs an executor with writefile. Returns true on success.
+	if type(writefile) ~= "function" then
+		return false
+	end
+	local data = self:_collect()
 	local ok = pcall(function()
 		writefile(self:_file(file), game:GetService("HttpService"):JSONEncode(data))
 	end)
 	return ok
+end
+
+function Window:Export()
+	-- every Flag as one line of text you can share. Window:Import(text) puts it back.
+	return game:GetService("HttpService"):JSONEncode(self:_collect())
+end
+
+function Window:Import(text)
+	local ok, data = pcall(function()
+		return game:GetService("HttpService"):JSONDecode(tostring(text))
+	end)
+	if not ok or type(data) ~= "table" then
+		return false
+	end
+	self:_apply(data)
+	return true
 end
 
 function Window:Load(file)
@@ -2959,6 +3843,11 @@ function Window:Load(file)
 	if not ok or type(data) ~= "table" then
 		return false
 	end
+	self:_apply(data)
+	return true
+end
+
+function Window:_apply(data)
 	if data["__theme"] and THEMES[data["__theme"]] then
 		self:SetTheme(data["__theme"])
 	end
@@ -2974,6 +3863,129 @@ function Window:Load(file)
 		end
 	end
 	return true
+end
+
+-- ============================================================ named profiles
+-- Several saved setups per script ("Legit", "Rage", ...). Plain files, no folders needed.
+local function cleanName(s)
+	s = tostring(s or ""):gsub("[^%w _%-]", ""):gsub("^%s+", ""):gsub("%s+$", "")
+	return s
+end
+
+function Window:_base()
+	local clean = tostring(self.TitleText):gsub("[^%w]", "")
+	return "RebelUI_" .. (clean == "" and "Script" or clean)
+end
+
+function Window:_readIndex()
+	local idx = { names = {} }
+	if type(readfile) == "function" and type(isfile) == "function" then
+		local path = self:_base() .. "_profiles.json"
+		local ok, data = pcall(function()
+			if isfile(path) then
+				return game:GetService("HttpService"):JSONDecode(readfile(path))
+			end
+		end)
+		if ok and type(data) == "table" then
+			idx.auto = type(data.auto) == "string" and data.auto or nil
+			if type(data.names) == "table" then
+				for _, n in ipairs(data.names) do
+					if type(n) == "string" then
+						table.insert(idx.names, n)
+					end
+				end
+			end
+		end
+	end
+	return idx
+end
+
+function Window:_writeIndex(idx)
+	if type(writefile) ~= "function" then
+		return false
+	end
+	return (pcall(function()
+		writefile(self:_base() .. "_profiles.json", game:GetService("HttpService"):JSONEncode(idx))
+	end))
+end
+
+function Window:_pfile(name)
+	return self:_base() .. "_profile_" .. name .. ".json"
+end
+
+function Window:ListProfiles()
+	local names = self:_readIndex().names
+	table.sort(names, function(a, b)
+		return a:lower() < b:lower()
+	end)
+	return names
+end
+
+function Window:SaveProfile(name)
+	name = cleanName(name)
+	if name == "" then
+		return false, "Type a name first."
+	end
+	if not self:Save(self:_pfile(name)) then
+		return false, "This executor can't write files."
+	end
+	local idx = self:_readIndex()
+	if not table.find(idx.names, name) then
+		table.insert(idx.names, name)
+	end
+	self:_writeIndex(idx)
+	return true
+end
+
+function Window:LoadProfile(name)
+	name = cleanName(name)
+	if name == "" then
+		return false, "Pick a profile first."
+	end
+	if not self:Load(self:_pfile(name)) then
+		return false, "That profile was not found."
+	end
+	return true
+end
+
+function Window:DeleteProfile(name)
+	name = cleanName(name)
+	local idx = self:_readIndex()
+	local at = table.find(idx.names, name)
+	if not at then
+		return false, "That profile was not found."
+	end
+	table.remove(idx.names, at)
+	if idx.auto == name then
+		idx.auto = nil
+	end
+	pcall(function()
+		if type(delfile) == "function" then
+			delfile(self:_pfile(name))
+		end
+	end)
+	self:_writeIndex(idx)
+	return true
+end
+
+function Window:SetAutoLoad(name)
+	-- the profile that AutoLoad() applies. nil turns it off.
+	local idx = self:_readIndex()
+	idx.auto = name and cleanName(name) or nil
+	if idx.auto == "" then
+		idx.auto = nil
+	end
+	self:_writeIndex(idx)
+	return idx.auto
+end
+
+function Window:AutoLoad()
+	-- call once after your tabs exist. Applies the auto-load profile (or the plain saved file) if there is one.
+	local idx = self:_readIndex()
+	if idx.auto and self:Load(self:_pfile(idx.auto)) then
+		return idx.auto
+	end
+	return nil
 end
 
 -- ============================================================ ready-made Settings tab
@@ -3017,13 +4029,15 @@ function Window:CreateSettingsTab(o)
 		end,
 	})
 	tab:Slider({
-		Name = "See-through",
-		Min = 0,
-		Max = 60,
-		Default = 0,
+		Name = "Opacity",
+		Description = "100% = solid panel",
+		Min = 30,
+		Max = 100,
+		Default = win.Opacity,
 		Suffix = "%",
+		Flag = "__opacity",
 		Callback = function(v)
-			win:SetTransparency(v / 100)
+			win:SetOpacity(v)
 		end,
 	})
 	if o.Bar then
@@ -3065,6 +4079,15 @@ function Window:CreateSettingsTab(o)
 		end,
 	})
 	tab:Section("Panel")
+	tab:Keybind({
+		Name = "Open / close key",
+		Default = win.ToggleKey,
+		Flag = "__togglekey",
+		Changed = function(k)
+			win:SetToggleKey(k)
+			win:Notify({ Title = "Key set", Text = "Press " .. k.Name .. " to open or close the panel." })
+		end,
+	})
 	tab:Toggle({
 		Name = "Confirm on close",
 		Description = "Tap X twice to close",
@@ -3083,6 +4106,168 @@ function Window:CreateSettingsTab(o)
 			win:Notify({ Title = "Position", Text = "The panel is back in the middle." })
 		end,
 	})
+	tab:Section("Profiles")
+	local nameBox, picker
+	nameBox = tab:Input({
+		Name = "Profile name",
+		Placeholder = "e.g. Legit",
+	})
+	picker = tab:Dropdown({
+		Name = "Saved profiles",
+		Options = win:ListProfiles(),
+		Callback = function(n)
+			if type(n) == "string" then
+				nameBox:Set(n, true)
+			end
+		end,
+	})
+	local function result(ok, why, okText, okTitle)
+		win:Notify({
+			Title = ok and okTitle or "Profile",
+			Text = ok and okText or why,
+			Type = ok and "success" or "warn",
+		})
+		picker:Refresh(win:ListProfiles())
+	end
+	tab:Button({
+		Name = "Save profile",
+		Description = "Saves everything under that name",
+		Callback = function()
+			local ok, why = win:SaveProfile(nameBox:Get())
+			result(ok, why, "Saved as " .. cleanName(nameBox:Get()) .. ".", "Saved")
+		end,
+	})
+	tab:Button({
+		Name = "Load profile",
+		Callback = function()
+			local ok, why = win:LoadProfile(nameBox:Get())
+			result(ok, why, "Profile " .. cleanName(nameBox:Get()) .. " is on.", "Loaded")
+		end,
+	})
+	tab:Button({
+		Name = "Delete profile",
+		Callback = function()
+			local ok, why = win:DeleteProfile(nameBox:Get())
+			result(ok, why, "Profile deleted.", "Deleted")
+		end,
+	})
+	tab:Button({
+		Name = "Load this profile on start",
+		Description = "Your script can call Win:AutoLoad()",
+		Callback = function()
+			local n = cleanName(nameBox:Get())
+			if n == "" or not table.find(win:ListProfiles(), n) then
+				win:Notify({ Title = "Profile", Text = "Save the profile first.", Type = "warn" })
+				return
+			end
+			win:SetAutoLoad(n)
+			win:Notify({ Title = "Auto-load", Text = n .. " will load next time.", Type = "success" })
+		end,
+	})
+	tab:Section("Share settings")
+	tab:Button({
+		Name = "Copy settings code",
+		Description = "One line of text with all your settings",
+		Callback = function()
+			local ok = type(setclipboard) == "function" and pcall(setclipboard, win:Export())
+			win:Notify({
+				Title = ok and "Copied" or "Can't copy",
+				Text = ok and "Send it to a friend. They paste it below." or "This executor can't copy text.",
+				Type = ok and "success" or "warn",
+			})
+		end,
+	})
+	tab:Input({
+		Name = "Paste settings code",
+		Placeholder = "paste, then tap done",
+		Clear = true,
+		Callback = function(text)
+			if tostring(text) ~= "" then
+				local ok = win:Import(text)
+				win:Notify({
+					Title = ok and "Imported" or "Not a settings code",
+					Text = ok and "The settings were applied." or "Copy the whole code and try again.",
+					Type = ok and "success" or "warn",
+				})
+			end
+		end,
+	})
+	if o.Utilities ~= false then
+		tab:Section("Utilities")
+		local lp = Players.LocalPlayer
+		tab:Toggle({
+			Name = "Anti-AFK",
+			Description = "Stops the 20 minute idle kick",
+			Flag = "__antiafk",
+			Callback = function(on)
+				if win._afk then
+					win._afk:Disconnect()
+					win._afk = nil
+				end
+				if on and lp then
+					local ok, vu = pcall(function()
+						return game:GetService("VirtualUser")
+					end)
+					if ok and vu then
+						local okc, c = pcall(function()
+							return lp.Idled:Connect(function()
+								pcall(function()
+									vu:CaptureController()
+									vu:ClickButton2(Vector2.new())
+								end)
+							end)
+						end)
+						if okc and c then
+							win._afk = c
+							win._conns[#win._conns + 1] = c
+						end
+					end
+				end
+			end,
+		})
+		if type(setfpscap) == "function" then
+			tab:Slider({
+				Name = "FPS cap",
+				Min = 30,
+				Max = 240,
+				Step = 10,
+				Default = 60,
+				Flag = "__fpscap",
+				Callback = function(v)
+					pcall(setfpscap, v)
+				end,
+			})
+		end
+		tab:Button({
+			Name = "Rejoin this server",
+			Callback = function()
+				win:Dialog({
+					Title = "Rejoin?",
+					Text = "You will leave this server and come back to the same game.",
+					Buttons = {
+						{
+							Name = "Rejoin",
+							Callback = function()
+								pcall(function()
+									game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
+								end)
+							end,
+						},
+						{ Name = "Cancel" },
+					},
+				})
+			end,
+		})
+		tab:Button({
+			Name = "Copy game ID",
+			Description = "The place id of this game",
+			Callback = function()
+				local ok = type(setclipboard) == "function" and pcall(setclipboard, tostring(game.PlaceId))
+				win:Notify({ Title = ok and "Copied" or "Can't copy", Text = tostring(game.PlaceId), Type = ok and "success" or "warn" })
+			end,
+		})
+	end
+	tab:Section("Files")
 	tab:Button({
 		Name = "Save settings",
 		Description = "Keeps every element that has a Flag",
@@ -3109,10 +4294,236 @@ function Window:CreateSettingsTab(o)
 	tab:Button({
 		Name = "Unload panel",
 		Callback = function()
-			win:Destroy()
+			win:Dialog({
+				Title = "Unload the panel?",
+				Text = "Everything you turned on stays as it is. The panel closes for good.",
+				Buttons = { { Name = "Unload", Callback = function() win:Destroy() end }, { Name = "Cancel" } },
+			})
 		end,
 	})
 	return tab
+end
+
+-- ============================================================ key gate
+-- Asks for a key before your script goes on. It waits (yields) until the key is right or the window is closed.
+--   local ok = UI:KeyGate({ Title = "My Script", Keys = { "ABC-123" }, Link = "https://discord.gg/..." })
+--   if not ok then return end
+-- Use Check = function(key) return true/false end to ask your own server (for example an HttpGet).
+function RebelUI:KeyGate(o)
+	o = o or {}
+	local theme = THEMES[o.Theme or "Red"] or THEMES.Red
+	local clean = tostring(o.Name or o.Title or "RebelUI"):gsub("[^%w]", "")
+	local file = o.File or ("RebelUI_" .. (clean == "" and "Script" or clean) .. "_key.txt")
+
+	local function trim(s)
+		s = tostring(s or ""):gsub("^%s+", ""):gsub("%s+$", "")
+		return s
+	end
+	local function valid(k)
+		k = trim(k)
+		if k == "" then
+			return false
+		end
+		if type(o.Check) == "function" then
+			local ok, r = pcall(o.Check, k)
+			return ok and r == true
+		end
+		for _, good in ipairs(o.Keys or {}) do
+			if k == tostring(good) then
+				return true
+			end
+		end
+		return false
+	end
+
+	-- a key saved on an earlier run
+	if o.Save ~= false and type(readfile) == "function" and type(isfile) == "function" then
+		local okf, saved = pcall(function()
+			if isfile(file) then
+				return readfile(file)
+			end
+		end)
+		if okf and saved and valid(saved) then
+			return true, trim(saved)
+		end
+	end
+
+	local name = (o.Name or "RebelUI") .. "_KeyGate"
+	clearOld(name)
+	local gui = new("ScreenGui", {
+		Name = name,
+		ResetOnSpawn = false,
+		IgnoreGuiInset = true,
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+		DisplayOrder = 1001,
+	})
+	pcall(function()
+		gui.ScreenInsets = Enum.ScreenInsets.None
+	end)
+	gui.Parent = pickParent()
+	local back = new("TextButton", {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Color3.new(0, 0, 0),
+		BackgroundTransparency = 0.35,
+		Text = "",
+		AutoButtonColor = false,
+		BorderSizePixel = 0,
+	}, gui)
+	local card = new("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(300, 196),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		Active = true,
+	}, back)
+	corner(card, 12)
+	new("UIGradient", { Rotation = 90, Color = ColorSequence.new(theme.BG0, theme.BG1) }, card)
+	local scl = new("UIScale", { Scale = 0.7 }, card)
+	local ring = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1.5 }, card)
+	local rg = new("UIGradient", { Color = ringSeq(theme) }, ring)
+	local spin = RunService.RenderStepped:Connect(function()
+		rg.Rotation = (os.clock() * 80) % 360
+	end)
+	tween(scl, 0.35, { Scale = 1 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+
+	local title = label(card, o.Title or "Enter your key", 15, theme.Glow, true)
+	title.Position = UDim2.fromOffset(16, 12)
+	title.Size = UDim2.new(1, -52, 0, 22)
+	title.Font = Enum.Font.GothamBlack
+	local sub = label(card, o.Subtitle or "Paste the key and tap Continue.", 10, C.Dim, false)
+	sub.Position = UDim2.fromOffset(16, 34)
+	sub.Size = UDim2.new(1, -32, 0, 14)
+	local closeB = new("TextButton", {
+		Position = UDim2.new(1, -30, 0, 8),
+		Size = UDim2.fromOffset(22, 22),
+		BackgroundTransparency = 1,
+		Text = "X",
+		TextColor3 = Color3.fromRGB(235, 40, 50),
+		TextSize = 12,
+		Font = Enum.Font.GothamBold,
+		AutoButtonColor = false,
+	}, card)
+	local box = new("TextBox", {
+		Position = UDim2.fromOffset(16, 62),
+		Size = UDim2.new(1, -32, 0, 34),
+		BackgroundColor3 = theme.Inset,
+		BorderSizePixel = 0,
+		Text = "",
+		PlaceholderText = "your key",
+		PlaceholderColor3 = C.Dim,
+		TextColor3 = C.Text,
+		TextSize = 12,
+		Font = Enum.Font.GothamMedium,
+		ClearTextOnFocus = false,
+	}, card)
+	corner(box, 8)
+	new("UIStroke", { Color = theme.Dark, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, box)
+	local status = label(card, "", 10, C.Dim, false)
+	status.Position = UDim2.fromOffset(16, 100)
+	status.Size = UDim2.new(1, -32, 0, 14)
+
+	local function button(text, x, w, accent)
+		local b = new("TextButton", {
+			Position = UDim2.new(0, x, 0, 124),
+			Size = UDim2.new(w, -6, 0, 34),
+			BackgroundColor3 = accent and theme.Accent or theme.Item,
+			BorderSizePixel = 0,
+			Text = text,
+			TextColor3 = C.Text,
+			TextSize = 12,
+			Font = Enum.Font.GothamBold,
+			AutoButtonColor = false,
+		}, card)
+		corner(b, 8)
+		if accent then
+			new("UIStroke", { Color = theme.Glow, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, b)
+		end
+		return b
+	end
+	local hasLink = o.Link ~= nil
+	local go = button("Continue", 16, hasLink and 0.5 or 1, true)
+	if not hasLink then
+		go.Size = UDim2.new(1, -32, 0, 34)
+	end
+	local getB
+	if hasLink then
+		getB = button("Get key", 0, 0.5, false)
+		getB.Position = UDim2.new(0.5, 6, 0, 124)
+		getB.Size = UDim2.new(0.5, -22, 0, 34)
+		go.Size = UDim2.new(0.5, -22, 0, 34)
+	end
+	local foot = label(card, o.Footer or "", 9, C.Dim, false)
+	foot.Position = UDim2.fromOffset(16, 168)
+	foot.Size = UDim2.new(1, -32, 0, 14)
+	foot.TextXAlignment = Enum.TextXAlignment.Center
+
+	local result, savedKey
+	local busy = false
+	local tries = 0
+	local function submit()
+		if busy or result ~= nil then
+			return
+		end
+		busy = true
+		status.TextColor3 = C.Dim
+		status.Text = "Checking..."
+		task.spawn(function()
+			local k = trim(box.Text)
+			if valid(k) then
+				status.TextColor3 = C.Green
+				status.Text = "Correct. Welcome!"
+				if o.Save ~= false and type(writefile) == "function" then
+					pcall(writefile, file, k)
+				end
+				savedKey = k
+				task.wait(0.5)
+				result = true
+			else
+				tries += 1
+				status.TextColor3 = C.Bad
+				status.Text = k == "" and "Type your key first." or "That key is not right. Try again."
+				if o.MaxTries and tries >= o.MaxTries then
+					task.wait(0.8)
+					result = false
+				end
+			end
+			busy = false
+		end)
+	end
+	go.MouseButton1Click:Connect(submit)
+	box.FocusLost:Connect(function(enter)
+		if enter then
+			submit()
+		end
+	end)
+	if getB then
+		getB.MouseButton1Click:Connect(function()
+			local ok = type(setclipboard) == "function" and pcall(setclipboard, tostring(o.Link))
+			status.TextColor3 = C.Dim
+			status.Text = ok and "Link copied. Paste it in your browser." or tostring(o.Link)
+		end)
+	end
+	closeB.MouseButton1Click:Connect(function()
+		result = false
+	end)
+
+	local waited = 0
+	while result == nil do
+		task.wait(0.1)
+		waited += 0.1
+		if o.Timeout and waited >= o.Timeout then
+			result = false
+		end
+	end
+	spin:Disconnect()
+	tween(scl, 0.2, { Scale = 0.7 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	tween(back, 0.2, { BackgroundTransparency = 1 })
+	task.wait(0.2)
+	gui:Destroy()
+	if result then
+		return true, savedKey
+	end
+	return false
 end
 
 return RebelUI
