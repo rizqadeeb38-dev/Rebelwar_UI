@@ -16,12 +16,13 @@
     Tab:Toggle({ Name = "Speed", Description = "Run faster", Callback = function(on) print(on) end })
     Win:CreateSettingsTab({ Bar = Bar })
 
-    Elements: Section, Label, Divider, Button, Toggle, Slider, Dropdown, Input, Keybind,
-              Color, Header, Image, Progress, Paragraph, Choice, Cycle
+    Elements: Section, Label, Divider, Button, Toggle, Slider, RangeSlider, Pad, Dropdown, Input,
+              Keybind, Color, Header, Image, Progress, Paragraph, Notice, Choice, Cycle,
+              Console, Graph, CodeBox, Feed
     Window:   CreateTab, CreateBar, CreateSettingsTab, Notify, SetTheme, SetAccent, SetScale,
               SetOpacity, SetSize, SetToggleKey, Toggle, Save, Load, Destroy,
               SaveProfile, LoadProfile, DeleteProfile, ListProfiles, SetAutoLoad, AutoLoad
-    Library:  Loading, CreateWindow, KeyGate, AddTheme
+    Library:  Loading, CreateWindow, KeyGate, AddTheme, SetLanguage, Spring, State
     Also: search box, drag-to-resize, named profiles, key gate, notification buttons and icons,
           dialogs, collapsible sections, keybind modes, number boxes, tab dividers,
           settings export / import, panel opacity (100% by default).
@@ -97,8 +98,27 @@ local THEMES = {
 	Blood = makeTheme(rgb(150, 10, 20)),
 	Ice = makeTheme(rgb(150, 210, 255)),
 	Mono = makeTheme(rgb(190, 190, 205)),
+	-- made for easy reading: pure black, bright yellow
+	Contrast = makeTheme(rgb(255, 230, 0), {
+		Glow = rgb(255, 255, 120),
+		Dark = rgb(130, 115, 0),
+		BG0 = rgb(0, 0, 0),
+		BG1 = rgb(12, 12, 12),
+		S0 = rgb(0, 0, 0),
+		S1 = rgb(20, 20, 20),
+		B0 = rgb(0, 0, 0),
+		B1 = rgb(28, 28, 28),
+		Item = rgb(26, 26, 26),
+		ItemOn = rgb(52, 48, 0),
+		Off = rgb(120, 120, 120),
+		Inset = rgb(0, 0, 0),
+	}),
+	-- blue and orange are easy to tell apart for most kinds of color blindness
+	Colorblind = makeTheme(rgb(0, 114, 178), { Glow = rgb(86, 180, 233), Dark = rgb(0, 50, 80) }),
 }
-RebelUI.Themes = { "Red", "Crimson", "Blue", "Green", "Purple", "Orange", "Pink", "Gold", "Cyber", "Blood", "Ice", "Mono" }
+RebelUI.Themes = { "Red", "Crimson", "Blue", "Green", "Purple", "Orange", "Pink", "Gold", "Cyber", "Blood", "Ice", "Mono", "Contrast", "Colorblind" }
+RebelUI.SourceUrl = "https://raw.githubusercontent.com/rizqadeeb38-dev/Rebelwar_UI/main/source.lua"
+RebelUI.Lang = {} -- text translations, see RebelUI:SetLanguage
 
 local C = {
 	Text = rgb(240, 235, 235),
@@ -112,6 +132,9 @@ local C = {
 -- ============================================================ helpers
 local function new(class, props, parent)
 	local o = Instance.new(class)
+	if props and type(props.Text) == "string" and RebelUI.Lang[props.Text] then
+		props.Text = RebelUI.Lang[props.Text] -- translations (RebelUI:SetLanguage)
+	end
 	for k, v in pairs(props or {}) do
 		o[k] = v
 	end
@@ -160,13 +183,70 @@ end
 local function label(parent, str, size, color, bold)
 	return new("TextLabel", {
 		BackgroundTransparency = 1,
-		Text = str,
+		Text = RebelUI.Lang[str] or str,
 		TextSize = size or 11,
 		TextColor3 = color or C.Text,
 		Font = bold and Enum.Font.GothamBold or Enum.Font.Gotham,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextTruncate = Enum.TextTruncate.AtEnd,
 	}, parent)
+end
+
+-- ============================================================ small tools you can use too
+-- Translate the panel: RebelUI:SetLanguage({ ["Settings"] = "Tetapan", ["Save settings"] = "Simpan" }) before CreateWindow.
+function RebelUI:SetLanguage(dict)
+	RebelUI.Lang = type(dict) == "table" and dict or {}
+end
+
+-- A spring: smooth, bouncy movement. local s = UI.Spring.new(0, 12, 0.6); s.Target = 1; s:Update(dt) each frame.
+local Spring = {}
+Spring.__index = Spring
+function Spring.new(value, speed, damping)
+	return setmetatable({ Value = value or 0, Target = value or 0, Velocity = 0, Speed = speed or 10, Damping = damping or 0.7 }, Spring)
+end
+function Spring:Update(dt)
+	dt = math.min(dt or 1 / 60, 0.25)
+	local steps = math.max(1, math.ceil(dt * 120))
+	local h = dt / steps
+	local k, c = self.Speed * self.Speed, 2 * self.Damping * self.Speed
+	for _ = 1, steps do
+		self.Velocity += (k * (self.Target - self.Value) - c * self.Velocity) * h
+		self.Value += self.Velocity * h
+	end
+	return self.Value
+end
+RebelUI.Spring = Spring
+
+-- A value that tells everyone who is listening when it changes.
+--   local score = UI.State(0); score:Bind(labelObj, "Score: %d"); score:Set(5)
+local State = {}
+State.__index = State
+function RebelUI.State(initial)
+	return setmetatable({ Value = initial, _fns = {} }, State)
+end
+function State:Get()
+	return self.Value
+end
+function State:Set(v)
+	if v == self.Value then
+		return
+	end
+	self.Value = v
+	for _, fn in ipairs(self._fns) do
+		safe(fn, v)
+	end
+end
+function State:OnChange(fn)
+	table.insert(self._fns, fn)
+	return fn
+end
+function State:Bind(obj, fmt)
+	-- obj is any element with :Set (a Label, Paragraph, Slider, Toggle...). fmt is a string.format pattern.
+	local function push(v)
+		obj:Set(fmt and string.format(fmt, v) or v)
+	end
+	push(self.Value)
+	return self:OnChange(push)
 end
 
 local function fitText(l, maxSize)
@@ -686,6 +766,8 @@ function RebelUI:CreateWindow(o)
 		NotifyTime = 4,
 		ConfirmClose = o.ConfirmClose == true,
 		Scale = 1,
+		Inertia = o.Inertia ~= false,
+		Scramble = o.Scramble ~= false,
 		Opacity = 100,
 		ToggleKey = o.ToggleKey or Enum.KeyCode.RightShift,
 	}, Window)
@@ -969,22 +1051,36 @@ function RebelUI:CreateWindow(o)
 	-- ---------- dragging the panel by the title strips
 	local function makeDraggable(handle)
 		local dragging, startMouse, startPos = false, nil, nil
+		local lx, ly, lt, vx, vy = 0, 0, 0, 0, 0
 		handle.InputBegan:Connect(function(i)
 			if isPress(i) then
 				dragging = true
 				startMouse = i.Position
 				startPos = main.Position
+				win._glide = nil
+				lx, ly, lt, vx, vy = i.Position.X, i.Position.Y, os.clock(), 0, 0
 			end
 		end)
 		win._conns[#win._conns + 1] = UIS.InputChanged:Connect(function(i)
 			if dragging and isMove(i) then
 				local d = i.Position - startMouse
 				main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
+				local now = os.clock()
+				local dt = now - lt
+				if dt > 0.001 then
+					vx = vx * 0.5 + ((i.Position.X - lx) / dt) * 0.5
+					vy = vy * 0.5 + ((i.Position.Y - ly) / dt) * 0.5
+					lx, ly, lt = i.Position.X, i.Position.Y, now
+				end
 			end
 		end)
 		win._conns[#win._conns + 1] = UIS.InputEnded:Connect(function(i)
-			if isPress(i) then
+			if dragging and isPress(i) then
 				dragging = false
+				-- let go while moving: the panel keeps gliding and slows down (Inertia = false turns it off)
+				if win.Inertia and os.clock() - lt < 0.08 and math.abs(vx) + math.abs(vy) > 150 then
+					win._glide = { x = math.clamp(vx, -1500, 1500), y = math.clamp(vy, -1500, 1500) }
+				end
 			end
 		end)
 	end
@@ -1033,6 +1129,17 @@ function RebelUI:CreateWindow(o)
 					e.x = math.random()
 				end
 				e.f.Position = UDim2.new(e.x, math.sin(now * e.fr + e.ph) * 8, e.y, 0)
+			end
+		end
+		local g = win._glide
+		if g then
+			local P = main.Position
+			main.Position = UDim2.new(P.X.Scale, P.X.Offset + g.x * dt, P.Y.Scale, P.Y.Offset + g.y * dt)
+			local f = 0.88 ^ (dt * 60)
+			g.x *= f
+			g.y *= f
+			if math.abs(g.x) + math.abs(g.y) < 20 then
+				win._glide = nil
 			end
 		end
 		for _, fn in ipairs(win._frame or {}) do
@@ -1113,6 +1220,9 @@ function RebelUI:CreateWindow(o)
 
 	win._orderTabs = 0
 	win:SetOpacity(o.Opacity or 100)
+	if o.AutoSave then
+		win:AutoSave(o.AutoSave)
+	end
 	if o.Open ~= false then
 		win:Toggle(true)
 	else
@@ -1219,7 +1329,43 @@ function Window:SetToggleKey(k)
 	end
 end
 
+function Window:_scramble(lbl, text)
+	-- the title "decodes" into the new name (Scramble = false turns it off)
+	self._scrTok = (self._scrTok or 0) + 1
+	local mine = self._scrTok
+	text = tostring(text)
+	if not self.Scramble or #text == 0 then
+		lbl.Text = text
+		return
+	end
+	local chars = "01#@$%&*+=?"
+	task.spawn(function()
+		local steps = 7
+		for s = 1, steps do
+			if self._scrTok ~= mine or self._dead then
+				return
+			end
+			local out = {}
+			for k = 1, #text do
+				local ch = text:sub(k, k)
+				if ch == " " or k <= (#text * (s - 1) / steps) then
+					out[k] = ch
+				else
+					local r = math.random(1, #chars)
+					out[k] = chars:sub(r, r)
+				end
+			end
+			lbl.Text = table.concat(out)
+			task.wait(0.035)
+		end
+		if self._scrTok == mine then
+			lbl.Text = text
+		end
+	end)
+end
+
 function Window:Destroy()
+	self._dead = true
 	for _, c in ipairs(self._conns) do
 		pcall(function()
 			c:Disconnect()
@@ -1822,8 +1968,13 @@ function Window:CreateTab(name, icon)
 		page.Visible = true
 		tween(page, 0.22, { Position = UDim2.fromOffset(0, 32) })
 		tab._set(true)
-		win._pageTitle.Text = tab.Name
+		win:_scramble(win._pageTitle, tab.Name)
 		win.CurrentTab = tab
+		if opts.Build and not tab._built then
+			-- Build = function(tab) ... end : the tab fills itself the first time it is opened
+			tab._built = true
+			safe(opts.Build, tab)
+		end
 	end
 	function tab:SetName(n)
 		tab.Name = n
@@ -1854,9 +2005,6 @@ function Window:CreateTab(name, icon)
 	end)
 
 	table.insert(win._tabs, tab)
-	if #win._tabs == 1 then
-		tab:Select()
-	end
 	-- the tab's own header ("text hub") at the top of its page
 	if opts.Title or opts.Description then
 		tab.HeaderObj = tab:Header({
@@ -1864,6 +2012,9 @@ function Window:CreateTab(name, icon)
 			Text = opts.Description,
 			Icon = opts.HeaderIcon or opts.Icon,
 		})
+	end
+	if #win._tabs == 1 then
+		tab:Select()
 	end
 	return tab
 end
@@ -1885,7 +2036,7 @@ function Tab:_row(h)
 	return f
 end
 
-local function register(self, o, obj)
+local function register(self, o, obj, kind)
 	if o.Flag then
 		self.Win.Flags[o.Flag] = obj
 	end
@@ -1898,6 +2049,10 @@ local function register(self, o, obj)
 		end
 	end
 	obj.Row = row
+	if kind then
+		self._items = self._items or {}
+		table.insert(self._items, { kind = kind, o = o, obj = obj })
+	end
 	if o.Tooltip and row then
 		self.Win:_tip(row, o.Tooltip)
 	end
@@ -1965,7 +2120,7 @@ function Tab:Section(text)
 		function obj:Set(v)
 			l.Text = tostring(v)
 		end
-		return register(self, {}, obj)
+		return register(self, { Name = name }, obj, "Section")
 	end
 	local tab = self
 	local b = new("TextButton", {
@@ -2018,7 +2173,7 @@ function Tab:Section(text)
 	end)
 	render()
 	task.defer(sec.apply) -- rows you add after the section are hidden too when it starts collapsed
-	return register(self, {}, obj)
+	return register(self, { Name = name }, obj, "Section")
 end
 
 function Tab:Divider()
@@ -2046,7 +2201,7 @@ function Tab:Label(text)
 	function obj:Get()
 		return l.Text
 	end
-	return register(self, {}, obj)
+	return register(self, { Text = text }, obj, "Label")
 end
 
 function Tab:Button(o)
@@ -2179,7 +2334,7 @@ function Tab:Button(o)
 		disabled = v == true
 		look()
 	end
-	return register(self, o, obj)
+	return register(self, o, obj, "Button")
 end
 
 function Tab:Toggle(o)
@@ -2397,11 +2552,12 @@ function Tab:Toggle(o)
 	if obj.Value and o.Callback then
 		task.defer(safe, o.Callback, true) -- a toggle that starts ON tells your code once
 	end
-	return register(self, o, obj)
+	return register(self, o, obj, "Toggle")
 end
 
 function Tab:Slider(o)
-	-- Name, Min, Max, Default, Step, Suffix, Flag, Callback(value)
+	-- Name, Min, Max, Default, Step, Suffix, Prefix, Flag, Callback(value)
+	-- Arrows = true (< > buttons), Log = true (fine steps for small numbers, Min must be above 0)
 	o = o or {}
 	local win = self.Win
 	local min, max = o.Min or 0, o.Max or 100
@@ -2443,8 +2599,22 @@ function Tab:Slider(o)
 	}, row)
 
 	local obj = { Value = min }
+	-- Log = true: the left part of the bar covers small numbers in fine steps (needs Min above 0)
+	local useLog = o.Log == true and min > 0 and max > min
+	local function toRel(v)
+		if useLog then
+			return math.log(math.max(v, min) / min) / math.log(max / min)
+		end
+		return (v - min) / math.max(max - min, 1e-9)
+	end
+	local function fromRel(r)
+		if useLog then
+			return min * (max / min) ^ r
+		end
+		return min + r * (max - min)
+	end
 	local function render()
-		local rel = (obj.Value - min) / math.max(max - min, 1e-9)
+		local rel = toRel(obj.Value)
 		fill.Size = UDim2.fromScale(rel, 1)
 		knob.Position = UDim2.new(rel, 0, 0.5, 0)
 		val.Text = (o.Prefix or "") .. tostring(obj.Value) .. suffix
@@ -2476,7 +2646,7 @@ function Tab:Slider(o)
 			page.ScrollingEnabled = false
 			local w = bar.AbsoluteSize.X
 			if w > 0 then
-				obj:Set(min + math.clamp((i.Position.X - bar.AbsolutePosition.X) / w, 0, 1) * (max - min))
+				obj:Set(fromRel(math.clamp((i.Position.X - bar.AbsolutePosition.X) / w, 0, 1)))
 			end
 		end
 	end)
@@ -2484,10 +2654,34 @@ function Tab:Slider(o)
 		if dragging and isMove(i) then
 			local w = bar.AbsoluteSize.X
 			if w > 0 then
-				obj:Set(min + math.clamp((i.Position.X - bar.AbsolutePosition.X) / w, 0, 1) * (max - min))
+				obj:Set(fromRel(math.clamp((i.Position.X - bar.AbsolutePosition.X) / w, 0, 1)))
 			end
 		end
 	end)
+	if o.Arrows then
+		-- small < > buttons for exact one-step changes
+		val.Position = UDim2.new(1, -104, 0, 6)
+		local function arrow(txt, x, dir)
+			local a = new("TextButton", {
+				Position = UDim2.new(1, x, 0, 5),
+				Size = UDim2.fromOffset(20, 16),
+				BorderSizePixel = 0,
+				Text = txt,
+				TextSize = 11,
+				TextColor3 = C.Text,
+				Font = Enum.Font.GothamBold,
+				AutoButtonColor = false,
+				ZIndex = 4,
+			}, row)
+			corner(a, 5)
+			win:_bind(a, "BackgroundColor3", "Inset")
+			a.MouseButton1Click:Connect(function()
+				obj:Set(obj.Value + dir * step)
+			end)
+		end
+		arrow("<", -50, -1)
+		arrow(">", -28, 1)
+	end
 	win._conns[#win._conns + 1] = UIS.InputEnded:Connect(function(i)
 		if dragging and isPress(i) then
 			dragging = false
@@ -2496,7 +2690,7 @@ function Tab:Slider(o)
 	end)
 	obj.Value = snap(o.Default or min)
 	render()
-	return register(self, o, obj)
+	return register(self, o, obj, "Slider")
 end
 
 function Tab:Dropdown(o)
@@ -2690,13 +2884,16 @@ function Tab:Dropdown(o)
 			task.delay(0.1, again)
 		end)
 	end
-	return register(self, o, obj)
+	return register(self, o, obj, "Dropdown")
 end
 
 function Tab:Input(o)
 	-- Name, Default, Placeholder, Clear, Flag, Callback(text)
-	-- Numeric = true: only numbers, Callback(number). Min / Max clamp it.
+	-- Numeric = true: only numbers, Callback(number). Min / Max clamp it. Math = true also solves things like 16 * 4.
 	o = o or {}
+	if o.Math then
+		o.Numeric = true
+	end
 	local win = self.Win
 	local row = self:_row(36)
 	local name = label(row, o.Name or "Input", 11, C.Text, true)
@@ -2718,18 +2915,89 @@ function Tab:Input(o)
 	corner(box, 6)
 	win:_bind(box, "BackgroundColor3", "Inset")
 	local obj = {}
+	-- Math = true lets you type 16 * 4 or (2 + 3) ^ 2 and get the answer. Plain recursive parser, no loadstring.
+	local function evaluate(src)
+		local pos, s = 1, tostring(src):gsub("%s+", "")
+		local expr
+		local function atom()
+			local c = s:sub(pos, pos)
+			if c == "(" then
+				pos += 1
+				local v = expr()
+				if s:sub(pos, pos) == ")" then
+					pos += 1
+				end
+				return v
+			elseif c == "-" then
+				pos += 1
+				return -(atom() or 0)
+			end
+			local num = s:match("^%d*%.?%d+", pos) or s:match("^%d+", pos)
+			if not num then
+				return nil
+			end
+			pos += #num
+			return tonumber(num)
+		end
+		local function power()
+			local a = atom()
+			while a and s:sub(pos, pos) == "^" do
+				pos += 1
+				local b = atom()
+				a = b and a ^ b or nil
+			end
+			return a
+		end
+		local function term()
+			local a = power()
+			while a do
+				local c = s:sub(pos, pos)
+				if c ~= "*" and c ~= "/" and c ~= "%" then
+					break
+				end
+				pos += 1
+				local b = power()
+				if not b then
+					return nil
+				end
+				a = c == "*" and a * b or (c == "/" and b ~= 0 and a / b) or (c == "%" and b ~= 0 and a % b) or nil
+			end
+			return a
+		end
+		function expr()
+			local a = term()
+			while a do
+				local c = s:sub(pos, pos)
+				if c ~= "+" and c ~= "-" then
+					break
+				end
+				pos += 1
+				local b = term()
+				if not b then
+					return nil
+				end
+				a = c == "+" and a + b or a - b
+			end
+			return a
+		end
+		local r = expr()
+		if pos <= #s then
+			return nil
+		end
+		return r
+	end
 	local function value()
 		if not o.Numeric then
 			return box.Text
 		end
-		local n = tonumber(box.Text) or tonumber(o.Default) or 0
+		local n = (o.Math and evaluate(box.Text)) or tonumber(box.Text) or tonumber(o.Default) or 0
 		return math.clamp(n, o.Min or -math.huge, o.Max or math.huge)
 	end
 	if o.Numeric or o.MaxLength then
 		box:GetPropertyChangedSignal("Text"):Connect(function()
 			local clean = box.Text
 			if o.Numeric then
-				clean = (clean:gsub("[^%d%.%-]", ""))
+				clean = (clean:gsub(o.Math and "[^%d%.%-%+%*/%^%%%(%)%s]" or "[^%d%.%-]", ""))
 			end
 			if o.MaxLength and #clean > o.MaxLength then
 				clean = clean:sub(1, o.MaxLength)
@@ -2757,11 +3025,12 @@ function Tab:Input(o)
 			box.Text = ""
 		end
 	end)
-	return register(self, o, obj)
+	return register(self, o, obj, "Input")
 end
 
 function Tab:Keybind(o)
 	-- Name, Default (Enum.KeyCode), Flag, Callback() when the key is pressed, Changed(key) when rebound
+	-- Modifier = Enum.KeyCode.LeftShift: the key only counts while that key is held (a combo, like Shift + F)
 	-- Mode: "Press" (default, Callback()), "Toggle" (Callback(true/false) each press), "Hold" (Callback(true) down, Callback(false) up)
 	o = o or {}
 	local mode = o.Mode or "Press"
@@ -2793,7 +3062,7 @@ function Tab:Keybind(o)
 		end,
 	})
 	local function render()
-		b.Text = obj.Listening and "press a key..." or obj.Value.Name
+		b.Text = obj.Listening and "press a key..." or ((o.Modifier and (o.Modifier.Name:gsub("^Left", "") .. "+") or "") .. obj.Value.Name)
 	end
 	function obj:Set(k, silent)
 		self.Value = k
@@ -2816,7 +3085,7 @@ function Tab:Keybind(o)
 		end
 		if obj.Listening then
 			obj:Set(i.KeyCode == Enum.KeyCode.Escape and obj.Value or i.KeyCode)
-		elseif not processed and i.KeyCode == obj.Value then
+		elseif not processed and i.KeyCode == obj.Value and (not o.Modifier or UIS:IsKeyDown(o.Modifier)) then
 			if mode == "Toggle" then
 				obj.State = not obj.State
 				safe(o.Callback, obj.State)
@@ -2837,7 +3106,7 @@ function Tab:Keybind(o)
 		end)
 	end
 	render()
-	return register(self, o, obj)
+	return register(self, o, obj, "Keybind")
 end
 
 local PRESETS = {
@@ -3007,7 +3276,7 @@ function Tab:Color(o)
 		end
 	end
 	render()
-	return register(self, o, obj)
+	return register(self, o, obj, "Color")
 end
 
 function Tab:Header(o)
@@ -3060,7 +3329,7 @@ function Tab:Header(o)
 			body.Text = t
 		end
 	end
-	return register(self, o, obj)
+	return register(self, o, obj, "Header")
 end
 
 function Tab:Image(o)
@@ -3096,7 +3365,7 @@ function Tab:Image(o)
 			cap.Text = t
 		end
 	end
-	return register(self, o, obj)
+	return register(self, o, obj, "Image")
 end
 
 function Tab:Progress(o)
@@ -3135,7 +3404,7 @@ function Tab:Progress(o)
 		return self.Value
 	end
 	obj:Set(o.Default or min)
-	return register(self, o, obj)
+	return register(self, o, obj, "Progress")
 end
 
 function Tab:Paragraph(o)
@@ -3165,7 +3434,7 @@ function Tab:Paragraph(o)
 		t.Text = title or t.Text
 		b.Text = text or b.Text
 	end
-	return register(self, o, obj)
+	return register(self, o, obj, "Paragraph")
 end
 
 function Tab:Notice(o)
@@ -3208,7 +3477,518 @@ function Tab:Notice(o)
 		kind = k
 		paint()
 	end
-	return register(self, o, obj)
+	return register(self, o, obj, "Notice")
+end
+
+-- ============================================================ range slider (two knobs)
+function Tab:RangeSlider(o)
+	-- Name, Min, Max, Default = { Low, High }, Step, Suffix, Flag, Callback(low, high). Get() gives { Low =, High = }
+	o = o or {}
+	local win = self.Win
+	local min, max = o.Min or 0, o.Max or 100
+	local step = o.Step or 1
+	local suffix = o.Suffix or ""
+	local row = self:_row(44)
+	local name = label(row, o.Name or "Range", 11, C.Text, true)
+	name.Position = UDim2.fromOffset(10, 6)
+	name.Size = UDim2.new(1, -110, 0, 14)
+	local val = label(row, "", 10, C.Dim, true)
+	val.TextXAlignment = Enum.TextXAlignment.Right
+	val.Position = UDim2.new(1, -108, 0, 6)
+	val.Size = UDim2.fromOffset(98, 14)
+	local bar = new("Frame", { Position = UDim2.fromOffset(12, 31), Size = UDim2.new(1, -24, 0, 4), BorderSizePixel = 0 }, row)
+	corner(bar, 2)
+	win:_bind(bar, "BackgroundColor3", "Off")
+	local fill = new("Frame", { Size = UDim2.fromScale(0, 1), BorderSizePixel = 0 }, bar)
+	corner(fill, 2)
+	win:_bind(fill, "BackgroundColor3", "Accent")
+	local knobs = {}
+	for k = 1, 2 do
+		local kn = new("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.new(0, 0, 0.5, 0),
+			Size = UDim2.fromOffset(12, 12),
+			BackgroundColor3 = C.Text,
+			BorderSizePixel = 0,
+			ZIndex = 2,
+		}, bar)
+		corner(kn, 6)
+		knobs[k] = kn
+	end
+	local hit = new("TextButton", { BackgroundTransparency = 1, Text = "", Position = UDim2.fromOffset(6, 22), Size = UDim2.new(1, -12, 0, 22), ZIndex = 3 }, row)
+	local obj = { Low = min, High = max }
+	local function snap(v)
+		v = math.clamp(v, min, max)
+		v = min + math.floor((v - min) / step + 0.5) * step
+		return math.floor(math.clamp(v, min, max) * 10000 + 0.5) / 10000
+	end
+	local function render()
+		local a = (obj.Low - min) / math.max(max - min, 1e-9)
+		local b = (obj.High - min) / math.max(max - min, 1e-9)
+		knobs[1].Position = UDim2.new(a, 0, 0.5, 0)
+		knobs[2].Position = UDim2.new(b, 0, 0.5, 0)
+		fill.Position = UDim2.fromScale(a, 0)
+		fill.Size = UDim2.fromScale(math.max(b - a, 0), 1)
+		val.Text = tostring(obj.Low) .. suffix .. " - " .. tostring(obj.High) .. suffix
+	end
+	function obj:Set(v, silent)
+		local lo, hi
+		if type(v) == "table" then
+			lo, hi = v.Low or v[1], v.High or v[2]
+		end
+		lo, hi = snap(tonumber(lo) or min), snap(tonumber(hi) or max)
+		if lo > hi then
+			lo, hi = hi, lo
+		end
+		local changed = lo ~= self.Low or hi ~= self.High
+		self.Low, self.High = lo, hi
+		render()
+		if changed and not silent then
+			safe(o.Callback, lo, hi)
+		end
+	end
+	function obj:Get()
+		return { Low = self.Low, High = self.High }
+	end
+	local page = self.Page
+	local dragging, which = false, 1
+	local function move(x)
+		local w = bar.AbsoluteSize.X
+		if w <= 0 then
+			return
+		end
+		local v = min + math.clamp((x - bar.AbsolutePosition.X) / w, 0, 1) * (max - min)
+		if which == 1 then
+			obj:Set({ Low = math.min(v, obj.High), High = obj.High })
+		else
+			obj:Set({ Low = obj.Low, High = math.max(v, obj.Low) })
+		end
+	end
+	hit.InputBegan:Connect(function(i)
+		if isPress(i) then
+			dragging = true
+			page.ScrollingEnabled = false
+			local w = bar.AbsoluteSize.X
+			local v = min + math.clamp((i.Position.X - bar.AbsolutePosition.X) / math.max(w, 1), 0, 1) * (max - min)
+			which = math.abs(v - obj.Low) <= math.abs(v - obj.High) and 1 or 2
+			move(i.Position.X)
+		end
+	end)
+	win._conns[#win._conns + 1] = UIS.InputChanged:Connect(function(i)
+		if dragging and isMove(i) then
+			move(i.Position.X)
+		end
+	end)
+	win._conns[#win._conns + 1] = UIS.InputEnded:Connect(function(i)
+		if dragging and isPress(i) then
+			dragging = false
+			page.ScrollingEnabled = true
+		end
+	end)
+	obj:Set(o.Default or { min, max }, true)
+	return register(self, o, obj, "RangeSlider")
+end
+
+-- ============================================================ 2D pad (two values with one finger)
+function Tab:Pad(o)
+	-- Name, Default = { X = 0.5, Y = 0.5 } (0 to 1), Height, Flag, Callback(x, y). Get() gives { X =, Y = }
+	o = o or {}
+	local win = self.Win
+	local H = o.Height or 110
+	local row = self:_row(H + 26)
+	local name = label(row, o.Name or "Pad", 11, C.Text, true)
+	name.Position = UDim2.fromOffset(10, 5)
+	name.Size = UDim2.new(0.5, -10, 0, 14)
+	local val = label(row, "", 10, C.Dim, true)
+	val.TextXAlignment = Enum.TextXAlignment.Right
+	val.Position = UDim2.new(0.5, 0, 0, 5)
+	val.Size = UDim2.new(0.5, -10, 0, 14)
+	local box = new("TextButton", {
+		Position = UDim2.fromOffset(10, 24),
+		Size = UDim2.new(1, -20, 0, H),
+		BorderSizePixel = 0,
+		Text = "",
+		AutoButtonColor = false,
+		ClipsDescendants = true,
+	}, row)
+	corner(box, 8)
+	win:_bind(box, "BackgroundColor3", "Inset")
+	local vline = new("Frame", { Size = UDim2.new(0, 1, 1, 0), BorderSizePixel = 0, BackgroundTransparency = 0.6 }, box)
+	local hline = new("Frame", { Size = UDim2.new(1, 0, 0, 1), BorderSizePixel = 0, BackgroundTransparency = 0.6 }, box)
+	local dot = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(14, 14), BorderSizePixel = 0, ZIndex = 3 }, box)
+	corner(dot, 7)
+	win:_bind(dot, "BackgroundColor3", "Glow")
+	win:_bind(vline, "BackgroundColor3", "Glow")
+	win:_bind(hline, "BackgroundColor3", "Glow")
+	local obj = { X = 0.5, Y = 0.5 }
+	local function render()
+		dot.Position = UDim2.fromScale(obj.X, obj.Y)
+		vline.Position = UDim2.new(obj.X, 0, 0, 0)
+		hline.Position = UDim2.new(0, 0, obj.Y, 0)
+		val.Text = string.format("%.2f , %.2f", obj.X, obj.Y)
+	end
+	function obj:Set(v, silent)
+		v = type(v) == "table" and v or {}
+		self.X = math.clamp(tonumber(v.X or v[1]) or 0.5, 0, 1)
+		self.Y = math.clamp(tonumber(v.Y or v[2]) or 0.5, 0, 1)
+		render()
+		if not silent then
+			safe(o.Callback, self.X, self.Y)
+		end
+	end
+	function obj:Get()
+		return { X = self.X, Y = self.Y }
+	end
+	local page = self.Page
+	local dragging = false
+	local function move(p)
+		local s = box.AbsoluteSize
+		if s.X > 0 and s.Y > 0 then
+			obj:Set({ X = (p.X - box.AbsolutePosition.X) / s.X, Y = (p.Y - box.AbsolutePosition.Y) / s.Y })
+		end
+	end
+	box.InputBegan:Connect(function(i)
+		if isPress(i) then
+			dragging = true
+			page.ScrollingEnabled = false
+			move(i.Position)
+		end
+	end)
+	win._conns[#win._conns + 1] = UIS.InputChanged:Connect(function(i)
+		if dragging and isMove(i) then
+			move(i.Position)
+		end
+	end)
+	win._conns[#win._conns + 1] = UIS.InputEnded:Connect(function(i)
+		if dragging and isPress(i) then
+			dragging = false
+			page.ScrollingEnabled = true
+		end
+	end)
+	obj:Set(o.Default or { X = 0.5, Y = 0.5 }, true)
+	return register(self, o, obj, "Pad")
+end
+
+-- ============================================================ console (a log you can read inside the panel)
+local LOG_COLORS = { warn = C.Yellow, error = C.Bad, success = C.Green }
+function Tab:Console(o)
+	-- Name, Height (120), MaxLines (200). obj:Log(text, "info"|"warn"|"error"|"success"), obj:Clear(), obj:GetText(), obj:Copy()
+	o = o or {}
+	local win = self.Win
+	local H = o.Height or 120
+	local row = self:_row(H + 30)
+	local name = label(row, o.Name or "Console", 11, C.Text, true)
+	name.Position = UDim2.fromOffset(10, 5)
+	name.Size = UDim2.new(1, -120, 0, 16)
+	local list = new("ScrollingFrame", {
+		Position = UDim2.fromOffset(8, 25),
+		Size = UDim2.new(1, -16, 0, H),
+		BorderSizePixel = 0,
+		ScrollBarThickness = 3,
+		CanvasSize = UDim2.new(),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+	}, row)
+	corner(list, 6)
+	win:_bind(list, "BackgroundColor3", "Inset")
+	new("UIListLayout", { Padding = UDim.new(0, 1), SortOrder = Enum.SortOrder.LayoutOrder }, list)
+	new("UIPadding", { PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6), PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 4) }, list)
+	local obj = { Lines = {}, _n = 0 }
+	local function small(txt, x, fn)
+		local b = new("TextButton", {
+			Position = UDim2.new(1, x, 0, 5),
+			Size = UDim2.fromOffset(48, 16),
+			BorderSizePixel = 0,
+			Text = txt,
+			TextSize = 9,
+			TextColor3 = C.Text,
+			Font = Enum.Font.GothamBold,
+			AutoButtonColor = false,
+		}, row)
+		corner(b, 5)
+		win:_bind(b, "BackgroundColor3", "Inset")
+		b.MouseButton1Click:Connect(fn)
+	end
+	function obj:Log(text, kind)
+		self._n += 1
+		local stamp = os.date("%H:%M:%S")
+		local l = new("TextLabel", {
+			BackgroundTransparency = 1,
+			Size = UDim2.new(1, 0, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			Text = "[" .. stamp .. "] " .. tostring(text),
+			TextSize = 9,
+			Font = Enum.Font.Code,
+			TextColor3 = LOG_COLORS[kind or ""] or C.Text,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextWrapped = true,
+			LayoutOrder = self._n,
+		}, list)
+		table.insert(self.Lines, { l = l, t = l.Text })
+		while #self.Lines > (o.MaxLines or 200) do
+			local first = table.remove(self.Lines, 1)
+			first.l:Destroy()
+		end
+		list.CanvasPosition = Vector2.new(0, 1e6)
+	end
+	function obj:Clear()
+		for _, e in ipairs(self.Lines) do
+			e.l:Destroy()
+		end
+		self.Lines = {}
+	end
+	function obj:GetText()
+		local out = {}
+		for _, e in ipairs(self.Lines) do
+			table.insert(out, e.t)
+		end
+		return table.concat(out, "\n")
+	end
+	function obj:Copy()
+		return type(setclipboard) == "function" and pcall(setclipboard, self:GetText())
+	end
+	function obj:Get()
+		return self:GetText()
+	end
+	function obj:Set() end
+	small("Clear", -56, function()
+		obj:Clear()
+	end)
+	small("Copy", -108, function()
+		local ok = obj:Copy()
+		win:Notify({ Title = ok and "Copied" or "Can't copy", Type = ok and "success" or "warn" })
+	end)
+	win._console = win._console or obj
+	return register(self, o, obj, "Console")
+end
+
+function Window:Log(text, kind)
+	-- writes to the first Console you made. Returns false if there is none.
+	if self._console then
+		self._console:Log(text, kind)
+		return true
+	end
+	return false
+end
+
+-- ============================================================ live graph (FPS, Ping, Memory, frame time or your own number)
+function Tab:Graph(o)
+	-- Name, Source = "FPS" | "Ping" | "Memory" | "Frame" | function() return number end, Height (60), Samples (30), Interval (0.25), Max, Suffix
+	o = o or {}
+	local win = self.Win
+	local H = o.Height or 60
+	local N = math.clamp(o.Samples or 30, 8, 60)
+	local source = o.Source or "FPS"
+	local row = self:_row(H + 30)
+	local name = label(row, o.Name or tostring(type(source) == "string" and source or "Graph"), 11, C.Text, true)
+	name.Position = UDim2.fromOffset(10, 5)
+	name.Size = UDim2.new(0.6, -10, 0, 16)
+	local val = label(row, "", 10, C.Dim, true)
+	val.TextXAlignment = Enum.TextXAlignment.Right
+	val.Position = UDim2.new(0.6, 0, 0, 5)
+	val.Size = UDim2.new(0.4, -10, 0, 16)
+	local area = new("Frame", { Position = UDim2.fromOffset(10, 26), Size = UDim2.new(1, -20, 0, H), BorderSizePixel = 0, ClipsDescendants = true }, row)
+	corner(area, 6)
+	win:_bind(area, "BackgroundColor3", "Inset")
+	local bars = {}
+	for k = 1, N do
+		local b = new("Frame", {
+			AnchorPoint = Vector2.new(0, 1),
+			Position = UDim2.new((k - 1) / N, 1, 1, -1),
+			Size = UDim2.new(1 / N, -2, 0, 1),
+			BorderSizePixel = 0,
+		}, area)
+		win:_bind(b, "BackgroundColor3", "Accent")
+		bars[k] = b
+	end
+	local defaults = { FPS = { 120, " fps" }, Ping = { 300, " ms" }, Memory = { 1500, " MB" }, Frame = { 40, " ms" } }
+	local top = o.Max or (defaults[source] and defaults[source][1]) or 100
+	local suffix = o.Suffix or (defaults[source] and defaults[source][2]) or ""
+	local samples = {}
+	for k = 1, N do
+		samples[k] = 0
+	end
+	local fpsAvg = 60
+	local function read(dt)
+		if type(source) == "function" then
+			local ok, v = pcall(source)
+			return ok and tonumber(v) or 0
+		elseif source == "FPS" then
+			fpsAvg = fpsAvg * 0.7 + (1 / math.max(dt, 1e-3)) * 0.3
+			return math.floor(fpsAvg + 0.5)
+		elseif source == "Frame" then
+			return math.floor(dt * 10000 + 0.5) / 10
+		elseif source == "Ping" then
+			local ok, v = pcall(function()
+				return game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue()
+			end)
+			return ok and math.floor((tonumber(v) or 0) + 0.5) or 0
+		elseif source == "Memory" then
+			local ok, v = pcall(function()
+				return game:GetService("Stats"):GetTotalMemoryUsageMb()
+			end)
+			return ok and math.floor((tonumber(v) or 0) + 0.5) or 0
+		end
+		return 0
+	end
+	local acc, dtSum, cnt = 0, 0, 0
+	local function draw()
+		local peak = top
+		for _, v in ipairs(samples) do
+			if v > peak then
+				peak = v
+			end
+		end
+		for k = 1, N do
+			bars[k].Size = UDim2.new(1 / N, -2, math.clamp(samples[k] / peak, 0.02, 1), 0)
+		end
+		val.Text = tostring(samples[N]) .. suffix
+	end
+	local obj = {}
+	function obj:Push(v)
+		table.remove(samples, 1)
+		table.insert(samples, tonumber(v) or 0)
+		draw()
+	end
+	function obj:Get()
+		return samples[N]
+	end
+	function obj:Set() end
+	table.insert(win._frame, function(_, dt)
+		acc += dt
+		dtSum += dt
+		cnt += 1
+		if acc >= (o.Interval or 0.25) then
+			local avg = dtSum / math.max(cnt, 1)
+			acc, dtSum, cnt = 0, 0, 0
+			if win.Open and self.Page.Visible and row.Visible then
+				obj:Push(read(avg))
+			end
+		end
+	end)
+	draw()
+	return register(self, o, obj, "Graph")
+end
+
+-- ============================================================ code box (type or paste a script and run it)
+function Tab:CodeBox(o)
+	-- Name, Height (110), Default, Placeholder, RunText ("Run"), Callback(code). Without a Callback it runs the code with loadstring.
+	o = o or {}
+	local win = self.Win
+	local H = o.Height or 110
+	local row = self:_row(H + 66)
+	local name = label(row, o.Name or "Code", 11, C.Text, true)
+	name.Position = UDim2.fromOffset(10, 5)
+	name.Size = UDim2.new(0.6, -10, 0, 16)
+	local count = label(row, "1 line", 9, C.Dim, false)
+	count.TextXAlignment = Enum.TextXAlignment.Right
+	count.Position = UDim2.new(0.6, 0, 0, 5)
+	count.Size = UDim2.new(0.4, -10, 0, 16)
+	local box = new("TextBox", {
+		Position = UDim2.fromOffset(8, 25),
+		Size = UDim2.new(1, -16, 0, H),
+		BorderSizePixel = 0,
+		Text = o.Default or "",
+		PlaceholderText = o.Placeholder or "-- type or paste Lua here",
+		PlaceholderColor3 = C.Dim,
+		TextColor3 = C.Text,
+		TextSize = 10,
+		Font = Enum.Font.Code,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextYAlignment = Enum.TextYAlignment.Top,
+		TextWrapped = false,
+		MultiLine = true,
+		ClearTextOnFocus = false,
+		ClipsDescendants = true,
+	}, row)
+	corner(box, 6)
+	new("UIPadding", { PaddingLeft = UDim.new(0, 6), PaddingTop = UDim.new(0, 4), PaddingRight = UDim.new(0, 6) }, box)
+	win:_bind(box, "BackgroundColor3", "Inset")
+	local function lines()
+		local _, n = box.Text:gsub("\n", "")
+		count.Text = (n + 1) .. (n == 0 and " line" or " lines")
+	end
+	box:GetPropertyChangedSignal("Text"):Connect(lines)
+	lines()
+	local obj = {}
+	function obj:Get()
+		return box.Text
+	end
+	function obj:Set(v)
+		box.Text = tostring(v)
+	end
+	function obj:Run()
+		local code = box.Text
+		if o.Callback then
+			safe(o.Callback, code)
+			return
+		end
+		if type(loadstring) ~= "function" then
+			win:Notify({ Title = "Can't run", Text = "This executor has no loadstring.", Type = "error" })
+			return
+		end
+		local fn, err = loadstring(code)
+		if not fn then
+			win:Notify({ Title = "Syntax error", Text = tostring(err), Type = "error" })
+			win:Log(tostring(err), "error")
+			return
+		end
+		local ok, e = pcall(fn)
+		win:Notify({ Title = ok and "Ran" or "Error", Text = ok and "The code ran without errors." or tostring(e), Type = ok and "success" or "error" })
+		win:Log(ok and "ran ok" or tostring(e), ok and "success" or "error")
+	end
+	local function btn(txt, x, w, accent, fn)
+		local b = new("TextButton", {
+			Position = UDim2.new(x, accent and 8 or 4, 0, H + 31),
+			Size = UDim2.new(w, -12, 0, 26),
+			BorderSizePixel = 0,
+			Text = txt,
+			TextSize = 11,
+			TextColor3 = C.Text,
+			Font = Enum.Font.GothamBold,
+			AutoButtonColor = false,
+		}, row)
+		corner(b, 7)
+		win:_bind(b, "BackgroundColor3", accent and "Accent" or "Inset")
+		b.MouseButton1Click:Connect(function()
+			win:_playClick()
+			fn()
+		end)
+	end
+	btn(o.RunText or "Run", 0, 0.5, true, function()
+		obj:Run()
+	end)
+	btn("Clear", 0.5, 0.5, false, function()
+		box.Text = ""
+	end)
+	return register(self, o, obj, "CodeBox")
+end
+
+-- ============================================================ feed (text that is loaded from a web page, like announcements)
+function Tab:Feed(o)
+	-- Title, Url (a plain text page, like a raw GitHub file), Text (shown while loading or if it fails), MaxChars (800). obj:Refresh()
+	o = o or {}
+	local obj = self:Paragraph({ Title = o.Title or "News", Text = o.Text or "Loading..." })
+	function obj:Refresh()
+		if not o.Url then
+			return
+		end
+		task.spawn(function()
+			local ok, body = pcall(function()
+				return game:HttpGet(o.Url)
+			end)
+			if ok and type(body) == "string" and body ~= "" then
+				body = body:gsub("\r", "")
+				if #body > (o.MaxChars or 800) then
+					body = body:sub(1, o.MaxChars or 800) .. "..."
+				end
+				obj:Set(nil, body)
+			else
+				obj:Set(nil, o.Text or "Could not load the news.")
+			end
+		end)
+	end
+	obj:Refresh()
+	return obj
 end
 
 function Tab:Choice(o)
@@ -3279,7 +4059,7 @@ function Tab:Choice(o)
 		obj.Value = o.Default ~= nil and buttons[o.Default] and o.Default or options[1]
 	end
 	win:_onTheme(render)
-	return register(self, o, obj)
+	return register(self, o, obj, "Choice")
 end
 
 function Tab:Cycle(o)
@@ -3358,7 +4138,7 @@ function Tab:Cycle(o)
 		obj.Index = idx or 1
 	end
 	render()
-	return register(self, o, obj)
+	return register(self, o, obj, "Cycle")
 end
 
 -- ============================================================ top bar (FPS, logo, timer and more)
@@ -3750,6 +4530,11 @@ local function encode(v)
 	elseif t == "EnumItem" then
 		return { _t = "k", v = v.Name }
 	elseif t == "table" then
+		if v.Low ~= nil and v.High ~= nil then
+			return { _t = "r", lo = v.Low, hi = v.High }
+		elseif v.X ~= nil and v.Y ~= nil then
+			return { _t = "p", x = v.X, y = v.Y }
+		end
 		local list = {}
 		for k, x in pairs(v) do
 			if x then
@@ -3772,6 +4557,10 @@ local function decode(v)
 			return Enum.KeyCode[v.v]
 		elseif v._t == "m" then
 			return v.v
+		elseif v._t == "r" then
+			return { Low = v.lo, High = v.hi }
+		elseif v._t == "p" then
+			return { X = v.x, Y = v.y }
 		end
 	end
 	return v
@@ -3811,14 +4600,66 @@ function Window:Save(file)
 	return ok
 end
 
+local B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+local function b64encode(s)
+	local out = {}
+	for i = 1, #s, 3 do
+		local a, b, c = s:byte(i, i + 2)
+		local n = a * 65536 + (b or 0) * 256 + (c or 0)
+		local c1, c2, c3, c4 = math.floor(n / 262144) % 64, math.floor(n / 4096) % 64, math.floor(n / 64) % 64, n % 64
+		out[#out + 1] = B64:sub(c1 + 1, c1 + 1) .. B64:sub(c2 + 1, c2 + 1) .. (b and B64:sub(c3 + 1, c3 + 1) or "=") .. (c and B64:sub(c4 + 1, c4 + 1) or "=")
+	end
+	return table.concat(out)
+end
+local function b64decode(s)
+	s = s:gsub("[^%w%+/=]", "")
+	local out = {}
+	for i = 1, #s, 4 do
+		local n, pad = 0, 0
+		for k = 0, 3 do
+			local ch = s:sub(i + k, i + k)
+			if ch == "=" or ch == "" then
+				n = n * 64
+				pad += 1
+			else
+				local at = B64:find(ch, 1, true)
+				if not at then
+					return nil
+				end
+				n = n * 64 + (at - 1)
+			end
+		end
+		local b1, b2, b3 = math.floor(n / 65536) % 256, math.floor(n / 256) % 256, n % 256
+		out[#out + 1] = string.char(b1) .. (pad < 2 and string.char(b2) or "") .. (pad < 1 and string.char(b3) or "")
+	end
+	return table.concat(out)
+end
+
 function Window:Export()
-	-- every Flag as one line of text you can share. Window:Import(text) puts it back.
-	return game:GetService("HttpService"):JSONEncode(self:_collect())
+	-- every Flag as one short line of text you can share ("RBL1:..."). Window:Import(text) puts it back.
+	return "RBL1:" .. b64encode(game:GetService("HttpService"):JSONEncode(self:_collect()))
+end
+
+function Window:ExportTheme()
+	-- just the look: "RBLT:#RRGGBB"
+	return "RBLT:" .. toHex(self.Theme.Accent)
 end
 
 function Window:Import(text)
+	text = tostring(text):gsub("^%s+", ""):gsub("%s+$", "")
+	if text:sub(1, 5) == "RBLT:" then
+		local c = fromHex(text:sub(6))
+		if c then
+			self:SetAccent(c)
+			return true
+		end
+		return false
+	end
+	if text:sub(1, 5) == "RBL1:" then
+		text = b64decode(text:sub(6)) or ""
+	end
 	local ok, data = pcall(function()
-		return game:GetService("HttpService"):JSONDecode(tostring(text))
+		return game:GetService("HttpService"):JSONDecode(text)
 	end)
 	if not ok or type(data) ~= "table" then
 		return false
@@ -3863,6 +4704,200 @@ function Window:_apply(data)
 		end
 	end
 	return true
+end
+
+-- ============================================================ auto-save, avatar colors, update check, code export
+function Window:AutoSave(seconds)
+	-- keeps a backup file of all your settings every N seconds. AutoSave(nil) or AutoSave(0) stops it.
+	self._autoTok = (self._autoTok or 0) + 1
+	local mine = self._autoTok
+	seconds = tonumber(seconds)
+	self._autoOn = seconds ~= nil and seconds > 0
+	if not self._autoOn then
+		return
+	end
+	task.spawn(function()
+		while not self._dead and self._autoTok == mine do
+			task.wait(math.max(seconds, 5))
+			if self._dead or self._autoTok ~= mine then
+				return
+			end
+			self:Save(self:_base() .. "_autosave.json")
+		end
+	end)
+end
+
+function Window:RestoreSnapshot()
+	-- brings back the last auto-saved settings
+	return self:Load(self:_base() .. "_autosave.json")
+end
+
+function Window:ThemeFromAvatar()
+	-- makes the accent color from the colors of your avatar. Returns the color, or nil if it can't tell.
+	local lp = Players.LocalPlayer
+	local ch = lp and lp.Character
+	local bc = ch and ch:FindFirstChildOfClass("BodyColors")
+	if not bc then
+		return nil
+	end
+	local best, bestS = nil, -1
+	for _, prop in ipairs({ "TorsoColor3", "HeadColor3", "LeftArmColor3", "RightArmColor3", "LeftLegColor3", "RightLegColor3" }) do
+		local c = bc[prop]
+		if typeof(c) == "Color3" then
+			local _, s = c:ToHSV()
+			if s > bestS then
+				best, bestS = c, s
+			end
+		end
+	end
+	if not best then
+		return nil
+	end
+	local h, s, v = best:ToHSV()
+	best = Color3.fromHSV(h, math.max(s, 0.45), math.max(v, 0.75))
+	self:SetAccent(best)
+	return best
+end
+
+local function newer(remote, current)
+	local function parts(v)
+		local t = {}
+		for n in tostring(v):gmatch("%d+") do
+			table.insert(t, tonumber(n))
+		end
+		return t
+	end
+	local a, b = parts(remote), parts(current)
+	for i = 1, math.max(#a, #b) do
+		local x, y = a[i] or 0, b[i] or 0
+		if x ~= y then
+			return x > y
+		end
+	end
+	return false
+end
+
+function Window:CheckUpdate(o)
+	-- Url (a raw page with  Version = "1.2.3"  in it), Current (your version), Silent = true to skip the notification.
+	-- Returns isNewer, remoteVersion (or nil, nil if it could not check).
+	o = o or {}
+	local ok, body = pcall(function()
+		return game:HttpGet(o.Url or RebelUI.SourceUrl)
+	end)
+	if not ok or type(body) ~= "string" then
+		if not o.Silent then
+			self:Notify({ Title = "Update check", Text = "Could not reach the server.", Type = "warn" })
+		end
+		return nil, nil
+	end
+	local remote = body:match('Version%s*=%s*"([%d%.]+)"')
+	if not remote then
+		return nil, nil
+	end
+	local isNew = newer(remote, o.Current or RebelUI.Version)
+	if not o.Silent then
+		self:Notify({
+			Title = isNew and "Update available" or "Up to date",
+			Text = isNew and ("Version " .. remote .. " is out.") or ("You have the newest version (" .. remote .. ")."),
+			Type = isNew and "warn" or "success",
+		})
+	end
+	return isNew, remote
+end
+
+local function lit(v)
+	local t = typeof(v)
+	if t == "string" then
+		return string.format("%q", v)
+	elseif t == "number" or t == "boolean" then
+		return tostring(v)
+	elseif t == "Color3" then
+		return string.format("Color3.fromRGB(%d, %d, %d)", math.floor(v.R * 255 + 0.5), math.floor(v.G * 255 + 0.5), math.floor(v.B * 255 + 0.5))
+	elseif t == "EnumItem" then
+		local s = tostring(v)
+		return s:find("^Enum%.") and s or ("Enum.KeyCode." .. tostring(v.Name))
+	elseif t == "table" then
+		local parts = {}
+		for _, x in ipairs(v) do
+			local s = lit(x)
+			if not s then
+				return nil
+			end
+			table.insert(parts, s)
+		end
+		if #parts == 0 then
+			return nil
+		end
+		return "{ " .. table.concat(parts, ", ") .. " }"
+	end
+	return nil
+end
+
+local STATEFUL = { Toggle = true, Slider = true, Dropdown = true, Input = true, Keybind = true, Color = true, Choice = true, Cycle = true }
+
+function Window:GenerateCode()
+	-- writes the Lua that builds this panel as it is now (names, options, current values). Callbacks are left empty.
+	local lines = {
+		'local UI = loadstring(game:HttpGet("' .. RebelUI.SourceUrl .. '"))()',
+		"",
+		"local Win = UI:CreateWindow({",
+		"\tTitle = " .. lit(self.TitleText) .. ",",
+	}
+	if THEMES[self.ThemeName] then
+		table.insert(lines, "\tTheme = " .. lit(self.ThemeName) .. ",")
+	end
+	table.insert(lines, "})")
+	local skip = { Callback = true, Changed = true, Flag = false }
+	for ti, tab in ipairs(self._tabs) do
+		table.insert(lines, "")
+		table.insert(lines, "local Tab" .. ti .. " = Win:CreateTab({ Name = " .. lit(tab.Name) .. " })")
+		for _, it in ipairs(tab._items or {}) do
+			local o, kind = it.o, it.kind
+			if kind == "Section" and not o.Collapsible then
+				table.insert(lines, "Tab" .. ti .. ":Section(" .. lit(o.Name or "Section") .. ")")
+			elseif kind == "Label" then
+				table.insert(lines, "Tab" .. ti .. ":Label(" .. lit(o.Text or "") .. ")")
+			else
+				local keys = {}
+				for k, v in pairs(o) do
+					if not skip[k] and type(v) ~= "function" and lit(v) and not (k == "Default" and STATEFUL[kind]) then
+						table.insert(keys, k)
+					end
+				end
+				if STATEFUL[kind] and it.obj.Get then
+					local okg, cur = pcall(function()
+						return it.obj:Get()
+					end)
+					if okg and cur ~= nil then
+						if typeof(cur) == "table" and next(cur) ~= nil and type(next(cur)) ~= "number" then
+							local pick = {}
+							for k, on in pairs(cur) do
+								if on == true then
+									table.insert(pick, k)
+								end
+							end
+							table.sort(pick)
+							cur = pick
+						end
+						if lit(cur) then
+							o = setmetatable({ Default = cur }, { __index = o })
+							table.insert(keys, "Default")
+						end
+					end
+				end
+				table.sort(keys)
+				local parts = {}
+				for _, k in ipairs(keys) do
+					table.insert(parts, k .. " = " .. lit(o[k]))
+				end
+				if type(it.o.Callback) == "function" then
+					table.insert(parts, "Callback = function() end")
+				end
+				table.insert(lines, "Tab" .. ti .. ":" .. kind .. "({ " .. table.concat(parts, ", ") .. " })")
+			end
+		end
+	end
+	return table.concat(lines, "\n")
 end
 
 -- ============================================================ named profiles
@@ -4016,6 +5051,18 @@ function Window:CreateSettingsTab(o)
 		Default = win.Theme.Accent,
 		Callback = function(c)
 			win:SetAccent(c)
+		end,
+	})
+	tab:Button({
+		Name = "Match my avatar colors",
+		Description = "Makes the accent from your character",
+		Callback = function()
+			local c = win:ThemeFromAvatar()
+			win:Notify({
+				Title = c and "Theme changed" or "Can't tell",
+				Text = c and "The panel now matches your avatar." or "Your character has no body colors yet.",
+				Type = c and "success" or "warn",
+			})
 		end,
 	})
 	tab:Slider({
@@ -4177,6 +5224,22 @@ function Window:CreateSettingsTab(o)
 			})
 		end,
 	})
+	tab:Button({
+		Name = "Copy theme code",
+		Description = "Just the colors (a short RBLT code)",
+		Callback = function()
+			local ok = type(setclipboard) == "function" and pcall(setclipboard, win:ExportTheme())
+			win:Notify({ Title = ok and "Copied" or "Can't copy", Text = ok and "Paste it in the box below on another device." or "This executor can't copy text.", Type = ok and "success" or "warn" })
+		end,
+	})
+	tab:Button({
+		Name = "Copy this panel as code",
+		Description = "Lua that builds the panel as it is now",
+		Callback = function()
+			local ok = type(setclipboard) == "function" and pcall(setclipboard, win:GenerateCode())
+			win:Notify({ Title = ok and "Copied" or "Can't copy", Text = ok and "The Lua code is on your clipboard." or "This executor can't copy text.", Type = ok and "success" or "warn" })
+		end,
+	})
 	tab:Input({
 		Name = "Paste settings code",
 		Placeholder = "paste, then tap done",
@@ -4256,6 +5319,28 @@ function Window:CreateSettingsTab(o)
 						{ Name = "Cancel" },
 					},
 				})
+			end,
+		})
+		tab:Toggle({
+			Name = "Auto-save",
+			Description = "A backup of your settings every minute",
+			Default = win._autoOn == true,
+			Flag = "__autosave",
+			Callback = function(on)
+				win:AutoSave(on and 60 or nil)
+			end,
+		})
+		tab:Button({
+			Name = "Restore auto-save",
+			Callback = function()
+				local ok = win:RestoreSnapshot()
+				win:Notify({ Title = ok and "Restored" or "Nothing to restore", Text = ok and "Your last backup is back." or "Turn on Auto-save first.", Type = ok and "success" or "warn" })
+			end,
+		})
+		tab:Button({
+			Name = "Check for updates",
+			Callback = function()
+				win:CheckUpdate()
 			end,
 		})
 		tab:Button({
