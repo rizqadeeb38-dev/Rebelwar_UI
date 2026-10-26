@@ -33,6 +33,8 @@ Made by **prorizz196**. Discord: https://discord.gg/Kq7N4gzH22
 17. [Common mistakes](#common-mistakes)
 18. [What is new in v1.0.0](#what-is-new-in-v100)
 19. [Files in this repo](#files-in-this-repo)
+20. [Search, resize, profiles and the key gate](#search-resize-profiles-and-the-key-gate)
+21. [More tools: dialogs, collapsible sections, keybind modes](#more-tools)
 
 ---
 
@@ -111,6 +113,7 @@ Load:Finish() -- fills the bar, fades out, then returns
 | `Footer` | Text at the bottom. `false` hides it | `"RebelUI v1.0.0"` |
 | `Theme` | Any theme name. It colors the glow, bar and title | `"Red"` |
 | `Name` | Name of the ScreenGui | `"RebelUI_Loading"` |
+| `Timeout` | Seconds after which the screen removes itself if you never call `Finish` (so it can never get stuck) | `40` |
 
 ### Methods
 
@@ -145,6 +148,20 @@ Load:Finish()
 Win:Toggle(true) -- open the panel after the loading screen is gone
 ```
 
+**Never get stuck.** If your script errors while the loading screen is up, the screen would cover the game. Wrap the building part in `pcall` and close the screen on failure:
+
+```lua
+local ok, err = pcall(function()
+	-- build your window here
+end)
+if not ok then
+	Load:Fail("Something went wrong")
+	task.wait(3)
+	Load:Destroy()
+	warn(err)
+end
+```
+
 > Tip: create the window with `Open = false` while the loading screen is up, then call `Win:Toggle(true)` after `Load:Finish()`. The panel then pops open exactly when the intro fades.
 
 ---
@@ -172,6 +189,9 @@ The window has: a **logo and title** in the corner, a **tab list** on the left, 
 | `Theme` | `Red`, `Crimson`, `Blue`, `Green`, `Purple`, `Orange`, `Pink`, `Gold`, `Cyber`, `Blood`, `Ice`, `Mono`, or a theme you added | `"Red"` |
 | `Width`, `Height` | Panel size in pixels (it shrinks to fit small screens) | `420`, `340` |
 | `Open` | `false` keeps the panel closed at the start | `true` |
+| `Opacity` | How solid the panel is, 10 to 100. `100` = fully solid | `100` |
+| `Search` | `false` hides the search box next to the page title | `true` |
+| `Resizable` | `false` removes the corner grip that resizes the panel | `true` |
 | `ToggleKey` | Key that shows or hides the panel on a keyboard | `Enum.KeyCode.RightShift` |
 | `Profile` | `false` hides the player card at the bottom left | `true` |
 | `Name` | Name of the ScreenGui (a second window with the same name replaces the first) | `"RebelUI"` |
@@ -192,7 +212,17 @@ The window has: a **logo and title** in the corner, a **tab list** on the left, 
 | `Win:SetTheme("Blue")` | Changes the whole theme live |
 | `Win:SetAccent(Color3)` | Makes a theme from any color |
 | `Win:SetScale(1.2)` | Makes the panel bigger or smaller (0.5 to 1.6) |
-| `Win:SetTransparency(0.3)` | Makes the panel see-through (0 to 0.9) |
+| `Win:Dialog({...})` | A pop-up question with up to 3 buttons. See [More tools](#more-tools) |
+| `Win:CreateKeybindList({...})` | An on-screen list of your keybinds. See [More tools](#more-tools) |
+| `Win:CreateTabDivider("GAMES")` | A small caption between tabs in the side list |
+| `Win:Export()` / `Win:Import(text)` | All your settings as one line of text, and back |
+| `Win:SetOpacity(100)` | How solid the panel is, 10 to 100 (`100` = solid) |
+| `Win:SetTransparency(0.3)` | The same thing the other way round (0 to 0.9) |
+| `Win:SetSize(500, 380)` | Resizes the panel (it stays on the screen, minimum 320 x 240) |
+| `Win:SetToggleKey(Enum.KeyCode.F4)` | Changes the key that opens and closes the panel |
+| `Win:SaveProfile(name)` / `LoadProfile` / `DeleteProfile` / `ListProfiles` | Named settings. See [Profiles](#search-resize-profiles-and-the-key-gate) |
+| `Win:SetAutoLoad(name)` / `Win:AutoLoad()` | Pick and apply the profile that loads on start |
+| `UI:KeyGate({...})` | Asks for a key before your script goes on. See [the key gate](#search-resize-profiles-and-the-key-gate) |
 | `Win:Save(file)` / `Win:Load(file)` | Save or load every element that has a `Flag`. See [saving](#flags-and-saving-settings) |
 | `Win:Destroy()` | Removes the whole panel and stops everything |
 
@@ -593,6 +623,19 @@ Win:Notify("Just a line of text")
 | `Text` | Smaller second line (wraps) | none |
 | `Type` | `"success"` (green), `"warn"` (yellow), `"error"` (red), or none (theme color) | none |
 | `Duration` | Seconds on screen | `Win.NotifyTime` (4) |
+| `Actions` | Up to 3 buttons: `{ { Name = "Yes", Callback = fn }, { Name = "No" } }`. Tapping one runs it and closes the card | none |
+
+```lua
+Win:Notify({
+	Title = "Update ready",
+	Text = "Reload now?",
+	Duration = 8,
+	Actions = {
+		{ Name = "Reload", Callback = function() print("reloading") end },
+		{ Name = "Later" },
+	},
+})
+```
 
 ---
 
@@ -639,7 +682,7 @@ Win:CreateSettingsTab({
 })
 ```
 
-It contains: a **Theme** cycle (12 themes) · an **Accent color** picker · **Panel size** · **See-through** · the **top bar choices** (show bar, style, items) · **Notifications**, **Toggle pop-ups**, **Sound effects**, **Notification time** · **Confirm on close** · **Reset position** · **Save settings** · **Load settings** · **Unload panel**.
+It contains: a **Theme** cycle (12 themes) · an **Accent color** picker · **Panel size** · **Opacity** (100% = solid) · **Open / close key** · **Profiles** (name, save, load, delete, load on start) · the **top bar choices** (show bar, style, items) · **Notifications**, **Toggle pop-ups**, **Sound effects**, **Notification time** · **Confirm on close** · **Reset position** · **Save settings** · **Load settings** · **Unload panel**.
 
 ---
 
@@ -1598,6 +1641,7 @@ RebelUI's `UI:Loading` adds a zooming banner, embers, a logo with a spinning rin
 
 | Problem | Cause and fix |
 |---|---|
+| The demo loader does nothing | The files in your repo are missing, private, or the old version. `Example.lua` and `source.lua` must be in the root of the `main` branch, and the repo must be public. Open the link in a browser: you should see code, not `404`. The demo now shows a message on screen saying what is wrong |
 | Nothing appears | The executor blocked the script, or an error stopped it. Check the console. RebelUI uses `gethui()` and falls back to `CoreGui` |
 | "attempt to index nil" on `Win` | The line that creates the window failed (often the `loadstring` link). Make sure the repo is public and the file name is exactly `source.lua` on the `main` branch |
 | The panel never opens after a loading screen | You created it with `Open = false` and forgot `Win:Toggle(true)` |
@@ -1610,10 +1654,245 @@ RebelUI's `UI:Loading` adds a zooming banner, embers, a logo with a spinning rin
 
 ---
 
+## Search, resize, profiles and the key gate
+
+New in v1.0.0. The search box, the resize grip and the opacity are on by default. Profiles and the key gate are one call each.
+
+### Search box
+
+A small box next to the page title. Type and the rows on the current tab that do not match hide. Clear it (or change tab) and everything comes back. Turn it off with `Search = false` in `CreateWindow`.
+
+### Resize
+
+Drag the little grip in the bottom-right corner of the panel. You can also set the size from code:
+
+```lua
+Win:SetSize(500, 380)   -- pixels. Minimum 320 x 240, and it never goes bigger than the screen
+```
+
+Turn the grip off with `Resizable = false`.
+
+### Opacity
+
+The panel is **100% solid** by default. Players can change it with the **Opacity** slider in Settings. From code:
+
+```lua
+local Win = UI:CreateWindow({ Title = "My Script", Opacity = 100 })
+Win:SetOpacity(80)   -- 10 to 100
+```
+
+### The open / close key
+
+The Settings tab has an **Open / close key** keybind. From code:
+
+```lua
+Win:SetToggleKey(Enum.KeyCode.F4)
+```
+
+### Profiles (named settings)
+
+A profile is everything with a `Flag`, saved under a name like `Legit` or `Rage`. The Settings tab has a **Profiles** section (name box, list, Save, Load, Delete, Load on start). From code:
+
+```lua
+Win:SaveProfile("Legit")             -- returns true, or false and a reason
+Win:LoadProfile("Legit")             -- your Callbacks run
+Win:DeleteProfile("Legit")
+print(table.concat(Win:ListProfiles(), ", "))
+Win:SetAutoLoad("Legit")             -- the profile that starts with the script
+Win:AutoLoad()                       -- call this once, after your tabs exist
+```
+
+Profiles are plain files next to your executor's workspace files. They need an executor with `writefile` and `readfile`.
+
+### The key gate
+
+Shows a small card that asks for a key, and **waits** until the key is right or the player closes it.
+
+```lua
+local ok = UI:KeyGate({
+	Name = "MyScript",
+	Title = "Enter your key",
+	Subtitle = "Paste the key and tap Continue.",
+	Keys = { "ABC-123", "XYZ-789" },     -- the allowed keys
+	Link = "https://discord.gg/Kq7N4gzH22", -- adds a "Get key" button that copies this link
+	Save = true,                         -- remember the key on this device
+})
+if not ok then
+	return -- the player closed it
+end
+-- the rest of your script runs only with a good key
+```
+
+| Option | What it does | Default |
+|---|---|---|
+| `Keys` | List of allowed keys | none |
+| `Check` | `function(key) return true end` to check the key yourself (for example against your own server). Used instead of `Keys` | none |
+| `Title`, `Subtitle`, `Footer` | Texts on the card | `"Enter your key"` |
+| `Link` | Adds a **Get key** button that copies the link | none |
+| `Save` | Remember a good key so the card is skipped next time | `true` |
+| `MaxTries` | Close after this many wrong keys (returns `false`) | no limit |
+| `Timeout` | Close after this many seconds (returns `false`) | no limit |
+| `Theme`, `Name`, `File` | Theme name, ScreenGui name, file for the saved key | `"Red"` |
+
+It returns `true` and the key, or `false`. RebelUI is keyless by default: only use the gate if you want one. Remember that keys written inside a script can be read by anyone who opens it. For real protection use `Check` with your own server.
+
+---
+
+## More tools
+
+### Dialog (a pop-up question)
+
+```lua
+Win:Dialog({
+	Title = "Reset everything?",
+	Text = "This turns every toggle off.",
+	Buttons = {
+		{ Name = "Yes, reset", Callback = function() print("reset") end }, -- the first button is the bright one
+		{ Name = "Cancel" },
+	},
+})
+```
+
+Up to 3 buttons. Tapping one closes the dialog and runs its `Callback`.
+
+### Collapsible sections
+
+```lua
+Tab:Section({ Name = "Advanced", Collapsible = true, Collapsed = true })
+Tab:Toggle({ Name = "Hidden until you tap the line above" })
+Tab:Section("Next section") -- a section ends where the next section starts
+```
+
+The line shows `v` when open and `>` when closed. `section:Collapse(true)` or `section:Collapse(false)` does it from code.
+
+### Keybind modes
+
+```lua
+Tab:Keybind({ Name = "Fly", Default = Enum.KeyCode.F, Mode = "Toggle", Callback = function(on) print(on) end })
+Tab:Keybind({ Name = "Sprint", Default = Enum.KeyCode.LeftShift, Mode = "Hold", Callback = function(held) print(held) end })
+Tab:Keybind({ Name = "Press", Default = Enum.KeyCode.G, Callback = function() print("pressed") end }) -- default mode
+```
+
+### Number box
+
+```lua
+Tab:Input({ Name = "Delay", Numeric = true, Min = 0, Max = 10, Default = "2", Callback = function(n) print(n + 1) end })
+```
+
+Only digits, `.` and `-` can be typed, and the callback gets a real number kept between `Min` and `Max`.
+
+### Hide or remove any element
+
+Every element has `:SetVisible(true/false)` and `:Destroy()`, and a `.Row` field with its frame.
+
+```lua
+local t = Tab:Toggle({ Name = "Secret", Flag = "secret" })
+t:SetVisible(false)
+t:Destroy()
+```
+
+### Tab dividers
+
+```lua
+Win:CreateTab({ Name = "Main" })
+Win:CreateTabDivider("Games")   -- a small "GAMES" caption in the side list
+Win:CreateTab({ Name = "Murder Mystery" })
+```
+
+### Share your settings
+
+`Win:Export()` returns all your `Flag` values as one line of text. `Win:Import(text)` puts them back (and returns `false` if the text is not a settings code). The Settings tab has **Copy settings code** and **Paste settings code**.
+
+### Utilities (in the Settings tab)
+
+**Anti-AFK**, **FPS cap** (when the executor has `setfpscap`), **Rejoin this server** (asks first), **Copy game ID**. Turn them off with `Win:CreateSettingsTab({ Utilities = false })`.
+
+### Notification icons
+
+```lua
+Win:Notify({ Title = "Update", Text = "New version", Icon = 114659273298746 })
+```
+
+
+### Tooltips
+
+```lua
+Tab:Toggle({ Name = "Speed", Tooltip = "Makes you run faster. Might look suspicious." })
+```
+
+Any element can have `Tooltip = "text"`. A small card shows when you hover (PC) or hold your finger on the element (phone).
+
+### Warning box (Notice)
+
+```lua
+Tab:Notice({ Type = "warn", Title = "Heads up", Text = "This works best in private servers." })
+```
+
+`Type` is `"warn"` (yellow), `"error"` (red), `"success"` (green) or none. Change it later with `notice:Set(title, text)` and `notice:SetType("error")`.
+
+### Button extras
+
+```lua
+Tab:Button({ Name = "Reset all", Risky = true, DoubleClick = true, Callback = function() end }) -- red, asks "Tap again to confirm"
+local b = Tab:Button({ Name = "Coming soon", Disabled = true })
+b:SetDisabled(false)
+```
+
+### Show an element only when something is on
+
+```lua
+local master = Tab:Toggle({ Name = "Aimbot" })
+Tab:Slider({ Name = "Smoothness", Min = 1, Max = 10 }):DependsOn(master)       -- visible only while master is ON
+Tab:Dropdown({ Name = "Mode", Options = { "A", "B" } }):DependsOn(otherDropdown, "A") -- or while the value is "A"
+```
+
+### Searchable dropdown and the player list
+
+Dropdowns with more than 7 options get a search box automatically (`Searchable = false` turns it off, `Searchable = true` forces it). `Options = "Players"` fills the list with everyone in the server and keeps it up to date.
+
+```lua
+Tab:Dropdown({ Name = "Target", Options = "Players", Callback = function(name) print(name) end })
+```
+
+### Keybind list (on screen)
+
+```lua
+local list = Win:CreateKeybindList({ Title = "Keybinds" })   -- drag it by the title
+list:Show(false)   -- hide / show from code
+```
+
+It lists every `Keybind` and every `Toggle` that has a `Key`, and shows `ON` next to the ones that are active.
+
+### Notifications you can update
+
+```lua
+local n = Win:Notify({ Title = "Downloading...", Text = "0%", Duration = 0 }) -- Duration = 0: stays until you close it
+n:SetText("50%")
+n:Progress(0.5)      -- the line at the bottom fills to 50%
+n:SetTitle("Done!")
+n:Close()
+```
+
+### More small options
+
+| Where | Option | What it does |
+|---|---|---|
+| `Slider` | `Prefix = "x"` | Text before the number |
+| `Input` | `MaxLength = 5` | Stops typing after 5 characters |
+
+---
+
 ## What is new in v1.0.0
 
+- **Opacity 100** by default, with a Settings slider and `Win:SetOpacity`.
+- **Search box** on every page, and a **resize grip** with `Win:SetSize`.
+- **Profiles** (named settings), **settings export / import**, and **`UI:KeyGate`** (an optional key card).
+- **Notification buttons and icons**, **`Win:Dialog`** pop-ups, **collapsible sections**, **keybind modes**, **number boxes**, **tab dividers**, `:SetVisible()` / `:Destroy()` on every element.
+- **Utilities** in Settings: Anti-AFK, Rejoin, Copy game ID.
+- **Tooltips**, **warning boxes** (`Tab:Notice`), **risky / double-tap / disabled buttons**, **`:DependsOn`**, **searchable dropdowns** and a **Players list**, an on-screen **keybind list**, and **notifications you can update** (`Win:Notify` returns a handle).
 - **The Rebelwar Hub look**: spinning ring, thin black ring, embers, glowing tab marker, player card, shiny buttons, pill toggles with ON/OFF, stacked notification cards.
 - **`UI:Loading`**: the full loading screen with `Preload` and `Run`.
+- **Safe loading**: the demo checks the download and shows a message if something is wrong, and a loading screen can never get stuck (`Timeout`).
 - **Top bar** in the Hub style, with 10 items, 5 presets and `Tab:BarSettings`.
 - **Tabs** with an image next to the name, their own header, and a slide-in page.
 - **Toggles**: switch or checkbox, description, icon, color, locked (with a warning card), key, flag.
