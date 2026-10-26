@@ -6,7 +6,7 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/works%20on-mobile%20%7C%20PC-blue)
 
-RebelUI gives you a finished panel in a few lines: a spinning-ring window with embers, tabs that have a **Roblox image next to the name** and their own header, **every kind of toggle** (name, description, icon, color, locked, key, checkbox), sliders, dropdowns, color pickers, notifications, a **top bar** where the player chooses what shows (FPS, Timer, Logo and more), a **loading screen**, 12 themes that change live, and saving.
+RebelUI gives you a finished panel in a few lines: a spinning-ring window with embers, tabs that have a **Roblox image next to the name** and their own header, **every kind of toggle** (name, description, icon, color, locked, key, checkbox), sliders, dropdowns, color pickers, notifications, a **top bar** where the player chooses what shows (FPS, Timer, Logo and more), a **loading screen**, 14 themes that change live, and saving.
 
 Made by **prorizz196**. Discord: https://discord.gg/Kq7N4gzH22
 
@@ -186,12 +186,15 @@ The window has: a **logo and title** in the corner, a **tab list** on the left, 
 | `Title` | Name in the corner | `"RebelUI"` |
 | `Subtitle` | Small text under the title | none |
 | `Icon` | Roblox image id for the small logo (also used on the round open button) | none |
-| `Theme` | `Red`, `Crimson`, `Blue`, `Green`, `Purple`, `Orange`, `Pink`, `Gold`, `Cyber`, `Blood`, `Ice`, `Mono`, or a theme you added | `"Red"` |
+| `Theme` | `Red`, `Crimson`, `Blue`, `Green`, `Purple`, `Orange`, `Pink`, `Gold`, `Cyber`, `Blood`, `Ice`, `Mono`, `Contrast`, `Colorblind`, or a theme you added | `"Red"` |
 | `Width`, `Height` | Panel size in pixels (it shrinks to fit small screens) | `420`, `340` |
 | `Open` | `false` keeps the panel closed at the start | `true` |
 | `Opacity` | How solid the panel is, 10 to 100. `100` = fully solid | `100` |
 | `Search` | `false` hides the search box next to the page title | `true` |
 | `Resizable` | `false` removes the corner grip that resizes the panel | `true` |
+| `Inertia` | `false` stops the panel gliding after you let go | `true` |
+| `Scramble` | `false` turns off the title decode effect | `true` |
+| `AutoSave` | Seconds between backups (needs `writefile`) | off |
 | `ToggleKey` | Key that shows or hides the panel on a keyboard | `Enum.KeyCode.RightShift` |
 | `Profile` | `false` hides the player card at the bottom left | `true` |
 | `Name` | Name of the ScreenGui (a second window with the same name replaces the first) | `"RebelUI"` |
@@ -215,7 +218,14 @@ The window has: a **logo and title** in the corner, a **tab list** on the left, 
 | `Win:Dialog({...})` | A pop-up question with up to 3 buttons. See [More tools](#more-tools) |
 | `Win:CreateKeybindList({...})` | An on-screen list of your keybinds. See [More tools](#more-tools) |
 | `Win:CreateTabDivider("GAMES")` | A small caption between tabs in the side list |
-| `Win:Export()` / `Win:Import(text)` | All your settings as one line of text, and back |
+| `Win:Export()` / `Win:Import(text)` | All your settings as one short code (`RBL1:`), and back |
+| `Win:ExportTheme()` | Just the colors (`RBLT:#RRGGBB`) |
+| `Win:GenerateCode()` | The Lua that builds this panel as it is now |
+| `Win:AutoSave(60)` / `Win:RestoreSnapshot()` | Backup every N seconds, and bring it back |
+| `Win:ThemeFromAvatar()` | Accent from your avatar's colors |
+| `Win:CheckUpdate({...})` | Tells the player when a newer version exists |
+| `Win:Log(text, kind)` | Writes to the first console |
+| `UI:SetLanguage({...})` | Translate every label |
 | `Win:SetOpacity(100)` | How solid the panel is, 10 to 100 (`100` = solid) |
 | `Win:SetTransparency(0.3)` | The same thing the other way round (0 to 0.9) |
 | `Win:SetSize(500, 380)` | Resizes the panel (it stays on the screen, minimum 320 x 240) |
@@ -469,7 +479,7 @@ Good for long lists like themes, because it takes one row.
 ```lua
 local theme = Tab:Cycle({
 	Name = "Theme Mode",
-	Description = "12 themes - tap the arrows",
+	Description = "14 themes - tap the arrows",
 	Options = UI.Themes,
 	Default = "Red",                       -- a name or a number
 	Callback = function(name, index) Win:SetTheme(name) end,
@@ -641,7 +651,7 @@ Win:Notify({
 
 ## Themes and your own colors
 
-Twelve themes are built in. `Red` is the exact Rebelwar Hub look.
+Fourteen themes are built in. `Red` is the exact Rebelwar Hub look. `Contrast` (black and bright yellow) and `Colorblind` (blue) are made to be easy to read.
 
 | Theme | Color |
 |---|---|
@@ -657,6 +667,8 @@ Twelve themes are built in. `Red` is the exact Rebelwar Hub look.
 | `Blood` | Dark blood red |
 | `Ice` | Ice blue |
 | `Mono` | Grey / white |
+| `Contrast` | Pure black with bright yellow (easy reading) |
+| `Colorblind` | Blue (easy to tell apart from orange) |
 
 ```lua
 Win:SetTheme("Cyber")                          -- everything recolors live
@@ -682,7 +694,7 @@ Win:CreateSettingsTab({
 })
 ```
 
-It contains: a **Theme** cycle (12 themes) · an **Accent color** picker · **Panel size** · **Opacity** (100% = solid) · **Open / close key** · **Profiles** (name, save, load, delete, load on start) · the **top bar choices** (show bar, style, items) · **Notifications**, **Toggle pop-ups**, **Sound effects**, **Notification time** · **Confirm on close** · **Reset position** · **Save settings** · **Load settings** · **Unload panel**.
+It contains: a **Theme** cycle (14 themes) · **Match my avatar colors** · an **Accent color** picker · **Panel size** · **Opacity** (100% = solid) · **Open / close key** · **Profiles** (name, save, load, delete, load on start) · the **top bar choices** (show bar, style, items) · **Notifications**, **Toggle pop-ups**, **Sound effects**, **Notification time** · **Copy / paste settings code**, **Copy theme code**, **Copy this panel as code** · **Auto-save**, **Check for updates**, **Anti-AFK**, **Rejoin** · **Confirm on close** · **Reset position** · **Save settings** · **Load settings** · **Unload panel**.
 
 ---
 
@@ -1880,6 +1892,134 @@ n:Close()
 | `Slider` | `Prefix = "x"` | Text before the number |
 | `Input` | `MaxLength = 5` | Stops typing after 5 characters |
 
+
+### Range slider (two knobs)
+
+```lua
+local r = Tab:RangeSlider({ Name = "Distance", Min = 0, Max = 500, Default = { 50, 300 }, Suffix = " studs", Flag = "dist",
+	Callback = function(low, high) print(low, high) end })
+print(r:Get().Low, r:Get().High)
+r:Set({ Low = 10, High = 20 })
+```
+
+### 2D pad
+
+```lua
+Tab:Pad({ Name = "Aim offset", Default = { X = 0.5, Y = 0.5 }, Callback = function(x, y) print(x, y) end }) -- both from 0 to 1
+```
+
+### Slider extras
+
+```lua
+Tab:Slider({ Name = "Speed", Min = 1, Max = 1000, Log = true, Arrows = true })
+```
+
+`Arrows = true` adds `<` `>` buttons that move one `Step`. `Log = true` makes the left of the bar fine and the right of the bar coarse (`Min` must be above 0).
+
+### Math box
+
+```lua
+Tab:Input({ Name = "Amount", Math = true, Callback = function(n) print(n) end }) -- type 16*4, (2+3)^2, 10/4 ...
+```
+
+It understands `+ - * / % ^` and brackets, and gives your function a number. It never runs code.
+
+### Keybind combo
+
+```lua
+Tab:Keybind({ Name = "Panic", Default = Enum.KeyCode.X, Modifier = Enum.KeyCode.LeftShift, Callback = function() end }) -- Shift + X
+```
+
+### Console
+
+```lua
+local log = Tab:Console({ Name = "Log", Height = 120, MaxLines = 200 })
+log:Log("started")
+log:Log("careful", "warn")      -- "warn", "error", "success" or none
+Win:Log("goes to the first console")
+log:Copy()   log:Clear()   print(log:GetText())
+```
+
+### Live graph
+
+```lua
+Tab:Graph({ Name = "FPS", Source = "FPS" })            -- "FPS", "Ping", "Memory" or "Frame" (milliseconds per frame)
+Tab:Graph({ Name = "Coins", Source = function() return myCoins end, Max = 100 })
+```
+
+### Code box
+
+```lua
+Tab:CodeBox({ Name = "Script", Default = "print('hi')", Height = 100 })                -- Run uses loadstring
+Tab:CodeBox({ Name = "Command", Callback = function(code) print(code) end })           -- or do your own thing
+```
+
+### Feed (news from the web)
+
+```lua
+Tab:Feed({ Title = "News", Url = "https://raw.githubusercontent.com/you/repo/main/news.txt", MaxChars = 400 })
+```
+
+It loads a plain text page into a card (and shows `Text` if it cannot).
+
+### Lazy tabs
+
+```lua
+Win:CreateTab({ Name = "Big tab", Build = function(tab)
+	tab:Toggle({ Name = "Built when you first open me" })
+end })
+```
+
+### State (a value that updates things)
+
+```lua
+local score = UI.State(0)
+local label = Tab:Label("")
+score:Bind(label, "Score: %d")   -- the label always shows the score
+score:Set(5)
+score:OnChange(function(v) print(v) end)
+```
+
+### Spring (smooth, bouncy numbers)
+
+```lua
+local s = UI.Spring.new(0, 12, 0.6)   -- start, speed, damping (0 bouncy ... 1 smooth)
+s.Target = 1
+game:GetService("RunService").RenderStepped:Connect(function(dt)
+	print(s:Update(dt))
+end)
+```
+
+### Settings codes, theme codes, code export
+
+```lua
+local code = Win:Export()      -- "RBL1:..."  all your settings as one short line (base64)
+Win:Import(code)               -- also accepts a theme code
+Win:ExportTheme()              -- "RBLT:#RRGGBB"  just the color
+print(Win:GenerateCode())      -- Lua that builds this panel as it is now (Callbacks left empty)
+```
+
+### Auto-save, avatar colors, update check
+
+```lua
+Win:AutoSave(60)        -- backup every 60 seconds (or CreateWindow({ AutoSave = 60 }))  AutoSave(0) stops it
+Win:RestoreSnapshot()   -- bring the last backup back
+Win:ThemeFromAvatar()   -- the accent becomes your character's color
+Win:CheckUpdate({ Url = "https://raw.githubusercontent.com/you/repo/main/script.lua", Current = "1.0.0" })
+```
+
+`CheckUpdate` reads `Version = "1.2.3"` from the page and tells the player when yours is older.
+
+### Translate the panel
+
+```lua
+UI:SetLanguage({ ["Settings"] = "Tetapan", ["Save settings"] = "Simpan" })  -- before CreateWindow
+```
+
+### Smooth moves
+
+The panel keeps gliding a little when you let go while dragging (`Inertia = false` turns it off), and page titles "decode" when you change tab (`Scramble = false` turns it off).
+
 ---
 
 ## What is new in v1.0.0
@@ -1889,6 +2029,9 @@ n:Close()
 - **Profiles** (named settings), **settings export / import**, and **`UI:KeyGate`** (an optional key card).
 - **Notification buttons and icons**, **`Win:Dialog`** pop-ups, **collapsible sections**, **keybind modes**, **number boxes**, **tab dividers**, `:SetVisible()` / `:Destroy()` on every element.
 - **Utilities** in Settings: Anti-AFK, Rejoin, Copy game ID.
+- **Power tools**: range slider, 2D pad, console, live graphs (FPS, Ping, Memory), code box, news feed, lazy tabs, `UI.State`, `UI.Spring`, math box, keybind combos, slider arrows and log scale.
+- **Shareable**: base64 settings codes (`RBL1:`), theme codes (`RBLT:`), `Win:GenerateCode()`, auto-save, `Win:CheckUpdate`, `RebelUI:SetLanguage`, avatar-matched theme.
+- **Two accessibility themes** (`Contrast`, `Colorblind`), glide after dragging and title decode.
 - **Tooltips**, **warning boxes** (`Tab:Notice`), **risky / double-tap / disabled buttons**, **`:DependsOn`**, **searchable dropdowns** and a **Players list**, an on-screen **keybind list**, and **notifications you can update** (`Win:Notify` returns a handle).
 - **The Rebelwar Hub look**: spinning ring, thin black ring, embers, glowing tab marker, player card, shiny buttons, pill toggles with ON/OFF, stacked notification cards.
 - **`UI:Loading`**: the full loading screen with `Preload` and `Run`.
@@ -1898,7 +2041,7 @@ n:Close()
 - **Toggles**: switch or checkbox, description, icon, color, locked (with a warning card), key, flag.
 - **`Tab:Cycle`** (the `<  option  >` picker) and a better color picker (tap to open).
 - **`Win:CreateSettingsTab`**: a finished Settings tab in one line.
-- **12 themes** that recolor everything live, `SetAccent`, `AddTheme`, `SetScale`, `SetTransparency`.
+- **14 themes** that recolor everything live, `SetAccent`, `AddTheme`, `SetScale`, `SetTransparency`.
 - **`Win:Save()` and `Win:Load()`** for every element with a `Flag`.
 
 ---
