@@ -3991,6 +3991,461 @@ function Tab:Feed(o)
 	return obj
 end
 
+-- ============================================================ chat (messages, typing text, quick replies, input box)
+local function chatRich(s)
+	-- a little markdown: **bold**, `code`, "- " bullets, "# " headings. Everything else is escaped.
+	s = s:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
+	s = s:gsub("%*%*(.-)%*%*", "<b>%1</b>")
+	s = s:gsub("`([^`\n]+)`", '<font face="Code" color="#ffb59e">%1</font>')
+	s = s:gsub("^%- ", "• "):gsub("\n%- ", "\n• "):gsub("\n%* ", "\n• ")
+	s = s:gsub("\n#+ ([^\n]+)", "\n<b>%1</b>"):gsub("^#+ ([^\n]+)", "<b>%1</b>")
+	return s
+end
+
+local function chatSegments(text)
+	local out, pos = {}, 1
+	while true do
+		local a, b, _, code = text:find("```(%w*)\n?(.-)```", pos)
+		if not a then
+			break
+		end
+		if a > pos then
+			table.insert(out, { false, text:sub(pos, a - 1) })
+		end
+		table.insert(out, { true, (code:gsub("\n+$", "")) })
+		pos = b + 1
+	end
+	if pos <= #text then
+		table.insert(out, { false, text:sub(pos) })
+	end
+	local clean = {}
+	for _, seg in ipairs(out) do
+		local t = seg[2]
+		if not seg[1] then
+			t = t:gsub("^%s+", ""):gsub("%s+$", "")
+		end
+		if t ~= "" then
+			table.insert(clean, { seg[1], t })
+		end
+	end
+	return clean
+end
+
+function Tab:Chat(o)
+	-- Name (the bot's name), Height (260), Placeholder, MaxMessages (60), Chips = true,
+	-- OnSend(text, chat) when the player sends something, Actions = { { Name = "Speak", Callback = function(text) end } }
+	-- chat:Add("user" | "bot" | "system", text, { Instant = true }) -> message, chat:SetStatus(text), chat:SetChips({...}),
+	-- chat:SetBusy(bool), chat:Submit(text), chat:Clear(), chat:GetMessages()
+	o = o or {}
+	local win = self.Win
+	local H = o.Height or 260
+	local botName = o.Name or "Bot"
+	local row = self:_row(H)
+	local INPUT, CHIPS, STATUS = 34, 26, 16
+	local reserve = 6 + INPUT + 6 + CHIPS + 2 + STATUS + 4
+	local list = new("ScrollingFrame", {
+		Position = UDim2.fromOffset(6, 6),
+		Size = UDim2.new(1, -12, 1, -reserve - 6),
+		BorderSizePixel = 0,
+		ScrollBarThickness = 3,
+		CanvasSize = UDim2.new(),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+	}, row)
+	corner(list, 8)
+	win:_bind(list, "BackgroundColor3", "Inset")
+	win:_bind(list, "ScrollBarImageColor3", "Accent")
+	new("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }, list)
+	new("UIPadding", { PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 6), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 8) }, list)
+
+	local statusL = label(row, "", 10, C.Dim, true)
+	statusL.Position = UDim2.new(0, 10, 1, -(6 + INPUT + 6 + CHIPS + 2 + STATUS))
+	statusL.Size = UDim2.new(1, -20, 0, STATUS)
+	win:_bind(statusL, "TextColor3", "Glow")
+
+	local chipBox = new("ScrollingFrame", {
+		Position = UDim2.new(0, 6, 1, -(6 + INPUT + 6 + CHIPS)),
+		Size = UDim2.new(1, -12, 0, CHIPS),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 0,
+		CanvasSize = UDim2.new(),
+		AutomaticCanvasSize = Enum.AutomaticSize.X,
+		ScrollingDirection = Enum.ScrollingDirection.X,
+	}, row)
+	new("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		Padding = UDim.new(0, 5),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		VerticalAlignment = Enum.VerticalAlignment.Center,
+	}, chipBox)
+
+	local box = new("TextBox", {
+		Position = UDim2.new(0, 6, 1, -(6 + INPUT)),
+		Size = UDim2.new(1, -78, 0, INPUT),
+		BorderSizePixel = 0,
+		Text = "",
+		PlaceholderText = o.Placeholder or "Type a message...",
+		PlaceholderColor3 = C.Dim,
+		TextColor3 = C.Text,
+		TextSize = 11,
+		Font = Enum.Font.Gotham,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		ClearTextOnFocus = false,
+	}, row)
+	corner(box, 9)
+	new("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 8) }, box)
+	win:_bind(box, "BackgroundColor3", "Inset")
+	local send = new("TextButton", {
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -6, 1, -(6 + INPUT)),
+		Size = UDim2.fromOffset(64, INPUT),
+		BorderSizePixel = 0,
+		Text = "Send",
+		TextColor3 = C.White,
+		TextSize = 12,
+		Font = Enum.Font.GothamBold,
+		AutoButtonColor = false,
+	}, row)
+	corner(send, 9)
+	local sg = new("UIGradient", {}, send)
+	win:_onTheme(function(t)
+		sg.Color = ColorSequence.new(t.Accent, t.Dark:Lerp(t.Accent, 0.35))
+	end)
+
+	local obj = { Messages = {}, Busy = false }
+	local n = 0
+	local function toBottom()
+		list.CanvasPosition = Vector2.new(0, 1e7)
+	end
+
+	-- one message bubble. role: "user" (right), "bot" (left), "system" (centered, small)
+	function obj:Add(role, text, opt)
+		opt = opt or {}
+		text = tostring(text or "")
+		n += 1
+		local isUser, isSys = role == "user", role == "system"
+		local wrap = new("Frame", {
+			Size = UDim2.new(1, 0, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			LayoutOrder = n,
+		}, list)
+		new("UIListLayout", {
+			Padding = UDim.new(0, 2),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			HorizontalAlignment = isUser and Enum.HorizontalAlignment.Right or (isSys and Enum.HorizontalAlignment.Center or Enum.HorizontalAlignment.Left),
+		}, wrap)
+		if not isSys then
+			local who = label(wrap, isUser and (opt.Name or "You") or (opt.Name or botName), 8, C.Dim, true)
+			who.Size = UDim2.new(1, 0, 0, 11)
+			who.TextXAlignment = isUser and Enum.TextXAlignment.Right or Enum.TextXAlignment.Left
+			who.LayoutOrder = 1
+		end
+		local bub = new("Frame", {
+			Size = UDim2.new(isSys and 1 or 0.9, 0, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BorderSizePixel = 0,
+			BackgroundTransparency = isSys and 1 or 0,
+			LayoutOrder = 2,
+		}, wrap)
+		corner(bub, 10)
+		if isUser then
+			win:_bind(bub, "BackgroundColor3", "Accent")
+		else
+			win:_bind(bub, "BackgroundColor3", "Item")
+		end
+		new("UIPadding", {
+			PaddingTop = UDim.new(0, isSys and 0 or 6),
+			PaddingBottom = UDim.new(0, isSys and 0 or 7),
+			PaddingLeft = UDim.new(0, isSys and 0 or 9),
+			PaddingRight = UDim.new(0, isSys and 0 or 9),
+		}, bub)
+		new("UIListLayout", { Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder }, bub)
+
+		local msg = { Role = role, Text = text, Frame = wrap }
+		local reveal = {}
+		local function build(t)
+			for _, c in ipairs(bub:GetChildren()) do
+				if c:IsA("GuiObject") then
+					c:Destroy()
+				end
+			end
+			table.clear(reveal)
+			local k = 0
+			for _, seg in ipairs(isUser and { { false, t } } or chatSegments(t)) do
+				k += 1
+				if seg[1] then
+					local cf = new("Frame", { Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BorderSizePixel = 0, LayoutOrder = k }, bub)
+					corner(cf, 7)
+					win:_bind(cf, "BackgroundColor3", "Inset")
+					new("UIPadding", { PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5), PaddingLeft = UDim.new(0, 7), PaddingRight = UDim.new(0, 7) }, cf)
+					new("UIListLayout", { Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder }, cf)
+					local top = new("Frame", { Size = UDim2.new(1, 0, 0, 16), BackgroundTransparency = 1, LayoutOrder = 1 }, cf)
+					local tag = label(top, "lua", 8, C.Dim, true)
+					tag.Size = UDim2.new(0.5, 0, 1, 0)
+					local cp = new("TextButton", {
+						AnchorPoint = Vector2.new(1, 0),
+						Position = UDim2.new(1, 0, 0, 0),
+						Size = UDim2.fromOffset(46, 16),
+						BorderSizePixel = 0,
+						Text = "Copy",
+						TextSize = 9,
+						TextColor3 = C.Text,
+						Font = Enum.Font.GothamBold,
+						AutoButtonColor = false,
+					}, top)
+					corner(cp, 5)
+					win:_bind(cp, "BackgroundColor3", "Item")
+					cp.MouseButton1Click:Connect(function()
+						local ok = type(setclipboard) == "function" and pcall(setclipboard, seg[2])
+						cp.Text = ok and "Copied" or "No clip"
+						task.delay(1.4, function()
+							if cp.Parent then
+								cp.Text = "Copy"
+							end
+						end)
+					end)
+					local cl = new("TextLabel", {
+						Size = UDim2.new(1, 0, 0, 0),
+						AutomaticSize = Enum.AutomaticSize.Y,
+						BackgroundTransparency = 1,
+						Text = seg[2],
+						TextSize = 9,
+						Font = Enum.Font.Code,
+						TextColor3 = C.Text,
+						TextXAlignment = Enum.TextXAlignment.Left,
+						TextWrapped = true,
+						LayoutOrder = 2,
+					}, cf)
+					table.insert(reveal, { obj = cf, code = true, len = #seg[2] })
+				else
+					local tl = new("TextLabel", {
+						Size = UDim2.new(1, 0, 0, 0),
+						AutomaticSize = Enum.AutomaticSize.Y,
+						BackgroundTransparency = 1,
+						RichText = true,
+						Text = isUser and (t:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")) or chatRich(seg[2]),
+						TextSize = isSys and 9 or 11,
+						Font = Enum.Font.Gotham,
+						TextColor3 = isSys and C.Dim or (isUser and C.White or C.Text),
+						TextXAlignment = isSys and Enum.TextXAlignment.Center or Enum.TextXAlignment.Left,
+						TextWrapped = true,
+						LayoutOrder = k,
+					}, bub)
+					table.insert(reveal, { obj = tl, code = false, len = #(seg[2]:gsub("[%*`#]", "")) })
+				end
+			end
+		end
+		build(text)
+		function msg:Set(t)
+			self.Text = tostring(t)
+			build(self.Text)
+			toBottom()
+		end
+		-- the typing effect: the text appears quickly, a few seconds at most
+		function msg:Type(speed)
+			local total = 0
+			for _, r in ipairs(reveal) do
+				total += r.len
+			end
+			if total == 0 then
+				return
+			end
+			local cps = math.max(speed or 70, total / 2.4)
+			local shown, done = 0, false
+			local labels = {}
+			for _, r in ipairs(reveal) do
+				if r.code then
+					r.obj.Visible = false
+				else
+					r.obj.MaxVisibleGraphemes = 0
+				end
+				table.insert(labels, r)
+			end
+			local fn
+			fn = function(_, dt)
+				shown += cps * dt
+				local left = shown
+				for _, r in ipairs(labels) do
+					if r.code then
+						r.obj.Visible = left > 0
+						left -= r.len
+					else
+						local take = math.clamp(left, 0, r.len)
+						r.obj.MaxVisibleGraphemes = take >= r.len and -1 or math.floor(take)
+						left -= r.len
+					end
+				end
+				toBottom()
+				if shown >= total or not wrap.Parent then
+					for _, r in ipairs(labels) do
+						if r.code then
+							r.obj.Visible = true
+						else
+							r.obj.MaxVisibleGraphemes = -1
+						end
+					end
+					local at = table.find(win._frame, fn)
+					if at then
+						table.remove(win._frame, at)
+					end
+				end
+			end
+			table.insert(win._frame, fn)
+		end
+		-- small buttons under a bot message: Copy + your own (Speak ...)
+		if role == "bot" and opt.Actions ~= false then
+			local acts = new("Frame", { Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, LayoutOrder = 3 }, wrap)
+			new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }, acts)
+			local function mini(txt, order, fn)
+				local b = new("TextButton", {
+					Size = UDim2.fromOffset(#txt * 5.4 + 16, 16),
+					BorderSizePixel = 0,
+					Text = txt,
+					TextSize = 8,
+					TextColor3 = C.Dim,
+					Font = Enum.Font.GothamBold,
+					AutoButtonColor = false,
+					LayoutOrder = order,
+				}, acts)
+				corner(b, 8)
+				win:_bind(b, "BackgroundColor3", "Item")
+				b.MouseButton1Click:Connect(function()
+					fn(b)
+				end)
+			end
+			mini("Copy", 1, function(b)
+				local ok = type(setclipboard) == "function" and pcall(setclipboard, msg.Text)
+				b.Text = ok and "Copied" or "No clip"
+				task.delay(1.4, function()
+					if b.Parent then
+						b.Text = "Copy"
+					end
+				end)
+			end)
+			for i, a in ipairs(o.Actions or {}) do
+				mini(tostring(a.Name), 1 + i, function()
+					safe(a.Callback, msg.Text, msg)
+				end)
+			end
+		end
+		table.insert(obj.Messages, msg)
+		while #obj.Messages > (o.MaxMessages or 60) do
+			local old = table.remove(obj.Messages, 1)
+			old.Frame:Destroy()
+		end
+		toBottom()
+		if role == "bot" and not opt.Instant and opt.Type ~= false then
+			msg:Type(opt.Speed)
+		end
+		return msg
+	end
+
+	-- the line above the chips: "Thinking..." with moving dots (SetStatus(nil) hides it)
+	local statusText, statusT0 = nil, 0
+	function obj:SetStatus(text)
+		statusText = text
+		statusT0 = os.clock()
+		statusL.Text = text and tostring(text) or ""
+	end
+	table.insert(win._frame, function(now)
+		if statusText then
+			local dots = string.rep(".", math.floor((now - statusT0) * 3) % 4)
+			statusL.Text = statusText .. dots
+			statusL.TextTransparency = 0.15 + 0.25 * (0.5 + 0.5 * math.sin(now * 5))
+		elseif statusL.TextTransparency ~= 0 then
+			statusL.TextTransparency = 0
+		end
+	end)
+
+	function obj:SetChips(chips)
+		for _, c in ipairs(chipBox:GetChildren()) do
+			if c:IsA("GuiObject") then
+				c:Destroy()
+			end
+		end
+		for i, text in ipairs(chips or {}) do
+			if i > 8 then
+				break
+			end
+			local b = new("TextButton", {
+				Size = UDim2.fromOffset(0, 22),
+				AutomaticSize = Enum.AutomaticSize.X,
+				BorderSizePixel = 0,
+				Text = tostring(text),
+				TextSize = 10,
+				Font = Enum.Font.GothamMedium,
+				AutoButtonColor = false,
+				LayoutOrder = i,
+			}, chipBox)
+			corner(b, 11)
+			new("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) }, b)
+			win:_bind(b, "BackgroundColor3", "Item")
+			win:_bind(b, "TextColor3", "Glow")
+			b.MouseButton1Click:Connect(function()
+				win:_playClick()
+				obj:Submit(tostring(text))
+			end)
+		end
+		chipBox.CanvasPosition = Vector2.new(0, 0)
+	end
+
+	function obj:SetBusy(v)
+		self.Busy = v == true
+		send.Text = self.Busy and "..." or "Send"
+		send.BackgroundTransparency = self.Busy and 0.5 or 0
+	end
+
+	function obj:Submit(text)
+		text = tostring(text or ""):gsub("^%s+", ""):gsub("%s+$", "")
+		if text == "" then
+			return false
+		end
+		if self.Busy and not o.AllowWhileBusy then
+			win:Notify({ Title = botName, Text = "One moment, I'm still on your last message.", Type = "warn", Duration = 2 })
+			return false
+		end
+		self:Add("user", text)
+		safe(o.OnSend, text, self)
+		return true
+	end
+
+	function obj:Clear()
+		for _, m in ipairs(self.Messages) do
+			m.Frame:Destroy()
+		end
+		self.Messages = {}
+	end
+	function obj:GetMessages()
+		return self.Messages
+	end
+	function obj:Get()
+		return #self.Messages
+	end
+	function obj:Set() end
+	function obj:Focus()
+		box:CaptureFocus()
+	end
+
+	local function fromBox()
+		local t = box.Text
+		if t:gsub("%s", "") ~= "" and obj:Submit(t) then
+			box.Text = ""
+		end
+	end
+	send.MouseButton1Click:Connect(function()
+		win:_playClick()
+		fromBox()
+	end)
+	box.FocusLost:Connect(function(enter)
+		if enter then
+			fromBox()
+		end
+	end)
+	return register(self, o, obj, "Chat")
+end
+
+
 function Tab:Choice(o)
 	-- Name, Options, Default (false = none chosen), Flag, Callback(choice): a bar of buttons where one is chosen
 	o = o or {}
