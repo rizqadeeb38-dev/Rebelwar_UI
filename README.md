@@ -2064,3 +2064,33 @@ Questions, bugs or ideas? Join the Discord: **https://discord.gg/Kq7N4gzH22**
 MIT. Use it, change it, make your own panel. Credit is appreciated. See `LICENSE`.
 
 > RebelUI is a UI library. What your buttons and toggles do is up to you. Follow the rules of the game you play in and the Roblox Terms of Use. Rebelwar is not affiliated with or endorsed by Roblox.
+
+
+## Chat window (`Tab:Chat`)
+
+A chat box inside a tab: message bubbles, typing text, tap-to-copy buttons, quick-reply chips and an input box. `Example.lua` uses it for the AI tab.
+
+```lua
+local chat = Tab:Chat({
+	Name = "Bot", -- the bot's name
+	Height = 250,
+	Placeholder = "Ask me anything...",
+	OnSend = function(text, chat)
+		chat:SetBusy(true)
+		chat:SetStatus("Thinking") -- moving dots above the chips
+		task.delay(1, function()
+			chat:SetStatus(nil)
+			chat:SetBusy(false)
+			chat:Add("bot", "You said **" .. text .. "**") -- **bold**, `code`, - bullets and ``` blocks work
+			chat:SetChips({ "Tell me more", "Thanks" }) -- tap to send
+		end)
+	end,
+	Actions = { { Name = "Speak", Callback = function(text) print(text) end } }, -- extra buttons under bot messages
+})
+chat:Add("bot", "Hello!", { Instant = true }) -- Instant skips the typing effect
+-- chat:Submit(text), chat:Clear(), chat:GetMessages(), chat:Focus()
+```
+
+## The AI tab in Example.lua
+
+The example is now four tabs: **Elements**, **AI**, **Discord** and **Settings**. The AI tab talks to a Gemini-powered bot ("Rebel AI"): it picks loading words that match what you asked (code, ideas, jokes, math...), remembers durable facts about you in `RebelAI_memory.txt`, has a **Bizarre idea** button, `/clear`, `/bizarre`, `/stop` and `/help` commands, four styles, and an optional voice that reads answers out loud (needs `request`, `writefile` and `getcustomasset`). Voice *input* is not possible in Roblox executors.
