@@ -2081,7 +2081,7 @@ local chat = Tab:Chat({
 		task.delay(1, function()
 			chat:SetStatus(nil)
 			chat:SetBusy(false)
-			chat:Add("bot", "You said **" .. text .. "**") -- **bold**, `code`, - bullets and ``` blocks work
+			chat:Add("bot", "You said **" .. text .. "**") -- **bold**, `code`, - bullets and code blocks work
 			chat:SetChips({ "Tell me more", "Thanks" }) -- tap to send
 		end)
 	end,
@@ -2096,3 +2096,83 @@ chat:Add("bot", "Hello!", { Instant = true }) -- Instant skips the typing effect
 The example is now four tabs: **Elements**, **AI**, **Discord** and **Settings**. The AI tab talks to a Gemini-powered bot ("Rebel AI"): it picks loading words that match what you asked (code, ideas, jokes, math...), remembers durable facts about you in `RebelAI_memory.txt`, has a **Bizarre idea** button, `/clear`, `/bizarre`, `/stop` and `/help` commands, four styles, and an optional voice that reads answers out loud (needs `request`, `writefile` and `getcustomasset`). Voice *input* is not possible in Roblox executors.
 
 The AI tab also has: **Think deeper**, **Live web** (Google search), **Double-check answers** (the bot reviews and fixes its own reply), **Show its steps**, seven styles, mood-aware tone, and commands `/plan`, `/explain`, `/forecast`, `/summarize`, `/translate`, `/teach`, `/parallel a | b | c` (runs jobs at the same time), `/bizarre`, `/clear`, `/stop`.
+
+
+## Open button: logo or bar (`Win:SetTrigger`)
+
+```lua
+Win:SetTrigger("Circle") -- a round logo button you can drag
+Win:SetTrigger("Square") -- the same button with sharp corners
+Win:SetTrigger("Bar")    -- the top bar (FPS, Logo, Timer)
+-- or at the start: UI:CreateWindow({ Trigger = "Square", Icon = 114659273298746 })
+```
+
+The Settings tab has an **Open button** picker that does the same, and it is saved with your settings.
+
+## Game assistant: the full-screen HUD (`Win:GameAssistant`)
+
+A sharp, glowing, full-screen overlay with edges that race around the panels and a rainbow or theme color:
+
+| Where | What |
+| --- | --- |
+| Right | Every player: picture, nickname, @username, health bar and distance. Tap one to target them. Count at the top. |
+| Right bottom | Your own profile: avatar, nickname, @username, user id and account age. |
+| Left middle | Your stats: Ping, FPS, Battery, Memory, Speed. |
+| Left bottom | Your health bar. |
+| Middle | A radar with a spinning ring and sweep, and your crosshair (6 styles). Nearby players show as dots. |
+| Middle bottom | Empty on purpose, so you can see the game. |
+
+```lua
+local HUD = Win:GameAssistant({
+	Logo = 114659273298746,
+	Title = "ELITE GAME ASSISTANT",
+	Color = "Rainbow", -- Rainbow, Theme, Red, Cyan, Lime, Gold, Pink, Violet
+	Crosshair = "Cross", -- Cross, Dot, Circle, Chevron, Diamond, X
+	Key = Enum.KeyCode.H,
+	OnSummary = function(hud, done) done(hud:GetSummary()) end, -- the AI BRIEF button (give it your own AI)
+})
+HUD:Open() HUD:Close() HUD:Toggle()
+HUD:SetColor("Gold") HUD:SetCrosshair("Dot") HUD:CrosshairInGame(true)
+HUD:Show("players", false) -- players, stats, health, profile, crosshair, banner, all
+HUD:Target("nearest") HUD:Spectate("name") HUD:Spectate(nil)
+HUD:Command("color gold") -- the same things as text, so an AI can control the HUD
+print(HUD:GetSummary()) -- a short text about you and the players around you
+```
+
+In Settings: **Open full game assistance**, **HUD colors**, **Crosshair** and **Crosshair on screen**. Battery shows N/A when the executor can't read it.
+
+## A loading video
+
+```lua
+local Load = UI:Loading({
+	Title = "Rebelwar",
+	Banner = 125144167121839, -- shown until the video starts (and if it can't play)
+	Video = "https://raw.githubusercontent.com/rizqadeeb38-dev/Rebelwar_UI/main/loading.mp4",
+})
+```
+
+1. Make the video short (10 to 15 seconds), 720p or smaller, no sound, **under about 20 MB**. `.mp4` (H.264) or `.webm`.
+2. Upload it to the repo next to `source.lua`, named `loading.mp4`, then open it on GitHub and copy the **Raw** link.
+3. Paste the link in `Video = ...`. The video is downloaded before the loading screen shows (first run only) and a copy is kept named `RebelUI_loading.mp4` in your executor's workspace, so later runs are instant.
+4. Your executor needs `writefile` and `getcustomasset` (most do). If it can't play the video, the loading screen keeps the banner picture and nothing breaks.
+
+`Video` can also be the link of a video page (like an `anonmp4.art/embed/...` player): the library reads the page, finds the real file and downloads it. This depends on the site, so a GitHub raw link is the reliable choice. In `Example.lua` there are two videos: `VIDEO` for the logo loading screen and `AI_VIDEO`, which plays while Rebel AI wakes up.
+
+`Video` can also be a file name already in your workspace folder, or a Roblox video asset id (`Video = 123456789`, only if you uploaded it yourself).
+
+
+## AI or no AI (`Win:CreateAITab`)
+
+The library has no AI in it unless you ask for it. To add the AI tab:
+
+```lua
+local AITab, ai = Win:CreateAITab({
+	Name = "AI",
+	Icon = 114659273298746,
+	Keys = { "your-gemini-key-1", "your-gemini-key-2" }, -- add as many as you like, it rotates between them
+	-- KeysReversed = true, -- if you stored them backwards so they are not plain text
+})
+-- ai.Ask(contents), ai.Brief(hud, done) for the HUD's AI BRIEF button, ai.Boot(video) for an AI loading video, ai.Chat
+```
+
+Without `Keys` the tab shows "AI is off". To have no AI at all, do not call it (in `Example.lua`, set `USE_AI = false` at the top). Anyone can read a key that is inside a public file, so for a public repo use your own keys and expect to rotate them.
