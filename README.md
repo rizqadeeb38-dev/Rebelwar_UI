@@ -2094,3 +2094,5 @@ chat:Add("bot", "Hello!", { Instant = true }) -- Instant skips the typing effect
 ## The AI tab in Example.lua
 
 The example is now four tabs: **Elements**, **AI**, **Discord** and **Settings**. The AI tab talks to a Gemini-powered bot ("Rebel AI"): it picks loading words that match what you asked (code, ideas, jokes, math...), remembers durable facts about you in `RebelAI_memory.txt`, has a **Bizarre idea** button, `/clear`, `/bizarre`, `/stop` and `/help` commands, four styles, and an optional voice that reads answers out loud (needs `request`, `writefile` and `getcustomasset`). Voice *input* is not possible in Roblox executors.
+
+The AI tab also has: **Think deeper**, **Live web** (Google search), **Double-check answers** (the bot reviews and fixes its own reply), **Show its steps**, seven styles, mood-aware tone, and commands `/plan`, `/explain`, `/forecast`, `/summarize`, `/translate`, `/teach`, `/parallel a | b | c` (runs jobs at the same time), `/bizarre`, `/clear`, `/stop`.
