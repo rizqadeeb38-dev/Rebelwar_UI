@@ -28,6 +28,8 @@
           settings export / import, panel opacity (100% by default).
     More Window methods: Dialog, CreateTabDivider, CreateKeybindList, Export, Import
     Game assistant: Window:GameAssistant (full-screen HUD), Window:SetTrigger (Circle / Square / Bar), Loading({ Video = ... })
+    Effects: SetOpenAnimation, SetAnimSpeed, SetReduceMotion, SetFx, SetRainbow, Confetti, Shake, ScreenShake, Button { Danger = true }
+    Extras: CreateToolsTab (command bar, notes, badges, randomizer, performance, accessibility), AddCommand, RunCommand, CreateAITab (optional)
     More elements: Notice (warning box). Every element: tooltip, :SetVisible, :Destroy, :DependsOn
     Every element returns an object with :Get() and :Set(value).
 ]]
@@ -267,6 +269,14 @@ local function ringSeq(t)
 	})
 end
 
+local RAINBOW = (function()
+	local k = {}
+	for i = 0, 6 do
+		k[#k + 1] = ColorSequenceKeypoint.new(i / 6, Color3.fromHSV(i / 6, 0.85, 1))
+	end
+	return ColorSequence.new(k)
+end)()
+
 local function pulse(obj)
 	local sc = new("UIScale", {}, obj)
 	TweenService:Create(
@@ -380,7 +390,7 @@ end
 -- a stroke whose gradient spins around the object and follows the theme
 function Window:_ring(stroke)
 	stroke.Color = Color3.new(1, 1, 1)
-	local g = new("UIGradient", { Color = ringSeq(self.Theme) }, stroke)
+	local g = new("UIGradient", { Color = self._rainbow and RAINBOW or ringSeq(self.Theme) }, stroke)
 	table.insert(self._spin, g)
 	return g
 end
@@ -404,7 +414,7 @@ local function resolveMedia(src, file)
 			local okC, size = pcall(function()
 				return #readfile(file)
 			end)
-			if okC and size > 1000 then
+			if okC and size > 1000 and size < 30000000 then
 				local okA, a = pcall(gca, file)
 				if okA then
 					return a
@@ -454,7 +464,10 @@ local function resolveMedia(src, file)
 				body = nil
 			end
 		end
-		if not isVideo(body) then
+		if not isVideo(body) or #body > 30000000 then
+			if body and #body > 30000000 then
+				warn("[RebelUI] that video is over 30 MB, so it was skipped (make it smaller)")
+			end
 			body = nil
 		end
 		if body and writefile and gca then
@@ -540,32 +553,48 @@ function RebelUI:Loading(o)
 		local bs = new("UIScale", {}, banner)
 		TweenService:Create(bs, TweenInfo.new(14, Enum.EasingStyle.Linear), { Scale = 1.12 }):Play()
 	end
-	-- a loading video (optional). Video = "https://.../intro.mp4" (downloaded once), a file in your executor workspace, or an asset id
-	if o.Video then
-		task.spawn(function()
-			local src = resolveMedia(o.Video, o.VideoFile)
-			if not src or L.Dead then
-				return
+	-- a loading video (optional). Video = link / file name / asset id. L:SetVideo(x) can add it later.
+	local function attachVideo(src)
+		if not src or L.Dead then
+			return
+		end
+		pcall(function()
+			if L.VideoFrame then
+				L.VideoFrame:Destroy()
 			end
-			local ok = pcall(function()
-				local vf = new("VideoFrame", {
-					Size = UDim2.fromScale(1, 1),
-					BackgroundTransparency = 1,
-					Looped = o.VideoLoop ~= false,
-					Volume = o.VideoVolume or 0,
-					Video = src,
-					ZIndex = 1,
-				}, root)
-				vf.Playing = true
-				pcall(function()
-					vf:Play()
-				end)
-				L.VideoFrame = vf
+			local vf = new("VideoFrame", {
+				Size = UDim2.fromScale(1, 1),
+				BackgroundTransparency = 1,
+				Looped = o.VideoLoop ~= false,
+				Volume = o.VideoVolume or 0,
+				Video = src,
+				ZIndex = 1,
+			}, root)
+			vf.Playing = true
+			pcall(function()
+				vf:Play()
 			end)
-			if not ok then
-				warn("[RebelUI] the loading video could not play")
+			L.VideoFrame = vf
+			-- if the video never loads (some executors can't play them) remove it so the banner stays
+			task.delay(8, function()
+				pcall(function()
+					if vf.Parent and not vf.IsLoaded then
+						vf:Destroy()
+					end
+				end)
+			end)
+		end)
+	end
+	function L:SetVideo(v)
+		task.spawn(function()
+			local okR, src = pcall(resolveMedia, v, o.VideoFile)
+			if okR then
+				attachVideo(src)
 			end
 		end)
+	end
+	if o.Video then
+		L:SetVideo(o.Video)
 	end
 	-- dark shade (heavier at the bottom) and an accent glow at the bottom
 	local shade = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BorderSizePixel = 0, ZIndex = 2 }, root)
@@ -852,11 +881,40 @@ function RebelUI:Loading(o)
 		sg:Destroy()
 	end
 	function L:Destroy()
+		L.Dead = true
 		alive = false
 		conn:Disconnect()
 		sg:Destroy()
 	end
 	L.Gui = sg
+	-- tap anywhere to skip (after 2.5 seconds), so a loading screen can never trap you
+	if o.Skippable ~= false then
+		local born = os.clock()
+		local hint = new("TextLabel", {
+			AnchorPoint = Vector2.new(1, 1),
+			Position = UDim2.new(1, -14, 1, -10),
+			Size = UDim2.fromOffset(120, 16),
+			BackgroundTransparency = 1,
+			Text = "Tap to skip",
+			TextSize = 10,
+			Font = Enum.Font.GothamBold,
+			TextColor3 = Color3.new(1, 1, 1),
+			TextTransparency = 0.35,
+			TextXAlignment = Enum.TextXAlignment.Right,
+			Visible = false,
+			ZIndex = 20,
+		}, root)
+		task.delay(2.5, function()
+			if alive then
+				hint.Visible = true
+			end
+		end)
+		root.InputBegan:Connect(function(i)
+			if alive and os.clock() - born > 2.5 and isPress(i) then
+				L:Destroy()
+			end
+		end)
+	end
 	-- safety net: if your script never calls Finish, the screen removes itself so it can never trap the player
 	local limit = o.Timeout or 40
 	task.delay(limit, function()
@@ -889,6 +947,9 @@ function RebelUI:CreateWindow(o)
 		Scramble = o.Scramble ~= false,
 		Opacity = 100,
 		ToggleKey = o.ToggleKey or Enum.KeyCode.RightShift,
+		AnimSpeed = o.AnimSpeed or 1,
+		OpenAnim = o.OpenAnimation or "Pop",
+		ReduceMotion = o.ReduceMotion == true,
 	}, Window)
 	local themeName = THEMES[o.Theme or "Red"] and (o.Theme or "Red") or "Red"
 	win.Theme = THEMES[themeName]
@@ -949,6 +1010,7 @@ function RebelUI:CreateWindow(o)
 	corner(blackRing, 11)
 	new("UIStroke", { Color = Color3.new(0, 0, 0), Thickness = 1 }, blackRing)
 	win.Main, win._mainG, win._scaleObj = main, mainG, panelScale
+	win._ringStroke = ringStroke
 
 	-- embers drifting up behind the content
 	local fx = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ClipsDescendants = true, Active = false }, main)
@@ -1225,7 +1287,7 @@ function RebelUI:CreateWindow(o)
 			profile.BackgroundColor3 = t.Item
 		end
 		for _, g in ipairs(win._spin) do
-			g.Color = ringSeq(t)
+			g.Color = win._rainbow and RAINBOW or ringSeq(t)
 		end
 		for _, e in ipairs(embers) do
 			e.f.BackgroundColor3 = e.odd and t.Glow or t.Accent:Lerp(Color3.new(1, 0.7, 0.3), 0.5)
@@ -1262,8 +1324,18 @@ function RebelUI:CreateWindow(o)
 				win._glide = nil
 			end
 		end
-		for _, fn in ipairs(win._frame or {}) do
-			fn(now, dt)
+		local fns = win._frame
+		if fns and #fns > 0 then
+			for _, fn in ipairs(table.clone(fns)) do -- a copy, so a function can remove itself safely
+				local ok, err = pcall(fn, now, dt)
+				if not ok then
+					local at = table.find(fns, fn)
+					if at then
+						table.remove(fns, at) -- a broken per-frame function is dropped instead of erroring every frame
+					end
+					warn("[RebelUI] a per-frame function failed and was removed: " .. tostring(err))
+				end
+			end
 		end
 	end)
 
@@ -1339,6 +1411,7 @@ function RebelUI:CreateWindow(o)
 	end)
 
 	win._orderTabs = 0
+	win:_initFx()
 	win:SetOpacity(o.Opacity or 100)
 	if o.AutoSave then
 		win:AutoSave(o.AutoSave)
@@ -1368,16 +1441,55 @@ function Window:Toggle(state)
 	end
 	self.Open = state
 	local main = self.Main
+	local sp = self.AnimSpeed or 1
+	local style = self.OpenAnim or "Pop"
+	local sc = self._scaleObj
+	if not self._restPos then
+		self._restPos = main.Position
+	end
 	if state then
+		self._token = (self._token or 0) + 1
 		main.Visible = true
-		tween(self._scaleObj, 0.35, { Scale = self.Scale }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+		if self.ReduceMotion then
+			sc.Scale = self.Scale
+			main.Rotation = 0
+		elseif style == "Slide" then
+			sc.Scale = self.Scale
+			local base = main.Position
+			main.Position = base + UDim2.fromOffset(0, 90)
+			tween(main, 0.4 / sp, { Position = base }, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+		elseif style == "Fade" then
+			sc.Scale = self.Scale * 0.94
+			tween(sc, 0.3 / sp, { Scale = self.Scale }, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+		elseif style == "Bounce" then
+			sc.Scale = self.Scale * 0.3
+			tween(sc, 0.7 / sp, { Scale = self.Scale }, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out)
+		elseif style == "Drop" then
+			sc.Scale = self.Scale
+			local base = main.Position
+			main.Position = base + UDim2.fromOffset(0, -140)
+			tween(main, 0.6 / sp, { Position = base }, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out)
+		elseif style == "Spin" then
+			sc.Scale = self.Scale * 0.5
+			main.Rotation = -14
+			tween(sc, 0.45 / sp, { Scale = self.Scale }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+			tween(main, 0.45 / sp, { Rotation = 0 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+		else -- Pop
+			tween(sc, 0.35 / sp, { Scale = self.Scale }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+		end
 	else
-		local t = tween(self._scaleObj, 0.2, { Scale = 0.6 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		local my = (self._token or 0) + 1
+		self._token = my
+		local t = tween(sc, (self.ReduceMotion and 0.01 or 0.2 / sp), { Scale = self.Scale * 0.6 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 		t.Completed:Connect(function()
-			if not self.Open then
+			if not self.Open and self._token == my then
 				main.Visible = false
+				main.Rotation = 0
 			end
 		end)
+	end
+	if self._scan then
+		self._scan.Visible = state and self.Fx and self.Fx.Scan or false
 	end
 	self._fab.Visible = not state and not self._hasBar
 end
@@ -1391,6 +1503,14 @@ function Window:SetTheme(name)
 	self.ThemeName = name
 	for _, fn in ipairs(self._fns) do
 		fn(t)
+	end
+end
+
+-- rainbow rings around everything (cheap: no per-frame recoloring of the whole panel)
+function Window:SetRainbow(on)
+	self._rainbow = on == true
+	for _, g in ipairs(self._spin) do
+		g.Color = self._rainbow and RAINBOW or ringSeq(self.Theme)
 	end
 end
 
@@ -2336,6 +2456,9 @@ function Tab:Button(o)
 	-- Name, Description, Callback: a shiny gradient button with a spinning ring and a click ripple
 	-- Risky = true (red), DoubleClick = true (asks "Tap again"), Disabled = true, Tooltip = "text"
 	o = o or {}
+	if o.Danger then
+		o.Risky = true
+	end
 	local win = self.Win
 	local hasDesc = o.Description ~= nil
 	local H = o.Height or (hasDesc and 40 or 32)
@@ -2415,6 +2538,10 @@ function Tab:Button(o)
 		if disabled then
 			return
 		end
+		if win.SafeMode and (o.Risky or o.Danger) then
+			win:Notify({ Title = "Safe mode is on", Text = "Turn it off in Tools to use this button.", Type = "warn" })
+			return
+		end
 		if o.DoubleClick and not armed then
 			armed = true
 			lbl.Text = "Tap again to confirm"
@@ -2443,6 +2570,9 @@ function Tab:Button(o)
 		tw.Completed:Connect(function()
 			r:Destroy()
 		end)
+		if o.Danger then -- Danger = true: the screen shakes (Power = 0.2 to 4)
+			win:ScreenShake(o.Power or 1.6, o.ShakeTime or 0.8)
+		end
 		safe(o.Callback)
 	end)
 	local obj = {}
@@ -5649,6 +5779,15 @@ function Window:CreateSettingsTab(o)
 			})
 		end,
 	})
+	tab:Toggle({
+		Name = "Rainbow rings",
+		Description = "Every glowing edge turns rainbow",
+		Default = win._rainbow == true,
+		Flag = "__rainbow",
+		Callback = function(on)
+			win:SetRainbow(on)
+		end,
+	})
 	tab:Slider({
 		Name = "Panel size",
 		Min = 70,
@@ -5724,6 +5863,51 @@ function Window:CreateSettingsTab(o)
 			hud():CrosshairInGame(on)
 		end,
 	})
+	tab:Section("Animations and effects")
+	tab:Cycle({
+		Name = "Open animation",
+		Description = "How the panel appears",
+		Options = RebelUI.OpenAnimations,
+		Default = win.OpenAnim,
+		Flag = "__openanim",
+		Callback = function(v)
+			win:SetOpenAnimation(v)
+			win:Toggle(false)
+			task.delay(0.35, function()
+				win:Toggle(true)
+			end)
+		end,
+	})
+	tab:Slider({
+		Name = "Animation speed",
+		Min = 0.5,
+		Max = 2.5,
+		Default = win.AnimSpeed,
+		Step = 0.1,
+		Suffix = "x",
+		Flag = "__animspeed",
+		Callback = function(v)
+			win:SetAnimSpeed(v)
+		end,
+	})
+	tab:Toggle({ Name = "Click ripples", Description = "A glow ring where you tap", Default = true, Flag = "__fxripple", Callback = function(on)
+		win:SetFx({ Ripple = on })
+	end })
+	tab:Toggle({ Name = "Finger glow", Description = "A soft light follows your finger or mouse", Default = false, Flag = "__fxglow", Callback = function(on)
+		win:SetFx({ Glow = on })
+	end })
+	tab:Toggle({ Name = "Scan lines", Description = "A slow sweep over the panel", Default = false, Flag = "__fxscan", Callback = function(on)
+		win:SetFx({ Scan = on })
+	end })
+	tab:Toggle({ Name = "Breathing border", Description = "The edge glows in and out", Default = true, Flag = "__fxbreathe", Callback = function(on)
+		win:SetFx({ Breathe = on })
+	end })
+	tab:Toggle({ Name = "Reduce motion", Description = "Turns the extra animations off (easier on weak phones)", Default = win.ReduceMotion, Flag = "__reduce", Callback = function(on)
+		win:SetReduceMotion(on)
+	end })
+	tab:Button({ Name = "Test confetti", Callback = function()
+		win:Confetti(40)
+	end })
 	tab:Section("Notifications and sound")
 	tab:Toggle({
 		Name = "Notifications",
@@ -6010,6 +6194,21 @@ function Window:CreateSettingsTab(o)
 			})
 		end,
 	})
+	tab:Section("About")
+	local cr = o.Credits or {}
+	tab:Paragraph({
+		Title = (cr.Name or win.TitleText) .. "  |  RebelUI v" .. RebelUI.Version,
+		Text = (cr.Text or "Made by prorizz196. Thank you for using it!") .. (cr.Discord and ("\n" .. cr.Discord) or ""),
+	})
+	if cr.Discord then
+		tab:Button({ Name = "Copy Discord invite", Callback = function()
+			local ok = type(setclipboard) == "function" and pcall(setclipboard, cr.Discord)
+			win:Notify({ Title = ok and "Copied!" or "Can't copy", Text = ok and "Paste it in your browser." or cr.Discord, Type = ok and "success" or "warn" })
+		end })
+	end
+	tab:Button({ Name = "Check for updates", Callback = function()
+		win:CheckUpdate()
+	end })
 	tab:Button({
 		Name = "Unload panel",
 		Callback = function()
@@ -6287,7 +6486,9 @@ local HUD_COLORS = {
 	Violet = Color3.fromRGB(160, 100, 255),
 }
 RebelUI.HudColors = { "Rainbow", "Theme", "Red", "Cyan", "Lime", "Gold", "Pink", "Violet" }
-RebelUI.Crosshairs = { "Cross", "Dot", "Circle", "Chevron", "Diamond", "X" }
+RebelUI.Crosshairs = { "Cross", "Dot", "Circle", "Chevron", "Diamond", "X", "Plus", "Square", "Sniper" }
+RebelUI.CrossSizes = { Small = 50, Medium = 90, Large = 140, XL = 200 }
+RebelUI.HudPresets = { "Low", "Medium", "High", "Extreme" }
 
 local function hudBattery()
 	local tries = { { "Stats", "BatteryLevel" }, { "UserInputService", "BatteryLevel" }, { "GuiService", "BatteryLevel" }, { "PlatformService", "BatteryLevel" } }
@@ -6312,7 +6513,9 @@ local function hudBattery()
 end
 
 -- draws one crosshair style inside `parent`. paint(inst, prop) registers things that follow the HUD color.
-local function drawCross(parent, style, s, paint)
+local function drawCross(parent, style, s, paint, th, alpha)
+	th = th or 2
+	alpha = alpha or 0
 	for _, c in ipairs(parent:GetChildren()) do
 		c:Destroy()
 	end
@@ -6323,12 +6526,13 @@ local function drawCross(parent, style, s, paint)
 			Size = UDim2.fromOffset(w, h),
 			BorderSizePixel = 0,
 			Rotation = rot or 0,
+			BackgroundTransparency = alpha,
 			BackgroundColor3 = Color3.new(1, 1, 1),
 		}, parent)
 		paint(f, "BackgroundColor3")
 		return f
 	end
-	local function ring(d, th)
+	local function ring(d, t2)
 		local f = new("Frame", {
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = UDim2.fromScale(0.5, 0.5),
@@ -6337,21 +6541,22 @@ local function drawCross(parent, style, s, paint)
 			BorderSizePixel = 0,
 		}, parent)
 		corner(f, d)
-		local st = new("UIStroke", { Thickness = th, Color = Color3.new(1, 1, 1) }, f)
+		local st = new("UIStroke", { Thickness = t2 or th, Transparency = alpha, Color = Color3.new(1, 1, 1) }, f)
 		paint(st, "Color")
 		return f
 	end
+	local dotS = math.max(3, th * 1.6)
 	local g, L = math.floor(s * 0.1), math.floor(s * 0.28)
 	if style == "Dot" then
-		bar(0, 0, 5, 5)
-		ring(s * 0.5, 1.5)
+		bar(0, 0, dotS * 1.6, dotS * 1.6)
+		ring(s * 0.5)
 	elseif style == "Circle" then
-		ring(s * 0.6, 2)
-		bar(0, 0, 3, 3)
+		ring(s * 0.6)
+		bar(0, 0, dotS, dotS)
 	elseif style == "Chevron" then
-		bar(-7, 0, L, 2, 35)
-		bar(7, 0, L, 2, -35)
-		bar(0, 14, 3, 3)
+		bar(-s * 0.08, 0, L, th, 35)
+		bar(s * 0.08, 0, L, th, -35)
+		bar(0, s * 0.16, dotS, dotS)
 	elseif style == "Diamond" then
 		local d = new("Frame", {
 			AnchorPoint = Vector2.new(0.5, 0.5),
@@ -6361,18 +6566,33 @@ local function drawCross(parent, style, s, paint)
 			BackgroundTransparency = 1,
 			BorderSizePixel = 0,
 		}, parent)
-		paint(new("UIStroke", { Thickness = 2, Color = Color3.new(1, 1, 1) }, d), "Color")
-		bar(0, 0, 3, 3)
+		paint(new("UIStroke", { Thickness = th, Transparency = alpha, Color = Color3.new(1, 1, 1) }, d), "Color")
+		bar(0, 0, dotS, dotS)
+	elseif style == "Square" then
+		local d = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(s * 0.4, s * 0.4), BackgroundTransparency = 1, BorderSizePixel = 0 }, parent)
+		paint(new("UIStroke", { Thickness = th, Transparency = alpha, Color = Color3.new(1, 1, 1) }, d), "Color")
+		bar(0, 0, dotS, dotS)
 	elseif style == "X" then
-		for _, p in ipairs({ { -g - 4, -g - 4, 45 }, { g + 4, -g - 4, -45 }, { -g - 4, g + 4, -45 }, { g + 4, g + 4, 45 } }) do
-			bar(p[1], p[2], L * 0.8, 2, p[3])
+		local o2 = g + L * 0.35
+		for _, p in ipairs({ { -o2, -o2, 45 }, { o2, -o2, -45 }, { -o2, o2, -45 }, { o2, o2, 45 } }) do
+			bar(p[1], p[2], L * 0.8, th, p[3])
 		end
+	elseif style == "Plus" then
+		bar(0, -(g + L / 2), th, L)
+		bar(0, g + L / 2, th, L)
+		bar(-(g + L / 2), 0, L, th)
+		bar(g + L / 2, 0, L, th)
+	elseif style == "Sniper" then
+		bar(0, 0, s, math.max(1, th * 0.5))
+		bar(0, 0, math.max(1, th * 0.5), s)
+		ring(s * 0.28, math.max(1, th * 0.6))
+		bar(0, 0, dotS, dotS)
 	else -- Cross
-		bar(0, -(g + L / 2), 2, L)
-		bar(0, g + L / 2, 2, L)
-		bar(-(g + L / 2), 0, L, 2)
-		bar(g + L / 2, 0, L, 2)
-		bar(0, 0, 3, 3)
+		bar(0, -(g + L / 2), th, L)
+		bar(0, g + L / 2, th, L)
+		bar(-(g + L / 2), 0, L, th)
+		bar(g + L / 2, 0, L, th)
+		bar(0, 0, dotS, dotS)
 	end
 end
 
@@ -6383,7 +6603,7 @@ function Window:GameAssistant(o)
 		return win.HUD
 	end
 	local lp = Players.LocalPlayer
-	local hud = { IsOpen = false, ColorName = HUD_COLORS[o.Color or "Rainbow"] and (o.Color or "Rainbow") or "Rainbow", CrossName = o.Crosshair or "Cross", _panels = {}, _dead = false }
+	local hud = { IsOpen = false, ColorName = HUD_COLORS[o.Color or "Rainbow"] and (o.Color or "Rainbow") or "Rainbow", CrossName = o.Crosshair or "Cross", CrossSize = o.CrosshairSize or 90, CrossThick = 2, CrossAlpha = 0, Preset = "Medium", Interval = 0.35, Fancy = true, Boost = 1, _panels = {}, _glows = {}, _dead = false }
 	win.HUD = hud
 	local name = o.Name or "RebelUI_HUD"
 	clearOld(name)
@@ -6405,11 +6625,12 @@ function Window:GameAssistant(o)
 	local function relayout()
 		local cam = workspace.CurrentCamera
 		local vp = cam and cam.ViewportSize or Vector2.new(800, 450)
-		local s = math.clamp(vp.Y / 560, 0.62, 1.35)
+		local s = math.clamp(vp.Y / 560, 0.62, 1.35) * (hud.Boost or 1)
 		sc.Scale = s
 		ui.Size = UDim2.fromScale(1 / s, 1 / s)
 	end
 	relayout()
+	hud._relayout = relayout
 	pcall(function()
 		win._conns[#win._conns + 1] = workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(relayout)
 	end)
@@ -6455,8 +6676,13 @@ function Window:GameAssistant(o)
 	end
 	local function applyColors(now)
 		local c = curColor(now or os.clock())
-		for _, p in ipairs(paints) do
-			p[1][p[2]] = c
+		for i = #paints, 1, -1 do
+			local pi = paints[i]
+			if pi[1].Parent == nil then
+				table.remove(paints, i) -- the thing was destroyed (a redrawn crosshair)
+			else
+				pi[1][pi[2]] = c
+			end
 		end
 	end
 	local function applyGrads()
@@ -6494,6 +6720,7 @@ function Window:GameAssistant(o)
 		local glow = new("Frame", { Position = UDim2.fromOffset(-4, -4), Size = UDim2.new(1, 8, 1, 8), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 2 }, f)
 		local gs = neon(new("UIStroke", { Thickness = 5, Transparency = 0.78, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, glow))
 		gs.Transparency = 0.78
+		table.insert(hud._glows, glow)
 		for _, c in ipairs({ { 0, 0, 1, 1 }, { 1, 0, -1, 1 }, { 0, 1, 1, -1 }, { 1, 1, -1, -1 } }) do
 			local ax, ay = c[1], c[2]
 			local h = new("Frame", { AnchorPoint = Vector2.new(ax, ay), Position = UDim2.fromScale(ax, ay), Size = UDim2.fromOffset(16, 3), BorderSizePixel = 0, ZIndex = 7, BackgroundColor3 = Color3.new(1, 1, 1) }, f)
@@ -6580,6 +6807,13 @@ function Window:GameAssistant(o)
 	end
 	local markColor = chipRow(UDim2.fromOffset(14, 58), 250, RebelUI.HudColors, hud.ColorName, function(n)
 		hud:SetColor(n)
+	end)
+	local sizeNames = { "Small", "Medium", "Large", "XL" }
+	local markSize = chipRow(UDim2.fromOffset(14, 88), 250, sizeNames, "Medium", function(n)
+		hud:SetCrosshairSize(n)
+	end)
+	local markPreset = chipRow(UDim2.fromOffset(14, 118), 280, RebelUI.HudPresets, "Medium", function(n)
+		hud:SetPreset(n)
 	end)
 	local markCross = chipRow(UDim2.new(0.5, -150, 0, 62), 300, RebelUI.Crosshairs, hud.CrossName, function(n)
 		hud:SetCrosshair(n)
@@ -6677,7 +6911,8 @@ function Window:GameAssistant(o)
 	local dots = {} -- other players on the radar
 	local cross = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(90, 90), BackgroundTransparency = 1, ZIndex = 8 }, center)
 	local function redrawCross()
-		drawCross(cross, hud.CrossName, 90, paint)
+		cross.Size = UDim2.fromOffset(hud.CrossSize, hud.CrossSize)
+		drawCross(cross, hud.CrossName, hud.CrossSize, paint, hud.CrossThick, hud.CrossAlpha)
 		applyColors()
 	end
 	hud._target = text(ui, "", 12, true, UDim2.new(0.5, -130, 0.5, -170), UDim2.fromOffset(260, 16), Enum.TextXAlignment.Center, true)
@@ -6688,7 +6923,8 @@ function Window:GameAssistant(o)
 	cgui.Parent = pickParent()
 	local cbox = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(60, 60), BackgroundTransparency = 1 }, cgui)
 	local function redrawGameCross()
-		drawCross(cbox, hud.CrossName, 60, paint)
+		cbox.Size = UDim2.fromOffset(hud.CrossSize, hud.CrossSize)
+		drawCross(cbox, hud.CrossName, hud.CrossSize, paint, hud.CrossThick, hud.CrossAlpha)
 		applyColors()
 	end
 
@@ -6727,6 +6963,39 @@ function Window:GameAssistant(o)
 			hud:ShowBrief(hud:GetSummary(), 18)
 		end
 	end
+
+	-- ---------- extras: damage flash, status tags, compare card, hotbar
+	local vig = {}
+	for i, e in ipairs({ { UDim2.new(1, 0, 0.2, 0), UDim2.fromScale(0, 0), 90 }, { UDim2.new(1, 0, 0.2, 0), UDim2.fromScale(0, 0.8), -90 }, { UDim2.new(0.12, 0, 1, 0), UDim2.fromScale(0, 0), 0 }, { UDim2.new(0.12, 0, 1, 0), UDim2.fromScale(0.88, 0), 180 } }) do
+		local v = new("Frame", { Size = e[1], Position = e[2], BackgroundColor3 = Color3.fromRGB(255, 20, 30), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 1, Active = false }, root)
+		new("UIGradient", { Rotation = e[3], Transparency = NumberSequence.new(0, 1) }, v)
+		vig[i] = v
+	end
+	function hud:_damage(n)
+		for _, v in ipairs(vig) do
+			v.BackgroundTransparency = math.clamp(0.75 - n / 80, 0.15, 0.7)
+			tween(v, 0.7, { BackgroundTransparency = 1 })
+		end
+		local t = text(ui, "-" .. math.floor(n), 24, true, UDim2.new(0.5, math.random(-40, 40), 0.5, 40), UDim2.fromOffset(80, 28), Enum.TextXAlignment.Center, false, 12)
+		t.AnchorPoint = Vector2.new(0.5, 0.5)
+		t.TextColor3 = Color3.fromRGB(255, 70, 70)
+		tween(t, 0.9, { Position = t.Position - UDim2.fromOffset(0, 60), TextTransparency = 1 })
+		task.delay(1, function()
+			t:Destroy()
+		end)
+	end
+	hud._status = text(ui, "", 11, true, UDim2.new(0, 16, 1, -118), UDim2.fromOffset(320, 16), nil, true)
+	local cmp = panel("compare", UDim2.new(0.5, 0, 0, 96), UDim2.fromOffset(300, 62), nil, Vector2.new(0.5, 0))
+	cmp.Visible = false
+	local cmpL = text(cmp, "", 11, true, UDim2.fromOffset(12, 8), UDim2.new(1, -24, 0, 48))
+	cmpL.TextWrapped = true
+	cmpL.TextYAlignment = Enum.TextYAlignment.Top
+	cmpL.TextTruncate = Enum.TextTruncate.None
+	local hot = panel("hotbar", UDim2.new(0.5, 0, 1, -64), UDim2.fromOffset(200, 52), nil, Vector2.new(0.5, 0))
+	hot.Visible = false
+	new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder }, hot)
+	local lastHp
+	local sh
 
 	-- ---------- data
 	local Stats = game:GetService("Stats")
@@ -6927,6 +7196,35 @@ function Window:GameAssistant(o)
 		else
 			hud._target.Text = ""
 		end
+		-- status tags and the compare card
+		local tags = {}
+		if h then
+			local okS, stn = pcall(function()
+				return h:GetState().Name
+			end)
+			if okS and stn then
+				table.insert(tags, stn:upper())
+			end
+			if hp / mx < 0.3 and hp > 0 then
+				table.insert(tags, "LOW HP")
+			end
+		end
+		if ping > 220 then
+			table.insert(tags, "HIGH PING")
+		end
+		if fps < 30 then
+			table.insert(tags, "LOW FPS")
+		end
+		hud._status.Text = table.concat(tags, "  |  ")
+		if targetPlayer and targetPlayer.Parent and hud._panels.compare then
+			local th = hum(targetPlayer)
+			local _, tr = hum(targetPlayer)
+			local tsp = tr and tr.AssemblyLinearVelocity and Vector3.new(tr.AssemblyLinearVelocity.X, 0, tr.AssemblyLinearVelocity.Z).Magnitude or 0
+			cmpL.Text = string.format("YOU vs %s\nHP  %d  |  %d      SPEED  %d  |  %d      DIST  %s", targetPlayer.DisplayName:upper(), hp, th and th.Health or 0, spd, tsp, distTo(targetPlayer) and (math.floor(distTo(targetPlayer)) .. "m") or "--")
+			cmp.Visible = hud._cmpOn ~= false
+		else
+			cmp.Visible = false
+		end
 	end
 
 	-- ---------- one loop: racing edges, spinning rings, colors, data
@@ -6950,11 +7248,30 @@ function Window:GameAssistant(o)
 		for _, g in ipairs(grads) do
 			g.Rotation = rot
 		end
-		ticks.Rotation = (now * 6) % 360
-		arcs.Rotation = -(now * 22) % 360
-		sweep.Rotation = (now * 140) % 360
+		if hud.Fancy then
+			ticks.Rotation = (now * 6) % 360
+			arcs.Rotation = -(now * 22) % 360
+			sweep.Rotation = (now * 140) % 360
+		end
+		local hh = hum(lp)
+		if hh then
+			if lastHp and hh.Health < lastHp - 0.5 then
+				hud:_damage(lastHp - hh.Health)
+			end
+			lastHp = hh.Health
+		end
+		if sh then
+			local k = 1 - (now - sh.t0) / sh.dur
+			if k <= 0 then
+				sh = nil
+				ui.Position = UDim2.new()
+			else
+				local m = 8 * sh.p * k
+				ui.Position = UDim2.fromOffset((math.random() - 0.5) * 2 * m, (math.random() - 0.5) * 2 * m)
+			end
+		end
 		dataAcc += dt
-		if dataAcc >= 0.35 then
+		if dataAcc >= (hud.Interval or 0.35) then
 			dataAcc = 0
 			local okR, eR = pcall(refreshData, now)
 			if not okR and not hud._warned then
@@ -6992,11 +7309,190 @@ function Window:GameAssistant(o)
 			redrawGameCross()
 		end
 	end
+	function hud:_shake(power, dur)
+		sh = { t0 = os.clock(), dur = dur, p = power }
+	end
+	function hud:SetCrosshairSize(n)
+		local px = RebelUI.CrossSizes[n] or tonumber(n)
+		if not px then
+			return false
+		end
+		hud.CrossSize = math.clamp(math.floor(px), 20, 240)
+		redrawCross()
+		redrawGameCross()
+		for name2, v in pairs(RebelUI.CrossSizes) do
+			if v == hud.CrossSize then
+				markSize(name2)
+				return true
+			end
+		end
+		markSize(nil)
+		return true
+	end
+	function hud:SetCrosshairThickness(n)
+		hud.CrossThick = math.clamp(tonumber(n) or 2, 1, 8)
+		redrawCross()
+		redrawGameCross()
+	end
+	function hud:SetCrosshairOpacity(pct)
+		hud.CrossAlpha = 1 - math.clamp((tonumber(pct) or 100) / 100, 0.1, 1)
+		redrawCross()
+		redrawGameCross()
+	end
+	function hud:SetPreset(n)
+		local P = {
+			Low = { 0.8, false, 0.9, false },
+			Medium = { 0.35, true, 1, true },
+			High = { 0.25, true, 1.08, true },
+			Extreme = { 0.2, true, 1.15, true },
+		}
+		local c = P[n]
+		if not c then
+			return false
+		end
+		hud.Preset, hud.Interval, hud.Fancy, hud.Boost = n, c[1], c[2], c[3]
+		for _, g in ipairs(hud._glows) do
+			g.Visible = c[4]
+		end
+		ticks.Visible, arcs.Visible, sweep.Visible = c[2], c[2], c[2]
+		if n == "Extreme" then
+			hud:SetColor("Rainbow")
+		end
+		hud._relayout()
+		markPreset(n)
+		return true
+	end
+	-- the game's name decides a starting setup (a template)
+	local TEMPLATES = {
+		{ "Shooter", { "shoot", "gun", "war", "arsenal", "phantom", "strike", "combat", "battle", "fps", "rivals", "business", "criminality", "sniper", "zombie", "blox" }, { cross = "Cross", size = 70, preset = "High", show = { players = true, crosshair = true } } },
+		{ "Murder mystery", { "murder", "mm2", "sheriff", "mystery", "among", "impostor" }, { cross = "Dot", size = 60, preset = "Medium", show = { players = true, crosshair = true } } },
+		{ "Obby / parkour", { "obby", "tower", "parkour", "difficulty", "escape", "climb", "jump" }, { cross = "Dot", size = 40, preset = "Low", show = { players = false, crosshair = false } } },
+		{ "Simulator / tycoon", { "tycoon", "simulator", "farm", "grow", "idle", "clicker", "pet", "garden", "fisch", "bee" }, { cross = "Plus", size = 50, preset = "Low", show = { players = true, crosshair = false } } },
+		{ "Racing", { "race", "racing", "drive", "driving", "car", "speed", "drift" }, { cross = "Chevron", size = 60, preset = "Medium", show = { players = true, crosshair = false } } },
+		{ "Roleplay / social", { "roleplay", "rp", "hangout", "life", "town", "city", "school" }, { cross = "Dot", size = 40, preset = "Low", show = { players = true, crosshair = false } } },
+	}
+	function hud:Detect(apply)
+		local nm = (game.Name or ""):lower()
+		pcall(function()
+			nm = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name:lower()
+		end)
+		local found, cfg = "General", { cross = "Cross", size = 90, preset = "Medium", show = { players = true, crosshair = true } }
+		for _, t in ipairs(TEMPLATES) do
+			for _, w in ipairs(t[2]) do
+				if nm:find(w, 1, true) then
+					found, cfg = t[1], t[3]
+					break
+				end
+			end
+			if found ~= "General" then
+				break
+			end
+		end
+		hud.Template = found
+		if apply ~= false then
+			hud:SetCrosshair(cfg.cross)
+			hud:SetCrosshairSize(cfg.size)
+			hud:SetPreset(cfg.preset)
+			for k, v in pairs(cfg.show) do
+				hud:Show(k, v)
+			end
+		end
+		return found
+	end
+	-- profiles: one file per game (and a share code)
+	local function profileData()
+		local hidden = {}
+		for k, f in pairs(hud._panels) do
+			if k ~= "brief" and k ~= "compare" and k ~= "hotbar" and f.Visible == false then
+				hidden[#hidden + 1] = k
+			end
+		end
+		return { color = hud.ColorName, cross = hud.CrossName, size = hud.CrossSize, thick = hud.CrossThick, alpha = hud.CrossAlpha, preset = hud.Preset, hidden = hidden, game = hud._gameCross == true }
+	end
+	local function applyProfile(d)
+		if type(d) ~= "table" then
+			return false
+		end
+		hud:SetColor(d.color or "Rainbow")
+		hud:SetCrosshair(d.cross or "Cross")
+		hud.CrossThick, hud.CrossAlpha = d.thick or 2, d.alpha or 0
+		hud:SetCrosshairSize(d.size or 90)
+		hud:SetPreset(d.preset or "Medium")
+		hud:Show("all", true)
+		for _, k in ipairs(d.hidden or {}) do
+			hud:Show(k, false)
+		end
+		hud:CrosshairInGame(d.game == true)
+		return true
+	end
+	local function pfile()
+		return "RebelUI_HUD_" .. tostring(game.PlaceId) .. ".json"
+	end
+	function hud:SaveProfile()
+		local ok = pcall(function()
+			writefile(pfile(), game:GetService("HttpService"):JSONEncode(profileData()))
+		end)
+		return ok
+	end
+	function hud:LoadProfile()
+		local ok, d = pcall(function()
+			if isfile and isfile(pfile()) then
+				return game:GetService("HttpService"):JSONDecode(readfile(pfile()))
+			end
+		end)
+		if ok and d then
+			return applyProfile(d)
+		end
+		return false
+	end
+	function hud:Export()
+		local code = "RBH1:" .. b64encode(game:GetService("HttpService"):JSONEncode(profileData()))
+		pcall(function()
+			setclipboard(code)
+		end)
+		return code
+	end
+	function hud:Import(code)
+		code = tostring(code or "")
+		if code:sub(1, 5) ~= "RBH1:" then
+			return false
+		end
+		local ok, d = pcall(function()
+			return game:GetService("HttpService"):JSONDecode(b64decode(code:sub(6)))
+		end)
+		return ok and applyProfile(d)
+	end
+	function hud:SetHotbar(list)
+		for _, c in ipairs(hot:GetChildren()) do
+			if c:IsA("TextButton") then
+				c:Destroy()
+			end
+		end
+		list = list or {}
+		hot.Size = UDim2.fromOffset(math.max(120, #list * 84 + 16), 52)
+		for i, it in ipairs(list) do
+			local b = new("TextButton", { Size = UDim2.fromOffset(78, 34), LayoutOrder = i, BackgroundColor3 = DARK, BackgroundTransparency = 0.1, BorderSizePixel = 0, Text = tostring(it.Name or ("Slot " .. i)), TextSize = 11, Font = Enum.Font.GothamBold, TextColor3 = Color3.new(1, 1, 1), AutoButtonColor = false, ZIndex = 8 }, hot)
+			neon(new("UIStroke", { Thickness = 1.2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, b))
+			b.MouseButton1Click:Connect(function()
+				win:_playClick()
+				safe(it.Callback)
+			end)
+		end
+		hot.Visible = #list > 0
+		return hot.Visible
+	end
+	-- a quick demo of the effects (test mode)
+	function hud:Demo()
+		hud:_damage(25)
+		hud:_shake(1.2, 0.5)
+		win:Confetti(30)
+		hud:ShowBrief("Test mode: damage flash, shake and confetti. Nothing in the game changed.", 5)
+	end
 	function hud:Show(key, v)
 		local p = hud._panels[key]
 		if key == "all" then
-			for _, f in pairs(hud._panels) do
-				if f ~= card then
+			for k, f in pairs(hud._panels) do
+				if k ~= "brief" and k ~= "compare" and k ~= "hotbar" then
 					f.Visible = v ~= false
 				end
 			end
@@ -7009,6 +7505,12 @@ function Window:GameAssistant(o)
 		return false
 	end
 	function hud:Open()
+		if not hud._init then
+			hud._init = true
+			if not hud:LoadProfile() and o.AutoDetect ~= false then
+				pcall(hud.Detect, hud, true)
+			end
+		end
 		hud.IsOpen = true
 		gui.Enabled = true
 		root.Visible = true
@@ -7127,7 +7629,16 @@ function Window:GameAssistant(o)
 			end
 			return hud:SetColor(cap(a)), "Color: " .. tostring(cap(a))
 		elseif cmd == "crosshair" then
-			if a == "game" then
+			if a == "size" then
+				local ok = hud:SetCrosshairSize(RebelUI.CrossSizes[cap(b)] and cap(b) or (b == "xl" and "XL" or tonumber(b)))
+				return ok, ok and ("Crosshair size " .. tostring(hud.CrossSize)) or "Use small, medium, large, xl or a number."
+			elseif a == "thick" or a == "thickness" then
+				hud:SetCrosshairThickness(tonumber(b))
+				return true, "Thickness " .. hud.CrossThick
+			elseif a == "opacity" or a == "alpha" then
+				hud:SetCrosshairOpacity(tonumber(b))
+				return true, "Crosshair opacity changed."
+			elseif a == "game" then
 				hud:CrosshairInGame(b ~= "off")
 				return true, "In-game crosshair " .. (b == "off" and "off" or "on") .. "."
 			elseif a == "on" or a == "off" then
@@ -7143,6 +7654,27 @@ function Window:GameAssistant(o)
 			return hud:Target(table.concat(w, " ", 2))
 		elseif cmd == "spectate" or cmd == "watch" then
 			return hud:Spectate(table.concat(w, " ", 2))
+		elseif cmd == "preset" or cmd == "quality" then
+			local ok = hud:SetPreset(cap(a))
+			return ok, ok and ("Preset " .. cap(a)) or "Use low, medium, high or extreme."
+		elseif cmd == "template" or cmd == "detect" then
+			return true, "Template: " .. hud:Detect(true)
+		elseif cmd == "save" then
+			return hud:SaveProfile(), "Saved the HUD setup for this game."
+		elseif cmd == "load" then
+			local ok = hud:LoadProfile()
+			return ok, ok and "Loaded." or "No saved setup for this game yet."
+		elseif cmd == "export" or cmd == "share" then
+			return true, "Copied a share code: " .. hud:Export():sub(1, 24) .. "..."
+		elseif cmd == "demo" or cmd == "test" then
+			hud:Demo()
+			return true, "Test mode."
+		elseif cmd == "shake" then
+			win:ScreenShake(tonumber(a) or 1.5, 0.7)
+			return true, "Shake."
+		elseif cmd == "compare" then
+			hud._cmpOn = a ~= "off"
+			return true, "Compare " .. (hud._cmpOn and "on" or "off")
 		elseif cmd == "brief" or cmd == "summary" then
 			hud:Brief()
 			return true, "Brief."
@@ -7182,6 +7714,527 @@ function Window:GameAssistant(o)
 end
 
 
+
+-- ============================================================ effects: animations, ripples, glow, confetti, shake
+-- Win:SetOpenAnimation("Pop"|"Slide"|"Fade"|"Bounce"|"Drop"|"Spin")  Win:SetAnimSpeed(0.5 - 2.5)  Win:SetReduceMotion(bool)
+-- Win:SetFx({ Ripple = true, Glow = false, Scan = false, Breathe = true })
+-- Win:Confetti(count)  Win:Shake(power, seconds) shakes the panel  Win:ScreenShake(power, seconds) shakes the panel AND the game camera
+RebelUI.OpenAnimations = { "Pop", "Slide", "Fade", "Bounce", "Drop", "Spin" }
+
+function Window:SetOpenAnimation(style)
+	if table.find(RebelUI.OpenAnimations, style) then
+		self.OpenAnim = style
+	end
+	return self.OpenAnim
+end
+
+function Window:SetAnimSpeed(x)
+	self.AnimSpeed = math.clamp(tonumber(x) or 1, 0.4, 2.5)
+end
+
+function Window:SetReduceMotion(on)
+	self.ReduceMotion = on == true
+	if self.ReduceMotion then
+		self.Fx.Glow, self.Fx.Scan = false, false
+		if self._glowDot then
+			self._glowDot.Visible = false
+		end
+		if self._scan then
+			self._scan.Visible = false
+		end
+	end
+end
+
+function Window:SetFx(t)
+	for k, v in pairs(t or {}) do
+		self.Fx[k] = v == true
+	end
+	if self._scan then
+		self._scan.Visible = self.Fx.Scan and self.Open
+	end
+	if self._glowDot and not self.Fx.Glow then
+		self._glowDot.Visible = false
+	end
+end
+
+function Window:Confetti(n)
+	n = math.clamp(math.floor(n or 36), 1, 80)
+	if self.ReduceMotion or not self.Gui then
+		return
+	end
+	local vp = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(800, 450)
+	local cols = { Color3.fromRGB(255, 70, 90), Color3.fromRGB(255, 200, 60), Color3.fromRGB(80, 220, 130), Color3.fromRGB(70, 160, 255), Color3.fromRGB(190, 110, 255), Color3.fromRGB(255, 255, 255) }
+	for i = 1, n do
+		local s = math.random(5, 10)
+		local f = new("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.new(0.5, math.random(-60, 60), 0.3, 0),
+			Size = UDim2.fromOffset(s, s * (math.random() < 0.5 and 1 or 2)),
+			BackgroundColor3 = cols[math.random(#cols)],
+			BorderSizePixel = 0,
+			Rotation = math.random(0, 360),
+			ZIndex = 200,
+		}, self.Gui)
+		local t = (0.9 + math.random() * 1.0) / (self.AnimSpeed or 1)
+		tween(f, t, {
+			Position = UDim2.new(0.5, math.random(-vp.X * 0.45, vp.X * 0.45), 0.3, math.random(vp.Y * 0.3, vp.Y * 0.75)),
+			Rotation = f.Rotation + math.random(-540, 540),
+			BackgroundTransparency = 1,
+		}, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		task.delay(t + 0.1, function()
+			f:Destroy()
+		end)
+	end
+end
+
+function Window:Shake(power, dur)
+	if self.ReduceMotion then
+		return
+	end
+	power = math.clamp(tonumber(power) or 1, 0.2, 4)
+	dur = math.clamp(tonumber(dur) or 0.5, 0.1, 3)
+	local main = self.Main
+	if not main then
+		return
+	end
+	if not self._shakeBase then
+		self._shakeBase = main.Position
+	end
+	self._shake = { t0 = os.clock(), dur = dur, p = power }
+end
+
+local function cameraShake(power, dur)
+	local ok = pcall(function()
+		local cam = workspace.CurrentCamera
+		local t0 = os.clock()
+		local name = "RebelUIShake"
+		pcall(function()
+			RunService:UnbindFromRenderStep(name)
+		end)
+		RunService:BindToRenderStep(name, Enum.RenderPriority.Camera.Value + 1, function()
+			local k = 1 - (os.clock() - t0) / dur
+			if k <= 0 then
+				RunService:UnbindFromRenderStep(name)
+				return
+			end
+			local a = power * 0.012 * k
+			cam.CFrame = cam.CFrame * CFrame.new((math.random() - 0.5) * power * 0.5 * k, (math.random() - 0.5) * power * 0.5 * k, 0) * CFrame.Angles((math.random() - 0.5) * a, (math.random() - 0.5) * a, (math.random() - 0.5) * a)
+		end)
+	end)
+	return ok
+end
+
+function Window:ScreenShake(power, dur)
+	power = math.clamp(tonumber(power) or 1, 0.2, 4)
+	dur = math.clamp(tonumber(dur) or 0.7, 0.1, 3)
+	self:Shake(power * 1.4, dur)
+	if self.HUD and self.HUD.IsOpen and self.HUD._shake then
+		self.HUD:_shake(power, dur)
+	end
+	if not self.ReduceMotion then
+		cameraShake(power, dur)
+	end
+end
+
+-- called once from CreateWindow
+function Window:_initFx()
+	local win = self
+	win.Fx = { Ripple = true, Glow = false, Scan = false, Breathe = true }
+	local main = win.Main
+	-- overlay that holds ripples (clipped to the panel)
+	local layer = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ClipsDescendants = true, Active = false, ZIndex = 40 }, main)
+	corner(layer, 10)
+	local dot = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(110, 110), BackgroundTransparency = 0.88, BorderSizePixel = 0, Visible = false, Active = false, ZIndex = 39 }, layer)
+	corner(dot, 110)
+	win._glowDot = dot
+	win:_onTheme(function(t)
+		dot.BackgroundColor3 = t.Glow
+	end)
+	local scan = new("Frame", { Size = UDim2.new(1, 0, 0, 26), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.9, BorderSizePixel = 0, Visible = false, Active = false, ZIndex = 38 }, layer)
+	new("UIGradient", { Rotation = 90, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 1) }) }, scan)
+	win._scan = scan
+	local function local_(p)
+		local s = win._scaleObj and win._scaleObj.Scale or 1
+		return Vector2.new((p.X - main.AbsolutePosition.X) / s, (p.Y - main.AbsolutePosition.Y) / s)
+	end
+	local function inside(p)
+		local a, s = main.AbsolutePosition, main.AbsoluteSize
+		return p.X >= a.X and p.Y >= a.Y and p.X <= a.X + s.X and p.Y <= a.Y + s.Y
+	end
+	win._conns[#win._conns + 1] = UIS.InputBegan:Connect(function(i)
+		if win.Open and win.Fx.Ripple and not win.ReduceMotion and isPress(i) and i.Position and inside(i.Position) then
+			local p = local_(i.Position)
+			local r = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(p.X, p.Y), Size = UDim2.fromOffset(6, 6), BackgroundColor3 = win.Theme.Glow, BackgroundTransparency = 0.55, BorderSizePixel = 0, Active = false, ZIndex = 41 }, layer)
+			corner(r, 200)
+			local t = 0.55 / (win.AnimSpeed or 1)
+			tween(r, t, { Size = UDim2.fromOffset(120, 120), BackgroundTransparency = 1 })
+			task.delay(t + 0.05, function()
+				r:Destroy()
+			end)
+		end
+	end)
+	win._conns[#win._conns + 1] = UIS.InputChanged:Connect(function(i)
+		if win.Open and win.Fx.Glow and not win.ReduceMotion and isMove(i) and i.Position then
+			if inside(i.Position) then
+				local p = local_(i.Position)
+				dot.Position = UDim2.fromOffset(p.X, p.Y)
+				dot.Visible = true
+			else
+				dot.Visible = false
+			end
+		end
+	end)
+	-- one hook in the shared frame loop: breathing border, scan line, panel shake
+	table.insert(win._frame, function(now)
+		local rs = win._ringStroke
+		if rs and win.Open then
+			rs.Thickness = (win.Fx.Breathe and not win.ReduceMotion) and (1.2 + 0.7 * math.sin(now * 2.2)) or 1
+		end
+		if win.Fx.Scan and win.Open and not win.ReduceMotion then
+			scan.Visible = true
+			scan.Position = UDim2.new(0, 0, ((now * 0.22) % 1.2) - 0.1, 0)
+		elseif scan.Visible then
+			scan.Visible = false
+		end
+		local sh = win._shake
+		if sh then
+			local k = 1 - (now - sh.t0) / sh.dur
+			if k <= 0 then
+				win._shake = nil
+				main.Position = win._shakeBase
+				win._shakeBase = nil
+			else
+				local m = 7 * sh.p * k
+				main.Position = win._shakeBase + UDim2.fromOffset((math.random() - 0.5) * 2 * m, (math.random() - 0.5) * 2 * m)
+			end
+		end
+	end)
+end
+
+-- ============================================================ tools tab: command bar, notes, usage + badges, randomizer, performance, accessibility, votes
+-- Win:AddCommand("name", function(args) end, "what it does")  Win:RunCommand("name args")  Win:CreateToolsTab({ Icon, Features = { "Fly", "ESP" }, Tips = { ... } })
+function Window:AddCommand(name, fn, desc)
+	self._commands = self._commands or {}
+	self._commands[tostring(name):lower()] = { fn = fn, desc = desc or "" }
+end
+
+function Window:RunCommand(text)
+	text = tostring(text or ""):gsub("^%s+", ""):gsub("%s+$", "")
+	local cmds = self._commands or {}
+	local word, rest = text:match("^(%S+)%s*(.*)$")
+	if not word then
+		return false, "Type a command."
+	end
+	word = word:lower()
+	local hit = cmds[word]
+	if not hit then
+		local names = {}
+		for n in pairs(cmds) do
+			names[#names + 1] = n
+		end
+		table.sort(names)
+		for _, n in ipairs(names) do
+			if n:sub(1, #word) == word then
+				hit = cmds[n]
+				break
+			end
+		end
+		if not hit then
+			for _, n in ipairs(names) do
+				if n:find(word, 1, true) then
+					hit = cmds[n]
+					break
+				end
+			end
+		end
+	end
+	if not hit then
+		return false, "No command like '" .. word .. "'."
+	end
+	local ok, res = pcall(hit.fn, rest)
+	return ok, ok and (res ~= nil and tostring(res) or "Done.") or tostring(res)
+end
+
+function Window:CreateToolsTab(o)
+	o = o or {}
+	local win = self
+	local HttpService = game:GetService("HttpService")
+	local tab = win:CreateTab({
+		Name = o.Name or "Tools",
+		Icon = o.Icon,
+		Title = o.Title or "🧰 TOOLS",
+		Description = o.Description or "Command bar, notes, stats, randomizer, performance and accessibility.",
+	})
+
+	-- built-in commands
+	win:AddCommand("confetti", function()
+		win:Confetti(50)
+	end, "party")
+	win:AddCommand("shake", function(a)
+		win:ScreenShake(tonumber(a) or 1.5, 0.7)
+	end, "shake the screen")
+	win:AddCommand("theme", function(a)
+		for _, n in ipairs(RebelUI.Themes) do
+			if n:lower() == a:lower() then
+				win:SetTheme(n)
+				return "Theme " .. n
+			end
+		end
+		return "Themes: " .. table.concat(RebelUI.Themes, ", ")
+	end, "theme <name>")
+	win:AddCommand("anim", function(a)
+		for _, n in ipairs(RebelUI.OpenAnimations) do
+			if n:lower() == a:lower() then
+				win:SetOpenAnimation(n)
+				return "Animation " .. n
+			end
+		end
+		return "Animations: " .. table.concat(RebelUI.OpenAnimations, ", ")
+	end, "anim <name>")
+	win:AddCommand("hud", function(a)
+		local h = win.HUD or win:GameAssistant({ Logo = o.Icon or win._icon })
+		if a == "" then
+			a = "open"
+		end
+		local ok, m = h:Command(a)
+		return m
+	end, "hud open / color gold / crosshair dot ...")
+	win:AddCommand("close", function()
+		win:Toggle(false)
+	end, "hide the panel")
+
+	-- ---------- command bar
+	tab:Section("Quick command bar")
+	local out = tab:Label("Type a command (try: confetti, shake, theme blue, hud open) and press enter.")
+	tab:Input({
+		Name = "Command",
+		Placeholder = "confetti, shake 2, theme blue, hud color gold ...",
+		Clear = true,
+		Callback = function(text)
+			local ok, m = win:RunCommand(text)
+			out:Set((ok and "OK: " or "Oops: ") .. tostring(m))
+		end,
+	})
+	tab:Button({ Name = "List commands", Callback = function()
+		local names = {}
+		for n, c in pairs(win._commands or {}) do
+			names[#names + 1] = n .. (c.desc ~= "" and (" - " .. c.desc) or "")
+		end
+		table.sort(names)
+		out:Set(table.concat(names, "\n"))
+	end })
+
+	-- ---------- quick notes (saved to a file)
+	tab:Section("Quick notes")
+	local NOTES = "RebelUI_notes.txt"
+	local saved = ""
+	pcall(function()
+		if isfile and isfile(NOTES) then
+			saved = readfile(NOTES)
+		end
+	end)
+	tab:CodeBox({
+		Name = "Notes",
+		Height = 80,
+		Default = saved,
+		Placeholder = "Write anything. Tap Save.",
+		RunText = "Save",
+		Callback = function(text)
+			local ok = pcall(function()
+				writefile(NOTES, text)
+			end)
+			win:Notify({ Title = ok and "Saved" or "Can't save", Text = ok and "Notes saved on this device." or "This executor can't write files.", Type = ok and "success" or "warn" })
+		end,
+	})
+
+	-- ---------- usage tracker and badges
+	tab:Section("Your stats and badges")
+	local FILE = "RebelUI_usage.json"
+	local use = { seconds = 0, opens = 0, badges = {} }
+	pcall(function()
+		if isfile and isfile(FILE) then
+			local d = HttpService:JSONDecode(readfile(FILE))
+			if type(d) == "table" then
+				use.seconds, use.opens, use.badges = d.seconds or 0, d.opens or 0, d.badges or {}
+			end
+		end
+	end)
+	use.opens += 1
+	local BADGES = {
+		{ "First steps", function() return use.opens >= 1 end },
+		{ "Regular", function() return use.opens >= 10 end },
+		{ "Veteran", function() return use.opens >= 50 end },
+		{ "10 minutes", function() return use.seconds >= 600 end },
+		{ "1 hour", function() return use.seconds >= 3600 end },
+		{ "10 hours", function() return use.seconds >= 36000 end },
+	}
+	local shown = tab:Label("")
+	local function fmt(s)
+		return string.format("%dh %02dm", s // 3600, (s % 3600) // 60)
+	end
+	local function refresh(announce)
+		local lines = { "Time used: " .. fmt(use.seconds) .. "    Sessions: " .. use.opens }
+		local have = {}
+		for _, b in ipairs(BADGES) do
+			if b[2]() then
+				have[#have + 1] = b[1]
+				if not use.badges[b[1]] then
+					use.badges[b[1]] = true
+					if announce then
+						win:Notify({ Title = "Badge unlocked!", Text = b[1], Type = "success" })
+						win:Confetti(40)
+					end
+				end
+			end
+		end
+		lines[#lines + 1] = "Badges: " .. (#have > 0 and table.concat(have, ", ") or "none yet")
+		shown:Set(table.concat(lines, "\n"))
+	end
+	refresh(false)
+	task.spawn(function()
+		local n = 0
+		while not win._dead do
+			task.wait(5)
+			use.seconds += 5
+			n += 1
+			refresh(true)
+			if n % 6 == 0 then
+				pcall(function()
+					writefile(FILE, HttpService:JSONEncode(use))
+				end)
+			end
+		end
+	end)
+
+	-- ---------- randomizer
+	tab:Section("Randomizer")
+	local rr = tab:Label("Tap one.")
+	local function say(t)
+		rr:Set(t)
+		win:Notify({ Title = "Randomizer", Text = t, Duration = 2.5 })
+	end
+	tab:Button({ Name = "Flip a coin", Callback = function()
+		say(math.random() < 0.5 and "Heads" or "Tails")
+	end })
+	tab:Button({ Name = "Roll a dice (1-6)", Callback = function()
+		say("You rolled " .. math.random(6))
+	end })
+	tab:Button({ Name = "Roll a d20", Callback = function()
+		say("You rolled " .. math.random(20))
+	end })
+	local picks = "pizza, burger, sushi"
+	tab:Input({ Name = "Pick one of (comma separated)", Default = picks, Callback = function(t)
+		picks = t
+	end })
+	tab:Button({ Name = "Pick for me", Callback = function()
+		local list = {}
+		for x in picks:gmatch("[^,]+") do
+			x = x:gsub("^%s+", ""):gsub("%s+$", "")
+			if x ~= "" then
+				list[#list + 1] = x
+			end
+		end
+		say(#list > 0 and ("Go with: " .. list[math.random(#list)]) or "Type some choices first.")
+	end })
+	tab:Button({ Name = "Random username idea", Callback = function()
+		local a = { "Shadow", "Turbo", "Neon", "Pixel", "Ghost", "Rebel", "Cosmic", "Wild" }
+		local b = { "Fox", "Blade", "Storm", "Panda", "Rider", "Ninja", "Bolt", "Wolf" }
+		say(a[math.random(#a)] .. b[math.random(#b)] .. math.random(10, 99))
+	end })
+
+	-- ---------- performance
+	tab:Section("Performance monitor")
+	tab:Graph({ Name = "FPS", Source = "FPS", Max = 70 })
+	tab:Graph({ Name = "Ping", Source = "Ping", Suffix = " ms" })
+	tab:Graph({ Name = "Memory", Source = "Memory", Suffix = " MB" })
+
+	-- ---------- accessibility
+	tab:Section("Accessibility")
+	tab:Toggle({ Name = "High contrast", Description = "Strong colors, easier to read", Flag = "__a11y_contrast", Callback = function(on)
+		win:SetTheme(on and "Contrast" or "Red")
+	end })
+	tab:Toggle({ Name = "Colorblind friendly colors", Flag = "__a11y_cb", Callback = function(on)
+		win:SetTheme(on and "Colorblind" or "Red")
+	end })
+	tab:Toggle({ Name = "Large panel", Description = "Bigger buttons and text", Flag = "__a11y_big", Callback = function(on)
+		win:SetScale(on and 1.25 or 1)
+	end })
+	tab:Toggle({ Name = "Reduce motion", Description = "Fewer animations", Flag = "__a11y_motion", Default = win.ReduceMotion, Callback = function(on)
+		win:SetReduceMotion(on)
+	end })
+
+	-- ---------- keyboard cheat sheet
+	tab:Section("Keyboard cheat sheet")
+	tab:Paragraph({
+		Title = "Keys",
+		Text = (win.ToggleKey and (win.ToggleKey.Name .. "  open / close the panel\n") or "") .. "H  open / close the game assistant (if set)\nEnter  send a chat message or run a command\nPhones: tap the top bar or the round button",
+	})
+
+	-- ---------- feature voting (saved on this device) and tips
+	tab:Section("Vote for the next feature")
+	local VOTES = "RebelUI_votes.json"
+	local votes = {}
+	pcall(function()
+		if isfile and isfile(VOTES) then
+			votes = HttpService:JSONDecode(readfile(VOTES)) or {}
+		end
+	end)
+	local features = o.Features or { "More themes", "More crosshairs", "Macro recorder", "Cloud sync", "Sound packs" }
+	local vtxt = tab:Label("")
+	local function showVotes()
+		local l = {}
+		for _, f in ipairs(features) do
+			l[#l + 1] = f .. ": " .. (votes[f] or 0)
+		end
+		vtxt:Set(table.concat(l, "\n"))
+	end
+	showVotes()
+	for _, f in ipairs(features) do
+		tab:Button({ Name = "Vote: " .. f, Callback = function()
+			votes[f] = (votes[f] or 0) + 1
+			pcall(function()
+				writefile(VOTES, HttpService:JSONEncode(votes))
+			end)
+			showVotes()
+		end })
+	end
+	local tips = o.Tips or { "Tap the top bar to hide the panel.", "Drag the corner grip to resize.", "Settings has 14 themes and a rainbow HUD.", "Say 'make the crosshair bigger' to the AI.", "Use the command bar for fast actions." }
+	local seen = 0
+	local tl = tab:Label("Tips seen: 0")
+	tab:Button({ Name = "Show a tip", Callback = function()
+		seen += 1
+		local t = tips[math.random(#tips)]
+		tl:Set("Tips seen: " .. seen)
+		win:Notify({ Title = "Tip", Text = t, Duration = 4 })
+	end })
+
+	-- ---------- safe mode, sandbox, screenshot
+	tab:Section("Safety and capture")
+	tab:Toggle({ Name = "Safe mode lock", Description = "Blocks dangerous buttons until you turn it off", Flag = "__safemode", Callback = function(on)
+		win.SafeMode = on
+	end })
+	tab:Section("Danger zone")
+	tab:Button({
+		Name = "DO NOT PRESS",
+		Description = "Shakes the whole screen. Tap twice.",
+		Danger = true,
+		DoubleClick = true,
+		Callback = function()
+			win:Notify({ Title = "You pressed it", Text = "Everything is fine. Probably.", Type = "warn" })
+		end,
+	})
+	tab:Button({ Name = "Take a screenshot", Description = "Saves to your Roblox captures (if the game allows it)", Callback = function()
+		win:Toggle(false)
+		task.wait(0.5)
+		local ok = pcall(function()
+			game:GetService("CaptureService"):CaptureScreenshot(function() end)
+		end)
+		task.wait(0.6)
+		win:Toggle(true)
+		win:Notify({ Title = ok and "Screenshot" or "Can't capture", Text = ok and "Taken." or "Your executor or this game blocks it.", Type = ok and "success" or "warn" })
+	end })
+	return tab
+end
 
 -- ============================================================ AI tab (optional: only exists if you call it)
 -- local AITab, ai = Win:CreateAITab({ Keys = { "..." }, KeysReversed = false, Name = "AI", Icon = 123, Models = { ... } })
@@ -7229,9 +8282,14 @@ function Window:CreateAITab(o)
 		["Sarcastic"] = "Be dry, sarcastic and clever, never cruel, and still give the real answer.",
 		["Professional"] = "Be precise, calm and professional. Structured, no slang.",
 		["Roleplay"] = "Stay fully in whatever character or story the player sets up. Remember every story detail and never break character unless asked.",
+		["Tutor"] = "Be a patient AI tutor: teach in tiny steps, give one exercise at a time, check the player's answer, then go one level up.",
+		["Designer"] = "Be a creative design assistant: palettes with hex codes, layouts, motion ideas, and bold original touches.",
+		["Debugger"] = "Be a calm debugging assistant: ask for the missing detail only if you must, list likely causes ranked, give the quickest test first.",
 	}
 	local opt = { deep = false, web = false, refine = false, reason = false }
 	local persona = "Rebel (default)"
+	local replyLang = "English"
+	local AITOOLS = {}
 	local memory = ""
 	pcall(function()
 		if isfile and isfile(MEMFILE) then
@@ -7266,6 +8324,9 @@ function Window:CreateAITab(o)
 	end
 	local function system()
 		local s = SYSTEM .. " " .. PERSONAS[persona]
+		if replyLang ~= "English" then
+			s ..= " Always reply in " .. replyLang .. " (keep code and command names as they are)."
+		end
 		if memory ~= "" then
 			s ..= "\nThings you know about this player (use them naturally):\n" .. memory
 		end
@@ -7520,13 +8581,27 @@ function Window:CreateAITab(o)
 		return reply, chips
 	end
 
-	local STARTERS = { "/summary", "Give me a bizarre idea", "/plan make a simple obby", "/explain how Luau tables work", "Tell me a joke", "Surprise me" }
+	local STARTERS = { "/summary", "/gen a simple fly script", "Give me a bizarre idea", "/plan make a simple obby", "/explain how Luau tables work", "Tell me a joke", "Surprise me" }
 
 	local function send(text)
 		if busy then
 			return
 		end
 		local cmd = text:lower()
+		local forceThink, forceWeb
+		local tname, targ = text:match("^/(%a+)%s*(.*)$")
+		local tool = tname and AITOOLS[tname:lower()]
+		if tool then
+			if targ == "" and tool.hint then
+				chat:Add("system", "Usage: /" .. tname:lower() .. " " .. tool.hint)
+				return
+			end
+			text = (tool.prompt:gsub("%%s", function()
+				return targ
+			end))
+			forceThink, forceWeb = tool.think, tool.web
+			cmd = ""
+		end
 		if cmd == "/clear" then
 			history = {}
 			chat:Clear()
@@ -7577,7 +8652,8 @@ function Window:CreateAITab(o)
 				local res, left = {}, #jobs
 				for i, j in ipairs(jobs) do
 					task.spawn(function()
-						res[i] = ask({ { role = "user", parts = { { text = j } } } }, { max = 500, web = opt.web }) or "(no answer)"
+						local okJ, rJ = pcall(ask, { { role = "user", parts = { { text = j } } } }, { max = 500, web = opt.web })
+						res[i] = okJ and rJ or "(no answer)"
 						left -= 1
 					end)
 				end
@@ -7595,7 +8671,7 @@ function Window:CreateAITab(o)
 				return
 			end
 		elseif cmd == "/help" then
-			chat:Add("bot", "Just talk to me. Tap the chips for quick replies.\n- **/bizarre** weird idea\n- **/plan** a goal: full step-by-step plan\n- **/explain** a topic: I teach it\n- **/forecast** what if X happens\n- **/summarize** or **/translate** some text\n- **/parallel** a | b | c: several jobs at once\n- **/teach** a fact: I remember it\n- **/summary** a cool briefing of our chat and the game\n- **/assist** opens the full game assistant, **/hud color gold** controls it (or just ask me)\n- **/clear**, **/stop**\nTurn on **Live web** for fresh facts, **Think deeper** for hard problems, **Voice** to hear me.", { Instant = true })
+			chat:Add("bot", "Just talk to me. Tap the chips for quick replies.\n- **/bizarre** weird idea\n- **/plan** a goal: full step-by-step plan\n- **/explain** a topic: I teach it\n- **/forecast** what if X happens\n- **/summarize** or **/translate** some text\n- **/parallel** a | b | c: several jobs at once\n- **/teach** a fact: I remember it\n- **/summary** a cool briefing of our chat and the game\n- **/assist** opens the full game assistant, **/hud color gold** controls it (or just ask me)\n- **/gen** make a script, **/fix**, **/review**, **/refactor**, **/debug**, **/secure**, **/comment** work on code you paste\n- **/docs** an API, **/tutor** a topic, **/design** something, **/tips**, **/ideas** a topic\nOr use the **Code lab** below.\n- **/clear**, **/stop**\nTurn on **Live web** for fresh facts, **Think deeper** for hard problems, **Voice** to hear me.", { Instant = true })
 			return
 		end
 		busy = true
@@ -7619,7 +8695,8 @@ function Window:CreateAITab(o)
 		task.spawn(function()
 			local it = intent(text)
 			local hard = it == "code" or it == "math" or opt.deep
-			local reply, err = ask(history, { think = hard and 1024 or 0, max = hard and 1600 or 900, web = opt.web })
+			local deep = hard or forceThink
+			local reply, err = ask(history, { think = deep and 1024 or 0, max = deep and 2400 or 900, web = opt.web or forceWeb })
 			if reply and opt.refine and #reply > 80 then
 				list = { "Double-checking my answer", "Hunting for mistakes", "Polishing it" }
 				local fixed = ask({ { role = "user", parts = { { text = "Review this draft answer to the player's message for mistakes, missing steps or anything unclear. Return ONLY the improved final answer (keep any [[...]] tags at the end). If it is already right, return it unchanged.\n\nPlayer: " .. text .. "\n\nDraft:\n" .. reply } } } }, { think = 512, max = 1600 })
@@ -7692,6 +8769,171 @@ function Window:CreateAITab(o)
 	AI:Button({ Name = "Bizarre idea", Description = "A random wild game idea", Callback = function()
 		chat:Submit(bizarrePrompt())
 	end })
+	-- ---------- code lab: paste code, then explain / fix / review / refactor / scan it. Offline tools work without the AI.
+	AI:Section("Code lab")
+	local lab = AI:CodeBox({ Name = "Code lab", Height = 120, Placeholder = "Paste or write Luau here. Run runs it.", RunText = "Run" })
+	local EXAMPLES = {
+		["Speed boost"] = "local h = game.Players.LocalPlayer.Character:FindFirstChildOfClass('Humanoid')\nh.WalkSpeed = 40",
+		["Infinite jump"] = "local UIS = game:GetService('UserInputService')\nUIS.JumpRequest:Connect(function()\n\tlocal c = game.Players.LocalPlayer.Character\n\tif c then c:FindFirstChildOfClass('Humanoid'):ChangeState(Enum.HumanoidStateType.Jumping) end\nend)",
+		["Anti AFK"] = "local vu = game:GetService('VirtualUser')\ngame.Players.LocalPlayer.Idled:Connect(function()\n\tvu:CaptureController()\n\tvu:ClickButton2(Vector2.new())\nend)",
+		["Player highlights"] = "for _, p in ipairs(game.Players:GetPlayers()) do\n\tif p ~= game.Players.LocalPlayer and p.Character then\n\t\tlocal h = Instance.new('Highlight')\n\t\th.FillTransparency = 0.7\n\t\th.Parent = p.Character\n\tend\nend",
+		["Fullbright"] = "local L = game:GetService('Lighting')\nL.Brightness = 2\nL.ClockTime = 14\nL.GlobalShadows = false",
+		["Click teleport"] = "local m = game.Players.LocalPlayer:GetMouse()\nm.Button1Down:Connect(function()\n\tif game:GetService('UserInputService'):IsKeyDown(Enum.KeyCode.LeftControl) then\n\t\tgame.Players.LocalPlayer.Character:MoveTo(m.Hit.Position)\n\tend\nend)",
+		["Show FPS in console"] = "local rs = game:GetService('RunService')\nlocal n, t = 0, os.clock()\nrs.RenderStepped:Connect(function()\n\tn += 1\n\tif os.clock() - t >= 1 then print('FPS', n) n, t = 0, os.clock() end\nend)",
+	}
+	local exNames = {}
+	for k in pairs(EXAMPLES) do
+		exNames[#exNames + 1] = k
+	end
+	table.sort(exNames)
+	AI:Dropdown({ Name = "One-click example", Options = exNames, Default = exNames[1], Callback = function(v)
+		if EXAMPLES[v] then
+			lab:Set(EXAMPLES[v])
+			Win:Notify({ Title = "Example loaded", Text = v .. ": tap Run, or ask the AI to explain it.", Type = "success" })
+		end
+	end })
+	local ACTIONS = {
+		["Explain"] = "Explain this code line by line in simple words, then say what it does overall:",
+		["Find and fix errors"] = "Find every bug or error in this code. Say what was wrong, then give the corrected code in a ```lua block:",
+		["Review"] = "Review this code like a senior engineer: 3 biggest problems, 2 good things, then a better version:",
+		["Refactor"] = "Refactor this for readability and speed without changing what it does. Show the new code and list what changed:",
+		["Add comments"] = "Add clear, short comments to this code and return it in a ```lua block:",
+		["Security scan (AI)"] = "Security scan this script: webhooks, cookie or token stealing, hidden loadstring or HttpGet, obfuscation, remote spam. Give a risk rating (Low / Medium / High) and the exact patterns that worry you:",
+		["Make it faster"] = "Optimize this for performance (fewer allocations, no busy loops, cache lookups). Show the code and explain the gains:",
+		["Convert to Luau"] = "Convert this code to clean Roblox Luau and explain any differences:",
+		["Write tests"] = "Write small test cases (as Luau asserts) for this code:",
+	}
+	local actNames = { "Explain", "Find and fix errors", "Review", "Refactor", "Add comments", "Security scan (AI)", "Make it faster", "Convert to Luau", "Write tests" }
+	local act = "Explain"
+	AI:Dropdown({ Name = "AI action", Options = actNames, Default = "Explain", Callback = function(v)
+		act = v
+	end })
+	local function labCode()
+		local c = lab:Get() or ""
+		if not c:match("%S") then
+			Win:Notify({ Title = "Code lab", Text = "Put some code in the box first.", Type = "warn" })
+			return nil
+		end
+		return c
+	end
+	AI:Button({ Name = "Ask AI about this code", Description = "Uses the action above", Callback = function()
+		local c = labCode()
+		if c then
+			local n = select(2, c:gsub("\n", "\n")) + 1
+			chat:Add("user", act .. " (" .. n .. " lines from the Code lab)")
+			send(ACTIONS[act] .. "\n```lua\n" .. c .. "\n```")
+		end
+	end })
+	AI:Button({ Name = "Check syntax (offline)", Description = "Finds the broken line without the AI", Callback = function()
+		local c = labCode()
+		if not c then
+			return
+		end
+		if type(loadstring) ~= "function" then
+			Win:Notify({ Title = "Can't check", Text = "This executor has no loadstring.", Type = "warn" })
+			return
+		end
+		local fn, err = loadstring(c)
+		if fn then
+			chat:Add("bot", "No syntax errors found. The code compiles.", { Instant = true })
+		else
+			local ln = tonumber(tostring(err):match(":(%d+):"))
+			local lines = {}
+			for l in (c .. "\n"):gmatch("(.-)\n") do
+				lines[#lines + 1] = l
+			end
+			local msg = "**Syntax error**" .. (ln and (" on line " .. ln) or "") .. "\n`" .. tostring(err):gsub("^.-:%d+:%s*", "") .. "`"
+			if ln and lines[ln] then
+				msg ..= "\n```lua\n>> " .. lines[ln] .. "\n```"
+			end
+			chat:Add("bot", msg, { Instant = true, Error = true })
+		end
+	end })
+	local function formatLua(src)
+		local out, lvl = {}, 0
+		for line in (src .. "\n"):gmatch("(.-)\n") do
+			local t = line:gsub("^%s+", ""):gsub("%s+$", "")
+			if t == "" then
+				out[#out + 1] = ""
+			else
+				local first = t:match("^(%a+)")
+				if first == "end" or first == "else" or first == "elseif" or first == "until" or t:match("^[%)%}%]]") then
+					lvl = math.max(0, lvl - 1)
+				end
+				out[#out + 1] = string.rep("\t", lvl) .. t
+				local s = t:gsub("%-%-.*$", "")
+				local inc = false
+				if first == "else" or first == "elseif" then
+					inc = true
+				elseif s:match("%f[%w]then%s*$") or s:match("%f[%w]do%s*$") or s:match("%f[%w]repeat%s*$") then
+					inc = true
+				elseif s:match("%f[%w]function%f[%W]") and not s:match("%f[%w]end[%s%)%,;]*$") then
+					inc = true
+				elseif s:match("[%{%(]%s*$") then
+					inc = true
+				end
+				if inc then
+					lvl += 1
+				end
+			end
+		end
+		return table.concat(out, "\n")
+	end
+	AI:Button({ Name = "Format code", Description = "Tidies the indentation", Callback = function()
+		local c = labCode()
+		if c then
+			lab:Set(formatLua(c))
+			Win:Notify({ Title = "Formatted", Type = "success", Duration = 2 })
+		end
+	end })
+	local RISKS = {
+		{ "discord%.com/api/webhooks", "sends data to a Discord webhook", 3 },
+		{ "webhook", "mentions a webhook", 2 },
+		{ "roblosecurity", "touches the login cookie (account theft)", 3 },
+		{ "loadstring%s*%(%s*game:httpget", "runs code downloaded from the internet", 2 },
+		{ "httpget", "downloads from the internet", 1 },
+		{ "request%s*%(", "sends web requests", 1 },
+		{ "setclipboard", "writes to your clipboard", 1 },
+		{ "getfenv", "reads the environment (often used to hide things)", 1 },
+		{ "string%.char", "builds text from numbers (common in obfuscation)", 1 },
+		{ "\\%d%d?%d?\\%d%d?%d?\\%d%d?%d?", "heavily escaped text (obfuscation)", 2 },
+		{ "fireserver", "fires remotes (can be abused)", 1 },
+		{ "%.kick", "kicks players", 1 },
+		{ "password", "mentions passwords", 2 },
+		{ "token", "mentions tokens", 1 },
+		{ "while%s+true%s+do%s*\n?%s*[^\n]*\n?%s*end", "a loop with no wait (can freeze the game)", 2 },
+	}
+	AI:Button({ Name = "Security scan (offline)", Description = "Checks for risky patterns, no AI needed", Callback = function()
+		local c = labCode()
+		if not c then
+			return
+		end
+		local low, found, score = c:lower(), {}, 0
+		for _, r in ipairs(RISKS) do
+			local n = select(2, low:gsub(r[1], ""))
+			if n > 0 then
+				found[#found + 1] = "- " .. r[2] .. " (" .. n .. "x)"
+				score += r[3]
+			end
+		end
+		local level = score >= 5 and "HIGH" or score >= 2 and "MEDIUM" or "LOW"
+		chat:Add("bot", "**Security scan: " .. level .. " risk**\n" .. (#found > 0 and table.concat(found, "\n") or "Nothing suspicious found.") .. "\nThis only checks patterns. Ask the AI to review it for a deeper look.", { Instant = true, Error = level == "HIGH" })
+	end })
+
+	-- ---------- more AI commands: type them in the chat
+	AITOOLS.fix = { prompt = "Find and fix the bug or error in this. Say what was wrong in one line, then give the corrected code in a ```lua block.\n%s", hint = "<code or error message>", think = true }
+	AITOOLS.gen = { prompt = "Write a complete, working Roblox Luau script for: %s. It runs client-side in an executor. Clean structure, short comments, one ```lua block, then 2 lines on how to use it.", hint = "<what the script should do>", think = true }
+	AITOOLS.review = { prompt = "Review this Luau like a senior engineer: the 3 biggest problems, 2 good things, then a short improved version.\n%s", hint = "<code>", think = true }
+	AITOOLS.refactor = { prompt = "Refactor this for readability and speed without changing behaviour. New code in a ```lua block, then 3 bullets on what changed.\n%s", hint = "<code>", think = true }
+	AITOOLS.debug = { prompt = "Act as my debugging assistant. For this problem list the most likely causes, ranked, and the quickest test for each: %s", hint = "<what goes wrong>", think = true }
+	AITOOLS.secure = { prompt = "Security scan this script: webhooks, cookie or token stealing, hidden loadstring/HttpGet, obfuscation, remote spam, account risks. Give a risk rating (Low/Medium/High) and the exact patterns that worry you.\n%s", hint = "<code>", think = true }
+	AITOOLS.comment = { prompt = "Add clear, short comments to this code and return it in a ```lua block.\n%s", hint = "<code>" }
+	AITOOLS.docs = { prompt = "Look up the official Roblox documentation for: %s. Give the key API, a tiny example, and one gotcha.", hint = "<API or topic>", web = true }
+	AITOOLS.tips = { prompt = "Give me 5 best-practice tips for writing safe, fast Luau for executors, one line each. Topic (optional): %s" }
+	AITOOLS.tutor = { prompt = "Be my tutor on: %s. Start lesson 1: simple words, one tiny example, then one exercise. Wait for my answer before going on.", hint = "<topic>" }
+	AITOOLS.design = { prompt = "Be my creative design assistant for: %s. Give a color palette (hex codes), a layout idea, 3 details that make it feel premium, and one bold surprising touch.", hint = "<what to design>" }
+	AITOOLS.ideas = { prompt = "Give me 5 bizarre but buildable ideas about: %s. One line each, make them specific.", hint = "<topic>" }
+
 	AI:Section("Brain")
 	AI:Toggle({ Name = "Think deeper", Description = "Slower, better on hard problems", Flag = "aiDeep", Callback = function(v)
 		opt.deep = v
@@ -7720,8 +8962,11 @@ function Window:CreateAITab(o)
 	end })
 	AI:Button({ Name = "Stop talking", Callback = stopVoice })
 	AI:Section("Personality")
-	AI:Dropdown({ Name = "Style", Options = { "Rebel (default)", "Chaos gremlin", "Scripter", "Teacher", "Sarcastic", "Professional", "Roleplay" }, Default = "Rebel (default)", Flag = "aiPersona", Callback = function(v)
+	AI:Dropdown({ Name = "Style", Options = { "Rebel (default)", "Chaos gremlin", "Scripter", "Teacher", "Sarcastic", "Professional", "Roleplay", "Tutor", "Designer", "Debugger" }, Default = "Rebel (default)", Flag = "aiPersona", Callback = function(v)
 		persona = PERSONAS[v] and v or persona
+	end })
+	AI:Dropdown({ Name = "Reply language", Options = { "English", "Malay", "Indonesian", "Spanish", "French", "German", "Portuguese", "Arabic", "Hindi", "Japanese", "Korean", "Chinese", "Turkish", "Russian" }, Default = "English", Flag = "aiLang", Callback = function(v)
+		replyLang = v
 	end })
 	AI:Button({ Name = "Forget what you know about me", Risky = true, Callback = function()
 		memory = ""
@@ -7734,21 +8979,8 @@ function Window:CreateAITab(o)
 	end })
 
 	AI:Section("Cool stuff")
-	local rainbow = false
-	AI:Toggle({ Name = "Rainbow accent", Description = "The whole panel slowly cycles colors", Flag = "aiRainbow", Callback = function(on)
-		rainbow = on
-		if on then
-			task.spawn(function()
-				local h = 0
-				while rainbow and Win and Win.SetAccent do
-					h = (h + 0.004) % 1
-					pcall(Win.SetAccent, Win, Color3.fromHSV(h, 0.75, 1))
-					task.wait(0.05)
-				end
-			end)
-		else
-			pcall(Win.SetTheme, Win, "Red")
-		end
+	AI:Toggle({ Name = "Rainbow rings", Description = "Every glowing edge turns rainbow", Flag = "aiRainbow", Callback = function(on)
+		Win:SetRainbow(on)
 	end })
 	AI:Button({ Name = "Theme from my avatar", Description = "Colors the panel like your character", Callback = function()
 		pcall(function()
@@ -7770,18 +9002,51 @@ function Window:CreateAITab(o)
 			return
 		end
 		task.spawn(function()
-			local ok, boot = pcall(UI.Loading, UI, { Name = "RebelUI_AIBoot", Title = "Rebel AI", Subtitle = "waking up", Logo = LOGO, Video = video, Theme = "Red", Footer = "" })
-			if not ok or not boot then
+			-- a small card at the bottom of the screen (it never covers the game and a tap closes it)
+			local ok, card = pcall(function()
+				local c = new("Frame", {
+					AnchorPoint = Vector2.new(0.5, 1),
+					Position = UDim2.new(0.5, 0, 1, -16),
+					Size = UDim2.fromOffset(250, 160),
+					BackgroundColor3 = Color3.fromRGB(10, 6, 9),
+					BorderSizePixel = 0,
+					Active = true,
+					ZIndex = 60,
+				}, Win.Gui)
+				corner(c, 10)
+				Win:_ring(new("UIStroke", { Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, c))
+				local vf = new("VideoFrame", { Position = UDim2.fromOffset(6, 6), Size = UDim2.new(1, -12, 0, 118), BackgroundColor3 = Color3.new(0, 0, 0), Looped = true, Volume = 0, Video = video, ZIndex = 61 }, c)
+				vf.Playing = true
+				pcall(function()
+					vf:Play()
+				end)
+				task.delay(8, function()
+					pcall(function()
+						if vf.Parent and not vf.IsLoaded then
+							vf:Destroy()
+						end
+					end)
+				end)
+				local l = new("TextLabel", { Position = UDim2.fromOffset(6, 128), Size = UDim2.new(1, -12, 0, 26), BackgroundTransparency = 1, Text = "Waking up Rebel AI...", TextSize = 12, Font = Enum.Font.GothamBold, TextColor3 = Color3.new(1, 1, 1), ZIndex = 61 }, c)
+				c.InputBegan:Connect(function(i)
+					if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+						c:Destroy()
+					end
+				end)
+				return { c, l }
+			end)
+			if not ok or not card then
 				return
 			end
-			boot:Status("Waking up Rebel AI...")
 			local t0 = os.clock()
-			while (os.clock() - t0 < 3.5) or (not warm and os.clock() - t0 < 7) do
-				boot:Progress(math.min(0.95, (os.clock() - t0) / 5))
+			while card[1].Parent and ((os.clock() - t0 < 3.5) or (not warm and os.clock() - t0 < 7)) do
 				task.wait(0.1)
 			end
-			boot:Status("Ready!")
-			boot:Finish()
+			if card[1].Parent then
+				card[2].Text = "Ready!"
+				task.wait(0.4)
+				card[1]:Destroy()
+			end
 		end)
 	end
 
