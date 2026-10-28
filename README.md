@@ -2176,3 +2176,57 @@ local AITab, ai = Win:CreateAITab({
 ```
 
 Without `Keys` the tab shows "AI is off". To have no AI at all, do not call it (in `Example.lua`, set `USE_AI = false` at the top). Anyone can read a key that is inside a public file, so for a public repo use your own keys and expect to rotate them.
+
+
+## Animations and effects
+
+```lua
+Win:SetOpenAnimation("Bounce") -- Pop, Slide, Fade, Bounce, Drop, Spin
+Win:SetAnimSpeed(1.5)          -- 0.5 slow ... 2.5 fast
+Win:SetFx({ Ripple = true, Glow = true, Scan = false, Breathe = true })
+Win:SetRainbow(true)           -- every glowing edge turns rainbow (cheap)
+Win:SetReduceMotion(true)      -- turns the extras off for weak phones
+Win:Confetti(40)
+Win:Shake(2, 0.5)              -- shakes the panel
+Win:ScreenShake(2, 0.8)        -- shakes the panel and the game camera
+```
+
+**Danger button:** `Tab:Button({ Name = "DO NOT PRESS", Danger = true, DoubleClick = true, Callback = function() ... end })` is red, asks for a second tap and shakes the whole screen (`Power`, `ShakeTime` change how hard). With **Safe mode lock** on (Tools tab, or `Win.SafeMode = true`) dangerous buttons do nothing.
+
+Settings has a section for all of these (open animation, speed, ripples, finger glow, scan lines, breathing border, reduce motion, rainbow rings, confetti test) plus an **About** box with credits, a Discord copy button and **Check for updates**.
+
+## Tools tab (`Win:CreateToolsTab`)
+
+```lua
+Win:CreateToolsTab({ Icon = 114659273298746, Features = { "More themes", "Macro recorder" } })
+Win:AddCommand("hello", function(args) return "Hi " .. args end, "says hi")
+print(Win:RunCommand("hello Sam")) -- true, Hi Sam
+```
+
+It has a **quick command bar** (confetti, shake, theme blue, anim bounce, hud color gold ...), **quick notes** saved to a file, a **usage tracker with badges** (confetti when you unlock one), a **randomizer** (coin, dice, picker, username ideas), **live FPS / ping / memory graphs**, **accessibility** (high contrast, colorblind colors, large panel, reduce motion), a **keyboard cheat sheet**, **feature voting** and **tips** (saved on this device only), **Safe mode lock**, a **screenshot** button and the **danger zone**.
+
+## Game assistant, more
+
+```lua
+HUD:SetCrosshair("Sniper")       -- Cross, Dot, Circle, Chevron, Diamond, X, Plus, Square, Sniper
+HUD:SetCrosshairSize("Large")    -- Small 50, Medium 90, Large 140, XL 200, or any number from 20 to 240
+HUD:SetCrosshairThickness(3)     -- 1 to 8
+HUD:SetCrosshairOpacity(70)      -- percent
+HUD:SetPreset("Extreme")         -- Low, Medium, High, Extreme (speed vs. glow)
+HUD:Detect()                     -- picks a template from the game's name (Shooter, Murder mystery, Obby, Simulator, Racing, Social)
+HUD:SaveProfile() HUD:LoadProfile() -- one saved setup per game
+HUD:Export() HUD:Import("RBH1:...") -- a share code (copied to your clipboard)
+HUD:SetHotbar({ { Name = "Party", Callback = function() Win:Confetti(40) end } }) -- your own buttons, bottom middle
+HUD:Demo()                       -- test mode: damage flash, shake, confetti
+HUD:Command("crosshair size 120")  -- the same things as text
+```
+
+New on screen: a **damage flash** with floating numbers when you lose health, **status tags** above your health (state, LOW HP, HIGH PING, LOW FPS) and a **compare card** (you vs your target: health, speed, distance). The first time it opens it loads this game's saved setup, or picks a template.
+
+## The AI tab, more
+
+The **Code lab** takes code and can **explain, fix, review, refactor, comment, speed up, convert, write tests for or security-scan** it. Offline buttons work without the AI: **check syntax** (shows the broken line), **format code** and **security scan**. A one-click example list fills the box with ready scripts. Chat commands: `/gen`, `/fix`, `/review`, `/refactor`, `/debug`, `/secure`, `/comment`, `/docs` (uses live web), `/tutor`, `/design`, `/tips`, `/ideas`, plus the earlier `/plan`, `/explain`, `/forecast`, `/summary`, `/translate`, `/parallel`, `/teach`. There are 10 styles (including Tutor, Designer, Debugger) and a reply-language menu (14 languages).
+
+## What is not in here (and why)
+
+Real background blur, book-flip animations, a drag-and-drop builder, a split-view editor, a macro recorder, cloud sync, sound packs, a public gallery with likes, light mode, image / video / voice cloning and "watching video or listening to audio" are not possible or not safe to fake inside a Roblox executor, so they are not included. Votes, badges and notes are saved on your own device only.
