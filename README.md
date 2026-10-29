@@ -8,7 +8,7 @@
 
 RebelUI gives you a finished panel in a few lines: a spinning-ring window with embers, tabs that have a **Roblox image next to the name** and their own header, **every kind of toggle** (name, description, icon, color, locked, key, checkbox), sliders, dropdowns, color pickers, notifications, a **top bar** where the player chooses what shows (FPS, Timer, Logo and more), a **loading screen**, 14 themes that change live, and saving.
 
-Made by **prorizz196**. Discord: https://discord.gg/Kq7N4gzH22
+Made by **prorizz196**. Discord: https://discord.gg/8s7RR3wZ6b
 
 ---
 
@@ -87,7 +87,7 @@ local Load = UI:Loading({
 	Subtitle = "made by prorizz196",
 	Logo = 114659273298746,     -- round logo with the spinning ring
 	Banner = 125144167121839,   -- zooming picture behind everything
-	Footer = "discord.gg/Kq7N4gzH22  |  v1.0.0",
+	Footer = "discord.gg/8s7RR3wZ6b  |  v1.0.0",
 })
 
 Load:Badge("Murder Mystery 2") -- small pill at the top (a game name, "Supported" ...)
@@ -1726,7 +1726,7 @@ local ok = UI:KeyGate({
 	Title = "Enter your key",
 	Subtitle = "Paste the key and tap Continue.",
 	Keys = { "ABC-123", "XYZ-789" },     -- the allowed keys
-	Link = "https://discord.gg/Kq7N4gzH22", -- adds a "Get key" button that copies this link
+	Link = "https://discord.gg/8s7RR3wZ6b", -- adds a "Get key" button that copies this link
 	Save = true,                         -- remember the key on this device
 })
 if not ok then
@@ -2064,7 +2064,7 @@ Questions, bugs or ideas? Join the **RebelUI & Resources** Discord: **https://di
 - `#examples`: the tutorial `source.lua` and ready-made examples to copy
 - `#documentation`: every document we have
 
-The Rebelwar hub server is **https://discord.gg/Kq7N4gzH22**
+The official server is **https://discord.gg/8s7RR3wZ6b**
 
 ## License
 
@@ -2238,6 +2238,31 @@ New on screen: a **damage flash** with floating numbers when you lose health, **
 ## The AI tab, more
 
 The **Code lab** takes code and can **explain, fix, review, refactor, comment, speed up, convert, write tests for or security-scan** it. Offline buttons work without the AI: **check syntax** (shows the broken line), **format code** and **security scan**. A one-click example list fills the box with ready scripts. Chat commands: `/gen`, `/fix`, `/review`, `/refactor`, `/debug`, `/secure`, `/comment`, `/docs` (uses live web), `/tutor`, `/design`, `/tips`, `/ideas`, plus the earlier `/plan`, `/explain`, `/forecast`, `/summary`, `/translate`, `/parallel`, `/teach`. There are 10 styles (including Tutor, Designer, Debugger) and a reply-language menu (14 languages).
+
+## Watermark, command palette and stat tiles
+
+```lua
+Win:CreateWatermark({ Text = "Rebelwar" }) -- a small pill in the top-right corner: name, FPS and ping
+Win:SetPalette()                           -- Ctrl+K opens a search for every tab and command (Win:OpenPalette() does the same from a button)
+Win:AddCommand("hello", function() return "hi" end, "says hi") -- shows up in the palette as "Run: hello"
+
+local stats = Tab:Stats({ { Name = "Kills", Value = 0 }, { Name = "Wins", Value = 0 } })
+stats:Set("Kills", 5) -- by name or by number
+```
+
+## Tab badges, dim, hotkeys, chips, steps, timeline, list and table
+
+```lua
+Tab:SetBadge(5)               -- a small bubble on the tab button: a number, "NEW", or nil to remove
+Win:SetDim(0.35)              -- darkens the game behind the panel while it is open (0 = off)
+Win:SetTabHotkeys()           -- Ctrl+1 ... Ctrl+9 jump to the tabs
+
+Tab:Chips({ "Legit", "Rage" }, { Closable = true, Callback = function(name, what) end })
+local steps = Tab:Steps({ "Pick", "Tune", "Go" }, 1)  -- steps:Next() steps:Back() steps:Set(2)
+Tab:Timeline({ { Title = "v1.0.0", Time = "today", Text = "Released" } })
+local list = Tab:List({ Items = { "Alpha", "Beta" }, Multi = true, Search = true, Callback = function(v) end }) -- list:Get() list:Clear()
+local tbl = Tab:Table({ Columns = { "Player", "Kills" }, Rows = { { "Ava", 12 }, { "Ben", 7 } }, PageSize = 8 }) -- tap a header to sort; tbl:SetRows(rows) tbl:AddRow(row)
+```
 
 ## What is not in here (and why)
 
