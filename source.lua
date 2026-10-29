@@ -1298,8 +1298,11 @@ function RebelUI:CreateWindow(o)
 	win._conns[#win._conns + 1] = RunService.RenderStepped:Connect(function(dt)
 		local now = os.clock()
 		local rot = (now * 80) % 360
-		for _, g in ipairs(win._spin) do
-			g.Rotation = rot
+		win._tick = (win._tick or 0) + 1
+		if win._tick % 2 == 0 or win.Open then -- the rings turn at half speed of updates when the panel is closed
+			for _, g in ipairs(win._spin) do
+				g.Rotation = rot
+			end
 		end
 		if win.Open then
 			mainG.Offset = Vector2.new(0, math.sin(now * 0.6) * 0.12)
@@ -5825,7 +5828,7 @@ function Window:CreateSettingsTab(o)
 		end,
 	})
 	local function hud()
-		return win.HUD or win:GameAssistant(o.Assistant or { Logo = o.Icon or win._icon })
+		return (o.Assistant and (win.HUD or win:GameAssistant(o.Assistant))) or win:_hud()
 	end
 	tab:Button({
 		Name = "Open full game assistance",
@@ -6596,8 +6599,25 @@ local function drawCross(parent, style, s, paint, th, alpha)
 	end
 end
 
+-- Win:SetAssistant({ ... same options as GameAssistant ... }): remember the options and build the HUD only when it is first needed.
+function Window:SetAssistant(o)
+	self._hudOpts = o or {}
+	if o and o.Key and not self._hudKey then
+		self._hudKey = UIS.InputBegan:Connect(function(i, gp)
+			if not gp and i.KeyCode == o.Key then
+				self:_hud():Toggle()
+			end
+		end)
+		self._conns[#self._conns + 1] = self._hudKey
+		self._hudOpts = setmetatable({ Key = false }, { __index = o })
+	end
+end
+function Window:_hud()
+	return self.HUD or self:GameAssistant(self._hudOpts or { Logo = self._icon })
+end
+
 function Window:GameAssistant(o)
-	o = o or {}
+	o = o or self._hudOpts or {}
 	local win = self
 	if win.HUD and not win.HUD._dead then
 		return win.HUD
@@ -7959,11 +7979,17 @@ function Window:CreateToolsTab(o)
 	o = o or {}
 	local win = self
 	local HttpService = game:GetService("HttpService")
+	local buildUI -- the page fills itself the first time it is opened (keeps the start fast)
 	local tab = win:CreateTab({
 		Name = o.Name or "Tools",
 		Icon = o.Icon,
 		Title = o.Title or "🧰 TOOLS",
 		Description = o.Description or "Command bar, notes, stats, randomizer, performance and accessibility.",
+		Build = function()
+			if buildUI then
+				buildUI()
+			end
+		end,
 	})
 
 	-- built-in commands
@@ -7992,7 +8018,7 @@ function Window:CreateToolsTab(o)
 		return "Animations: " .. table.concat(RebelUI.OpenAnimations, ", ")
 	end, "anim <name>")
 	win:AddCommand("hud", function(a)
-		local h = win.HUD or win:GameAssistant({ Logo = o.Icon or win._icon })
+		local h = win:_hud()
 		if a == "" then
 			a = "open"
 		end
@@ -8003,236 +8029,238 @@ function Window:CreateToolsTab(o)
 		win:Toggle(false)
 	end, "hide the panel")
 
-	-- ---------- command bar
-	tab:Section("Quick command bar")
-	local out = tab:Label("Type a command (try: confetti, shake, theme blue, hud open) and press enter.")
-	tab:Input({
-		Name = "Command",
-		Placeholder = "confetti, shake 2, theme blue, hud color gold ...",
-		Clear = true,
-		Callback = function(text)
-			local ok, m = win:RunCommand(text)
-			out:Set((ok and "OK: " or "Oops: ") .. tostring(m))
-		end,
-	})
-	tab:Button({ Name = "List commands", Callback = function()
-		local names = {}
-		for n, c in pairs(win._commands or {}) do
-			names[#names + 1] = n .. (c.desc ~= "" and (" - " .. c.desc) or "")
-		end
-		table.sort(names)
-		out:Set(table.concat(names, "\n"))
-	end })
-
-	-- ---------- quick notes (saved to a file)
-	tab:Section("Quick notes")
-	local NOTES = "RebelUI_notes.txt"
-	local saved = ""
-	pcall(function()
-		if isfile and isfile(NOTES) then
-			saved = readfile(NOTES)
-		end
-	end)
-	tab:CodeBox({
-		Name = "Notes",
-		Height = 80,
-		Default = saved,
-		Placeholder = "Write anything. Tap Save.",
-		RunText = "Save",
-		Callback = function(text)
-			local ok = pcall(function()
-				writefile(NOTES, text)
-			end)
-			win:Notify({ Title = ok and "Saved" or "Can't save", Text = ok and "Notes saved on this device." or "This executor can't write files.", Type = ok and "success" or "warn" })
-		end,
-	})
-
-	-- ---------- usage tracker and badges
-	tab:Section("Your stats and badges")
-	local FILE = "RebelUI_usage.json"
-	local use = { seconds = 0, opens = 0, badges = {} }
-	pcall(function()
-		if isfile and isfile(FILE) then
-			local d = HttpService:JSONDecode(readfile(FILE))
-			if type(d) == "table" then
-				use.seconds, use.opens, use.badges = d.seconds or 0, d.opens or 0, d.badges or {}
+	buildUI = function()
+		-- ---------- command bar
+		tab:Section("Quick command bar")
+		local out = tab:Label("Type a command (try: confetti, shake, theme blue, hud open) and press enter.")
+		tab:Input({
+			Name = "Command",
+			Placeholder = "confetti, shake 2, theme blue, hud color gold ...",
+			Clear = true,
+			Callback = function(text)
+				local ok, m = win:RunCommand(text)
+				out:Set((ok and "OK: " or "Oops: ") .. tostring(m))
+			end,
+		})
+		tab:Button({ Name = "List commands", Callback = function()
+			local names = {}
+			for n, c in pairs(win._commands or {}) do
+				names[#names + 1] = n .. (c.desc ~= "" and (" - " .. c.desc) or "")
 			end
+			table.sort(names)
+			out:Set(table.concat(names, "\n"))
+		end })
+
+		-- ---------- quick notes (saved to a file)
+		tab:Section("Quick notes")
+		local NOTES = "RebelUI_notes.txt"
+		local saved = ""
+		pcall(function()
+			if isfile and isfile(NOTES) then
+				saved = readfile(NOTES)
+			end
+		end)
+		tab:CodeBox({
+			Name = "Notes",
+			Height = 80,
+			Default = saved,
+			Placeholder = "Write anything. Tap Save.",
+			RunText = "Save",
+			Callback = function(text)
+				local ok = pcall(function()
+					writefile(NOTES, text)
+				end)
+				win:Notify({ Title = ok and "Saved" or "Can't save", Text = ok and "Notes saved on this device." or "This executor can't write files.", Type = ok and "success" or "warn" })
+			end,
+		})
+
+		-- ---------- usage tracker and badges
+		tab:Section("Your stats and badges")
+		local FILE = "RebelUI_usage.json"
+		local use = { seconds = 0, opens = 0, badges = {} }
+		pcall(function()
+			if isfile and isfile(FILE) then
+				local d = HttpService:JSONDecode(readfile(FILE))
+				if type(d) == "table" then
+					use.seconds, use.opens, use.badges = d.seconds or 0, d.opens or 0, d.badges or {}
+				end
+			end
+		end)
+		use.opens += 1
+		local BADGES = {
+			{ "First steps", function() return use.opens >= 1 end },
+			{ "Regular", function() return use.opens >= 10 end },
+			{ "Veteran", function() return use.opens >= 50 end },
+			{ "10 minutes", function() return use.seconds >= 600 end },
+			{ "1 hour", function() return use.seconds >= 3600 end },
+			{ "10 hours", function() return use.seconds >= 36000 end },
+		}
+		local shown = tab:Label("")
+		local function fmt(s)
+			return string.format("%dh %02dm", s // 3600, (s % 3600) // 60)
 		end
-	end)
-	use.opens += 1
-	local BADGES = {
-		{ "First steps", function() return use.opens >= 1 end },
-		{ "Regular", function() return use.opens >= 10 end },
-		{ "Veteran", function() return use.opens >= 50 end },
-		{ "10 minutes", function() return use.seconds >= 600 end },
-		{ "1 hour", function() return use.seconds >= 3600 end },
-		{ "10 hours", function() return use.seconds >= 36000 end },
-	}
-	local shown = tab:Label("")
-	local function fmt(s)
-		return string.format("%dh %02dm", s // 3600, (s % 3600) // 60)
-	end
-	local function refresh(announce)
-		local lines = { "Time used: " .. fmt(use.seconds) .. "    Sessions: " .. use.opens }
-		local have = {}
-		for _, b in ipairs(BADGES) do
-			if b[2]() then
-				have[#have + 1] = b[1]
-				if not use.badges[b[1]] then
-					use.badges[b[1]] = true
-					if announce then
-						win:Notify({ Title = "Badge unlocked!", Text = b[1], Type = "success" })
-						win:Confetti(40)
+		local function refresh(announce)
+			local lines = { "Time used: " .. fmt(use.seconds) .. "    Sessions: " .. use.opens }
+			local have = {}
+			for _, b in ipairs(BADGES) do
+				if b[2]() then
+					have[#have + 1] = b[1]
+					if not use.badges[b[1]] then
+						use.badges[b[1]] = true
+						if announce then
+							win:Notify({ Title = "Badge unlocked!", Text = b[1], Type = "success" })
+							win:Confetti(40)
+						end
 					end
 				end
 			end
+			lines[#lines + 1] = "Badges: " .. (#have > 0 and table.concat(have, ", ") or "none yet")
+			shown:Set(table.concat(lines, "\n"))
 		end
-		lines[#lines + 1] = "Badges: " .. (#have > 0 and table.concat(have, ", ") or "none yet")
-		shown:Set(table.concat(lines, "\n"))
-	end
-	refresh(false)
-	task.spawn(function()
-		local n = 0
-		while not win._dead do
-			task.wait(5)
-			use.seconds += 5
-			n += 1
-			refresh(true)
-			if n % 6 == 0 then
-				pcall(function()
-					writefile(FILE, HttpService:JSONEncode(use))
-				end)
+		refresh(false)
+		task.spawn(function()
+			local n = 0
+			while not win._dead do
+				task.wait(5)
+				use.seconds += 5
+				n += 1
+				refresh(true)
+				if n % 6 == 0 then
+					pcall(function()
+						writefile(FILE, HttpService:JSONEncode(use))
+					end)
+				end
 			end
-		end
-	end)
+		end)
 
-	-- ---------- randomizer
-	tab:Section("Randomizer")
-	local rr = tab:Label("Tap one.")
-	local function say(t)
-		rr:Set(t)
-		win:Notify({ Title = "Randomizer", Text = t, Duration = 2.5 })
-	end
-	tab:Button({ Name = "Flip a coin", Callback = function()
-		say(math.random() < 0.5 and "Heads" or "Tails")
-	end })
-	tab:Button({ Name = "Roll a dice (1-6)", Callback = function()
-		say("You rolled " .. math.random(6))
-	end })
-	tab:Button({ Name = "Roll a d20", Callback = function()
-		say("You rolled " .. math.random(20))
-	end })
-	local picks = "pizza, burger, sushi"
-	tab:Input({ Name = "Pick one of (comma separated)", Default = picks, Callback = function(t)
-		picks = t
-	end })
-	tab:Button({ Name = "Pick for me", Callback = function()
-		local list = {}
-		for x in picks:gmatch("[^,]+") do
-			x = x:gsub("^%s+", ""):gsub("%s+$", "")
-			if x ~= "" then
-				list[#list + 1] = x
+		-- ---------- randomizer
+		tab:Section("Randomizer")
+		local rr = tab:Label("Tap one.")
+		local function say(t)
+			rr:Set(t)
+			win:Notify({ Title = "Randomizer", Text = t, Duration = 2.5 })
+		end
+		tab:Button({ Name = "Flip a coin", Callback = function()
+			say(math.random() < 0.5 and "Heads" or "Tails")
+		end })
+		tab:Button({ Name = "Roll a dice (1-6)", Callback = function()
+			say("You rolled " .. math.random(6))
+		end })
+		tab:Button({ Name = "Roll a d20", Callback = function()
+			say("You rolled " .. math.random(20))
+		end })
+		local picks = "pizza, burger, sushi"
+		tab:Input({ Name = "Pick one of (comma separated)", Default = picks, Callback = function(t)
+			picks = t
+		end })
+		tab:Button({ Name = "Pick for me", Callback = function()
+			local list = {}
+			for x in picks:gmatch("[^,]+") do
+				x = x:gsub("^%s+", ""):gsub("%s+$", "")
+				if x ~= "" then
+					list[#list + 1] = x
+				end
 			end
+			say(#list > 0 and ("Go with: " .. list[math.random(#list)]) or "Type some choices first.")
+		end })
+		tab:Button({ Name = "Random username idea", Callback = function()
+			local a = { "Shadow", "Turbo", "Neon", "Pixel", "Ghost", "Rebel", "Cosmic", "Wild" }
+			local b = { "Fox", "Blade", "Storm", "Panda", "Rider", "Ninja", "Bolt", "Wolf" }
+			say(a[math.random(#a)] .. b[math.random(#b)] .. math.random(10, 99))
+		end })
+
+		-- ---------- performance
+		tab:Section("Performance monitor")
+		tab:Graph({ Name = "FPS", Source = "FPS", Max = 70 })
+		tab:Graph({ Name = "Ping", Source = "Ping", Suffix = " ms" })
+		tab:Graph({ Name = "Memory", Source = "Memory", Suffix = " MB" })
+
+		-- ---------- accessibility
+		tab:Section("Accessibility")
+		tab:Toggle({ Name = "High contrast", Description = "Strong colors, easier to read", Flag = "__a11y_contrast", Callback = function(on)
+			win:SetTheme(on and "Contrast" or "Red")
+		end })
+		tab:Toggle({ Name = "Colorblind friendly colors", Flag = "__a11y_cb", Callback = function(on)
+			win:SetTheme(on and "Colorblind" or "Red")
+		end })
+		tab:Toggle({ Name = "Large panel", Description = "Bigger buttons and text", Flag = "__a11y_big", Callback = function(on)
+			win:SetScale(on and 1.25 or 1)
+		end })
+		tab:Toggle({ Name = "Reduce motion", Description = "Fewer animations", Flag = "__a11y_motion", Default = win.ReduceMotion, Callback = function(on)
+			win:SetReduceMotion(on)
+		end })
+
+		-- ---------- keyboard cheat sheet
+		tab:Section("Keyboard cheat sheet")
+		tab:Paragraph({
+			Title = "Keys",
+			Text = (win.ToggleKey and (win.ToggleKey.Name .. "  open / close the panel\n") or "") .. "H  open / close the game assistant (if set)\nEnter  send a chat message or run a command\nPhones: tap the top bar or the round button",
+		})
+
+		-- ---------- feature voting (saved on this device) and tips
+		tab:Section("Vote for the next feature")
+		local VOTES = "RebelUI_votes.json"
+		local votes = {}
+		pcall(function()
+			if isfile and isfile(VOTES) then
+				votes = HttpService:JSONDecode(readfile(VOTES)) or {}
+			end
+		end)
+		local features = o.Features or { "More themes", "More crosshairs", "Macro recorder", "Cloud sync", "Sound packs" }
+		local vtxt = tab:Label("")
+		local function showVotes()
+			local l = {}
+			for _, f in ipairs(features) do
+				l[#l + 1] = f .. ": " .. (votes[f] or 0)
+			end
+			vtxt:Set(table.concat(l, "\n"))
 		end
-		say(#list > 0 and ("Go with: " .. list[math.random(#list)]) or "Type some choices first.")
-	end })
-	tab:Button({ Name = "Random username idea", Callback = function()
-		local a = { "Shadow", "Turbo", "Neon", "Pixel", "Ghost", "Rebel", "Cosmic", "Wild" }
-		local b = { "Fox", "Blade", "Storm", "Panda", "Rider", "Ninja", "Bolt", "Wolf" }
-		say(a[math.random(#a)] .. b[math.random(#b)] .. math.random(10, 99))
-	end })
-
-	-- ---------- performance
-	tab:Section("Performance monitor")
-	tab:Graph({ Name = "FPS", Source = "FPS", Max = 70 })
-	tab:Graph({ Name = "Ping", Source = "Ping", Suffix = " ms" })
-	tab:Graph({ Name = "Memory", Source = "Memory", Suffix = " MB" })
-
-	-- ---------- accessibility
-	tab:Section("Accessibility")
-	tab:Toggle({ Name = "High contrast", Description = "Strong colors, easier to read", Flag = "__a11y_contrast", Callback = function(on)
-		win:SetTheme(on and "Contrast" or "Red")
-	end })
-	tab:Toggle({ Name = "Colorblind friendly colors", Flag = "__a11y_cb", Callback = function(on)
-		win:SetTheme(on and "Colorblind" or "Red")
-	end })
-	tab:Toggle({ Name = "Large panel", Description = "Bigger buttons and text", Flag = "__a11y_big", Callback = function(on)
-		win:SetScale(on and 1.25 or 1)
-	end })
-	tab:Toggle({ Name = "Reduce motion", Description = "Fewer animations", Flag = "__a11y_motion", Default = win.ReduceMotion, Callback = function(on)
-		win:SetReduceMotion(on)
-	end })
-
-	-- ---------- keyboard cheat sheet
-	tab:Section("Keyboard cheat sheet")
-	tab:Paragraph({
-		Title = "Keys",
-		Text = (win.ToggleKey and (win.ToggleKey.Name .. "  open / close the panel\n") or "") .. "H  open / close the game assistant (if set)\nEnter  send a chat message or run a command\nPhones: tap the top bar or the round button",
-	})
-
-	-- ---------- feature voting (saved on this device) and tips
-	tab:Section("Vote for the next feature")
-	local VOTES = "RebelUI_votes.json"
-	local votes = {}
-	pcall(function()
-		if isfile and isfile(VOTES) then
-			votes = HttpService:JSONDecode(readfile(VOTES)) or {}
-		end
-	end)
-	local features = o.Features or { "More themes", "More crosshairs", "Macro recorder", "Cloud sync", "Sound packs" }
-	local vtxt = tab:Label("")
-	local function showVotes()
-		local l = {}
+		showVotes()
 		for _, f in ipairs(features) do
-			l[#l + 1] = f .. ": " .. (votes[f] or 0)
+			tab:Button({ Name = "Vote: " .. f, Callback = function()
+				votes[f] = (votes[f] or 0) + 1
+				pcall(function()
+					writefile(VOTES, HttpService:JSONEncode(votes))
+				end)
+				showVotes()
+			end })
 		end
-		vtxt:Set(table.concat(l, "\n"))
-	end
-	showVotes()
-	for _, f in ipairs(features) do
-		tab:Button({ Name = "Vote: " .. f, Callback = function()
-			votes[f] = (votes[f] or 0) + 1
-			pcall(function()
-				writefile(VOTES, HttpService:JSONEncode(votes))
+		local tips = o.Tips or { "Tap the top bar to hide the panel.", "Drag the corner grip to resize.", "Settings has 14 themes and a rainbow HUD.", "Say 'make the crosshair bigger' to the AI.", "Use the command bar for fast actions." }
+		local seen = 0
+		local tl = tab:Label("Tips seen: 0")
+		tab:Button({ Name = "Show a tip", Callback = function()
+			seen += 1
+			local t = tips[math.random(#tips)]
+			tl:Set("Tips seen: " .. seen)
+			win:Notify({ Title = "Tip", Text = t, Duration = 4 })
+		end })
+
+		-- ---------- safe mode, sandbox, screenshot
+		tab:Section("Safety and capture")
+		tab:Toggle({ Name = "Safe mode lock", Description = "Blocks dangerous buttons until you turn it off", Flag = "__safemode", Callback = function(on)
+			win.SafeMode = on
+		end })
+		tab:Section("Danger zone")
+		tab:Button({
+			Name = "DO NOT PRESS",
+			Description = "Shakes the whole screen. Tap twice.",
+			Danger = true,
+			DoubleClick = true,
+			Callback = function()
+				win:Notify({ Title = "You pressed it", Text = "Everything is fine. Probably.", Type = "warn" })
+			end,
+		})
+		tab:Button({ Name = "Take a screenshot", Description = "Saves to your Roblox captures (if the game allows it)", Callback = function()
+			win:Toggle(false)
+			task.wait(0.5)
+			local ok = pcall(function()
+				game:GetService("CaptureService"):CaptureScreenshot(function() end)
 			end)
-			showVotes()
+			task.wait(0.6)
+			win:Toggle(true)
+			win:Notify({ Title = ok and "Screenshot" or "Can't capture", Text = ok and "Taken." or "Your executor or this game blocks it.", Type = ok and "success" or "warn" })
 		end })
 	end
-	local tips = o.Tips or { "Tap the top bar to hide the panel.", "Drag the corner grip to resize.", "Settings has 14 themes and a rainbow HUD.", "Say 'make the crosshair bigger' to the AI.", "Use the command bar for fast actions." }
-	local seen = 0
-	local tl = tab:Label("Tips seen: 0")
-	tab:Button({ Name = "Show a tip", Callback = function()
-		seen += 1
-		local t = tips[math.random(#tips)]
-		tl:Set("Tips seen: " .. seen)
-		win:Notify({ Title = "Tip", Text = t, Duration = 4 })
-	end })
-
-	-- ---------- safe mode, sandbox, screenshot
-	tab:Section("Safety and capture")
-	tab:Toggle({ Name = "Safe mode lock", Description = "Blocks dangerous buttons until you turn it off", Flag = "__safemode", Callback = function(on)
-		win.SafeMode = on
-	end })
-	tab:Section("Danger zone")
-	tab:Button({
-		Name = "DO NOT PRESS",
-		Description = "Shakes the whole screen. Tap twice.",
-		Danger = true,
-		DoubleClick = true,
-		Callback = function()
-			win:Notify({ Title = "You pressed it", Text = "Everything is fine. Probably.", Type = "warn" })
-		end,
-	})
-	tab:Button({ Name = "Take a screenshot", Description = "Saves to your Roblox captures (if the game allows it)", Callback = function()
-		win:Toggle(false)
-		task.wait(0.5)
-		local ok = pcall(function()
-			game:GetService("CaptureService"):CaptureScreenshot(function() end)
-		end)
-		task.wait(0.6)
-		win:Toggle(true)
-		win:Notify({ Title = ok and "Screenshot" or "Can't capture", Text = ok and "Taken." or "Your executor or this game blocks it.", Type = ok and "success" or "warn" })
-	end })
 	return tab
 end
 
@@ -8247,24 +8275,51 @@ function Window:CreateAITab(o)
 	local LOGO = o.Icon or Win._icon
 	local UI = RebelUI
 	local api = {}
+	local buildUI -- the chat page fills itself the first time it is opened (keeps the start fast)
 	local AI = Win:CreateTab({
 		Name = o.Name or "AI",
 		Icon = LOGO,
 		Title = o.Title or "🤖 REBEL AI",
 		Description = o.Description or "Chat with the bot. It can talk back too.",
+		Build = function()
+			if buildUI then
+				buildUI()
+			end
+		end,
 	})
+	-- Where the bot gets its access, safest first:
+	--   Proxy   = "https://your-worker.workers.dev"  your own small server holds the secrets (see ai_proxy_worker.js). Nothing secret is in this file.
+	--   KeyFile = "RebelAI_keys.txt"                 a file in YOUR executor's workspace folder (one per line). Never uploaded anywhere.
+	--   Keys    = { ... }                            written in the script (anyone who can read the script can read them)
+	local PROXY = type(o.Proxy) == "string" and o.Proxy:match("^https?://") and (o.Proxy:gsub("/+$", "")) or nil
 	local POOL = {}
-	for _, k in ipairs(o.Keys or {}) do
-		if type(k) == "string" and #k > 10 then
-			POOL[#POOL + 1] = o.KeysReversed and k:reverse() or k
+	if PROXY then
+		POOL[1] = "proxy"
+	else
+		for _, k in ipairs(o.Keys or {}) do
+			if type(k) == "string" and #k > 10 then
+				POOL[#POOL + 1] = o.KeysReversed and k:reverse() or k
+			end
+		end
+		if #POOL == 0 and o.KeyFile then
+			pcall(function()
+				if type(isfile) == "function" and isfile(o.KeyFile) then
+					for line in tostring(readfile(o.KeyFile)):gmatch("[^\r\n]+") do
+						line = line:gsub("^%s+", ""):gsub("%s+$", "")
+						if #line > 10 and line:sub(1, 1) ~= "#" then
+							POOL[#POOL + 1] = line
+						end
+					end
+				end
+			end)
 		end
 	end
 	if #POOL == 0 then
-		AI:Notice({ Type = "warn", Title = "AI is off", Text = "Pass Keys = { ... } to Win:CreateAITab to turn the bot on." })
+		AI:Notice({ Type = "warn", Title = "AI is off", Text = "No access is set up yet. Add a Proxy, or put your keys in the file " .. tostring(o.KeyFile or "RebelAI_keys.txt") .. " in your executor's workspace folder." })
 		return AI, api
 	end
 	local function hudOf()
-		return Win.HUD or Win:GameAssistant({ Logo = LOGO })
+		return Win:_hud()
 	end
 	local HttpService = game:GetService("HttpService")
 	local SoundService = game:GetService("SoundService")
@@ -8444,9 +8499,9 @@ function Window:CreateAITab(o)
 							},
 						}
 						local ok, res = pcall(getReq, {
-							Url = API .. model .. ":generateContent",
+							Url = (PROXY and (PROXY .. "/v1beta/models/") or API) .. model .. ":generateContent",
 							Method = "POST",
-							Headers = { ["Content-Type"] = "application/json", ["x-goog-api-key"] = POOL[ki] },
+							Headers = PROXY and { ["Content-Type"] = "application/json" } or { ["Content-Type"] = "application/json", ["x-goog-api-key"] = POOL[ki] },
 							Body = HttpService:JSONEncode(body),
 						})
 						if ok and res then
@@ -8560,9 +8615,9 @@ function Window:CreateAITab(o)
 		local remember = reply:match("%[%[remember:%s*(.-)%]%]")
 		local nxt = reply:match("%[%[next:%s*(.-)%]%]")
 		for hc in reply:gmatch("%[%[hud:%s*(.-)%]%]") do
-			if Win.HUD then
-				pcall(Win.HUD.Command, Win.HUD, hc)
-			end
+			pcall(function()
+				Win:_hud():Command(hc)
+			end)
 		end
 		reply = reply:gsub("%[%[.-%]%]", ""):gsub("%s+$", "")
 		if remember and #remember > 2 and not memory:find(remember, 1, true) then
@@ -8733,24 +8788,6 @@ function Window:CreateAITab(o)
 		origSend(text)
 	end
 
-	chat = AI:Chat({
-		Name = "Rebel AI",
-		Height = 250,
-		Placeholder = "Ask me anything...",
-		OnSend = function(text)
-			send(text)
-		end,
-		Actions = {
-			{ Name = "Speak", Callback = function(t)
-				if not speak(t) then
-					Win:Notify({ Title = "Voice", Text = "This executor can't play sound files.", Type = "warn" })
-				end
-			end },
-		},
-	})
-	chat:Add("bot", "Hey, I'm **Rebel AI**. Ask me anything, or tap **Bizarre idea** and let's invent something weird. I can write Luau, tell stories, explain things, and talk out loud if you turn Voice on.", { Instant = true })
-	chat:SetChips(STARTERS)
-
 	-- the HUD's AI BRIEF button: a short tactical summary written by the bot
 	api.Brief = function(hud, done)
 		task.spawn(function()
@@ -8758,242 +8795,269 @@ function Window:CreateAITab(o)
 			done(r and (r:gsub("%[%[.-%]%]", "")) or hud:GetSummary())
 		end)
 	end
-	AI:Section("Fun")
-	AI:Button({ Name = "AI summary", Description = "A cool briefing of our chat and the game", Callback = function()
-		chat:Submit("/summary")
-	end })
-	AI:Button({ Name = "Open game assistant", Description = "The full-screen HUD (or press H)", Callback = function()
-		Win:Toggle(false)
-		hudOf():Open()
-	end })
-	AI:Button({ Name = "Bizarre idea", Description = "A random wild game idea", Callback = function()
-		chat:Submit(bizarrePrompt())
-	end })
-	-- ---------- code lab: paste code, then explain / fix / review / refactor / scan it. Offline tools work without the AI.
-	AI:Section("Code lab")
-	local lab = AI:CodeBox({ Name = "Code lab", Height = 120, Placeholder = "Paste or write Luau here. Run runs it.", RunText = "Run" })
-	local EXAMPLES = {
-		["Speed boost"] = "local h = game.Players.LocalPlayer.Character:FindFirstChildOfClass('Humanoid')\nh.WalkSpeed = 40",
-		["Infinite jump"] = "local UIS = game:GetService('UserInputService')\nUIS.JumpRequest:Connect(function()\n\tlocal c = game.Players.LocalPlayer.Character\n\tif c then c:FindFirstChildOfClass('Humanoid'):ChangeState(Enum.HumanoidStateType.Jumping) end\nend)",
-		["Anti AFK"] = "local vu = game:GetService('VirtualUser')\ngame.Players.LocalPlayer.Idled:Connect(function()\n\tvu:CaptureController()\n\tvu:ClickButton2(Vector2.new())\nend)",
-		["Player highlights"] = "for _, p in ipairs(game.Players:GetPlayers()) do\n\tif p ~= game.Players.LocalPlayer and p.Character then\n\t\tlocal h = Instance.new('Highlight')\n\t\th.FillTransparency = 0.7\n\t\th.Parent = p.Character\n\tend\nend",
-		["Fullbright"] = "local L = game:GetService('Lighting')\nL.Brightness = 2\nL.ClockTime = 14\nL.GlobalShadows = false",
-		["Click teleport"] = "local m = game.Players.LocalPlayer:GetMouse()\nm.Button1Down:Connect(function()\n\tif game:GetService('UserInputService'):IsKeyDown(Enum.KeyCode.LeftControl) then\n\t\tgame.Players.LocalPlayer.Character:MoveTo(m.Hit.Position)\n\tend\nend)",
-		["Show FPS in console"] = "local rs = game:GetService('RunService')\nlocal n, t = 0, os.clock()\nrs.RenderStepped:Connect(function()\n\tn += 1\n\tif os.clock() - t >= 1 then print('FPS', n) n, t = 0, os.clock() end\nend)",
-	}
-	local exNames = {}
-	for k in pairs(EXAMPLES) do
-		exNames[#exNames + 1] = k
-	end
-	table.sort(exNames)
-	AI:Dropdown({ Name = "One-click example", Options = exNames, Default = exNames[1], Callback = function(v)
-		if EXAMPLES[v] then
-			lab:Set(EXAMPLES[v])
-			Win:Notify({ Title = "Example loaded", Text = v .. ": tap Run, or ask the AI to explain it.", Type = "success" })
+	local pendingGreeting
+	buildUI = function()
+		buildUI = nil
+		chat = AI:Chat({
+			Name = "Rebel AI",
+			Height = 250,
+			Placeholder = "Ask me anything...",
+			OnSend = function(text)
+				send(text)
+			end,
+			Actions = {
+				{ Name = "Speak", Callback = function(t)
+					if not speak(t) then
+						Win:Notify({ Title = "Voice", Text = "This executor can't play sound files.", Type = "warn" })
+					end
+				end },
+			},
+		})
+		chat:Add("bot", "Hey, I'm **Rebel AI**. Ask me anything, or tap **Bizarre idea** and let's invent something weird. I can write Luau, tell stories, explain things, and talk out loud if you turn Voice on.", { Instant = true })
+		chat:SetChips(STARTERS)
+
+		AI:Section("Fun")
+		AI:Button({ Name = "AI summary", Description = "A cool briefing of our chat and the game", Callback = function()
+			chat:Submit("/summary")
+		end })
+		AI:Button({ Name = "Open game assistant", Description = "The full-screen HUD (or press H)", Callback = function()
+			Win:Toggle(false)
+			hudOf():Open()
+		end })
+		AI:Button({ Name = "Bizarre idea", Description = "A random wild game idea", Callback = function()
+			chat:Submit(bizarrePrompt())
+		end })
+		-- ---------- code lab: paste code, then explain / fix / review / refactor / scan it. Offline tools work without the AI.
+		AI:Section("Code lab")
+		local lab = AI:CodeBox({ Name = "Code lab", Height = 120, Placeholder = "Paste or write Luau here. Run runs it.", RunText = "Run" })
+		local EXAMPLES = {
+			["Speed boost"] = "local h = game.Players.LocalPlayer.Character:FindFirstChildOfClass('Humanoid')\nh.WalkSpeed = 40",
+			["Infinite jump"] = "local UIS = game:GetService('UserInputService')\nUIS.JumpRequest:Connect(function()\n\tlocal c = game.Players.LocalPlayer.Character\n\tif c then c:FindFirstChildOfClass('Humanoid'):ChangeState(Enum.HumanoidStateType.Jumping) end\nend)",
+			["Anti AFK"] = "local vu = game:GetService('VirtualUser')\ngame.Players.LocalPlayer.Idled:Connect(function()\n\tvu:CaptureController()\n\tvu:ClickButton2(Vector2.new())\nend)",
+			["Player highlights"] = "for _, p in ipairs(game.Players:GetPlayers()) do\n\tif p ~= game.Players.LocalPlayer and p.Character then\n\t\tlocal h = Instance.new('Highlight')\n\t\th.FillTransparency = 0.7\n\t\th.Parent = p.Character\n\tend\nend",
+			["Fullbright"] = "local L = game:GetService('Lighting')\nL.Brightness = 2\nL.ClockTime = 14\nL.GlobalShadows = false",
+			["Click teleport"] = "local m = game.Players.LocalPlayer:GetMouse()\nm.Button1Down:Connect(function()\n\tif game:GetService('UserInputService'):IsKeyDown(Enum.KeyCode.LeftControl) then\n\t\tgame.Players.LocalPlayer.Character:MoveTo(m.Hit.Position)\n\tend\nend)",
+			["Show FPS in console"] = "local rs = game:GetService('RunService')\nlocal n, t = 0, os.clock()\nrs.RenderStepped:Connect(function()\n\tn += 1\n\tif os.clock() - t >= 1 then print('FPS', n) n, t = 0, os.clock() end\nend)",
+		}
+		local exNames = {}
+		for k in pairs(EXAMPLES) do
+			exNames[#exNames + 1] = k
 		end
-	end })
-	local ACTIONS = {
-		["Explain"] = "Explain this code line by line in simple words, then say what it does overall:",
-		["Find and fix errors"] = "Find every bug or error in this code. Say what was wrong, then give the corrected code in a ```lua block:",
-		["Review"] = "Review this code like a senior engineer: 3 biggest problems, 2 good things, then a better version:",
-		["Refactor"] = "Refactor this for readability and speed without changing what it does. Show the new code and list what changed:",
-		["Add comments"] = "Add clear, short comments to this code and return it in a ```lua block:",
-		["Security scan (AI)"] = "Security scan this script: webhooks, cookie or token stealing, hidden loadstring or HttpGet, obfuscation, remote spam. Give a risk rating (Low / Medium / High) and the exact patterns that worry you:",
-		["Make it faster"] = "Optimize this for performance (fewer allocations, no busy loops, cache lookups). Show the code and explain the gains:",
-		["Convert to Luau"] = "Convert this code to clean Roblox Luau and explain any differences:",
-		["Write tests"] = "Write small test cases (as Luau asserts) for this code:",
-	}
-	local actNames = { "Explain", "Find and fix errors", "Review", "Refactor", "Add comments", "Security scan (AI)", "Make it faster", "Convert to Luau", "Write tests" }
-	local act = "Explain"
-	AI:Dropdown({ Name = "AI action", Options = actNames, Default = "Explain", Callback = function(v)
-		act = v
-	end })
-	local function labCode()
-		local c = lab:Get() or ""
-		if not c:match("%S") then
-			Win:Notify({ Title = "Code lab", Text = "Put some code in the box first.", Type = "warn" })
-			return nil
-		end
-		return c
-	end
-	AI:Button({ Name = "Ask AI about this code", Description = "Uses the action above", Callback = function()
-		local c = labCode()
-		if c then
-			local n = select(2, c:gsub("\n", "\n")) + 1
-			chat:Add("user", act .. " (" .. n .. " lines from the Code lab)")
-			send(ACTIONS[act] .. "\n```lua\n" .. c .. "\n```")
-		end
-	end })
-	AI:Button({ Name = "Check syntax (offline)", Description = "Finds the broken line without the AI", Callback = function()
-		local c = labCode()
-		if not c then
-			return
-		end
-		if type(loadstring) ~= "function" then
-			Win:Notify({ Title = "Can't check", Text = "This executor has no loadstring.", Type = "warn" })
-			return
-		end
-		local fn, err = loadstring(c)
-		if fn then
-			chat:Add("bot", "No syntax errors found. The code compiles.", { Instant = true })
-		else
-			local ln = tonumber(tostring(err):match(":(%d+):"))
-			local lines = {}
-			for l in (c .. "\n"):gmatch("(.-)\n") do
-				lines[#lines + 1] = l
+		table.sort(exNames)
+		AI:Dropdown({ Name = "One-click example", Options = exNames, Default = exNames[1], Callback = function(v)
+			if EXAMPLES[v] then
+				lab:Set(EXAMPLES[v])
+				Win:Notify({ Title = "Example loaded", Text = v .. ": tap Run, or ask the AI to explain it.", Type = "success" })
 			end
-			local msg = "**Syntax error**" .. (ln and (" on line " .. ln) or "") .. "\n`" .. tostring(err):gsub("^.-:%d+:%s*", "") .. "`"
-			if ln and lines[ln] then
-				msg ..= "\n```lua\n>> " .. lines[ln] .. "\n```"
+		end })
+		local ACTIONS = {
+			["Explain"] = "Explain this code line by line in simple words, then say what it does overall:",
+			["Find and fix errors"] = "Find every bug or error in this code. Say what was wrong, then give the corrected code in a ```lua block:",
+			["Review"] = "Review this code like a senior engineer: 3 biggest problems, 2 good things, then a better version:",
+			["Refactor"] = "Refactor this for readability and speed without changing what it does. Show the new code and list what changed:",
+			["Add comments"] = "Add clear, short comments to this code and return it in a ```lua block:",
+			["Security scan (AI)"] = "Security scan this script: webhooks, cookie or token stealing, hidden loadstring or HttpGet, obfuscation, remote spam. Give a risk rating (Low / Medium / High) and the exact patterns that worry you:",
+			["Make it faster"] = "Optimize this for performance (fewer allocations, no busy loops, cache lookups). Show the code and explain the gains:",
+			["Convert to Luau"] = "Convert this code to clean Roblox Luau and explain any differences:",
+			["Write tests"] = "Write small test cases (as Luau asserts) for this code:",
+		}
+		local actNames = { "Explain", "Find and fix errors", "Review", "Refactor", "Add comments", "Security scan (AI)", "Make it faster", "Convert to Luau", "Write tests" }
+		local act = "Explain"
+		AI:Dropdown({ Name = "AI action", Options = actNames, Default = "Explain", Callback = function(v)
+			act = v
+		end })
+		local function labCode()
+			local c = lab:Get() or ""
+			if not c:match("%S") then
+				Win:Notify({ Title = "Code lab", Text = "Put some code in the box first.", Type = "warn" })
+				return nil
 			end
-			chat:Add("bot", msg, { Instant = true, Error = true })
+			return c
 		end
-	end })
-	local function formatLua(src)
-		local out, lvl = {}, 0
-		for line in (src .. "\n"):gmatch("(.-)\n") do
-			local t = line:gsub("^%s+", ""):gsub("%s+$", "")
-			if t == "" then
-				out[#out + 1] = ""
+		AI:Button({ Name = "Ask AI about this code", Description = "Uses the action above", Callback = function()
+			local c = labCode()
+			if c then
+				local n = select(2, c:gsub("\n", "\n")) + 1
+				chat:Add("user", act .. " (" .. n .. " lines from the Code lab)")
+				send(ACTIONS[act] .. "\n```lua\n" .. c .. "\n```")
+			end
+		end })
+		AI:Button({ Name = "Check syntax (offline)", Description = "Finds the broken line without the AI", Callback = function()
+			local c = labCode()
+			if not c then
+				return
+			end
+			if type(loadstring) ~= "function" then
+				Win:Notify({ Title = "Can't check", Text = "This executor has no loadstring.", Type = "warn" })
+				return
+			end
+			local fn, err = loadstring(c)
+			if fn then
+				chat:Add("bot", "No syntax errors found. The code compiles.", { Instant = true })
 			else
-				local first = t:match("^(%a+)")
-				if first == "end" or first == "else" or first == "elseif" or first == "until" or t:match("^[%)%}%]]") then
-					lvl = math.max(0, lvl - 1)
+				local ln = tonumber(tostring(err):match(":(%d+):"))
+				local lines = {}
+				for l in (c .. "\n"):gmatch("(.-)\n") do
+					lines[#lines + 1] = l
 				end
-				out[#out + 1] = string.rep("\t", lvl) .. t
-				local s = t:gsub("%-%-.*$", "")
-				local inc = false
-				if first == "else" or first == "elseif" then
-					inc = true
-				elseif s:match("%f[%w]then%s*$") or s:match("%f[%w]do%s*$") or s:match("%f[%w]repeat%s*$") then
-					inc = true
-				elseif s:match("%f[%w]function%f[%W]") and not s:match("%f[%w]end[%s%)%,;]*$") then
-					inc = true
-				elseif s:match("[%{%(]%s*$") then
-					inc = true
+				local msg = "**Syntax error**" .. (ln and (" on line " .. ln) or "") .. "\n`" .. tostring(err):gsub("^.-:%d+:%s*", "") .. "`"
+				if ln and lines[ln] then
+					msg ..= "\n```lua\n>> " .. lines[ln] .. "\n```"
 				end
-				if inc then
-					lvl += 1
+				chat:Add("bot", msg, { Instant = true, Error = true })
+			end
+		end })
+		local function formatLua(src)
+			local out, lvl = {}, 0
+			for line in (src .. "\n"):gmatch("(.-)\n") do
+				local t = line:gsub("^%s+", ""):gsub("%s+$", "")
+				if t == "" then
+					out[#out + 1] = ""
+				else
+					local first = t:match("^(%a+)")
+					if first == "end" or first == "else" or first == "elseif" or first == "until" or t:match("^[%)%}%]]") then
+						lvl = math.max(0, lvl - 1)
+					end
+					out[#out + 1] = string.rep("\t", lvl) .. t
+					local s = t:gsub("%-%-.*$", "")
+					local inc = false
+					if first == "else" or first == "elseif" then
+						inc = true
+					elseif s:match("%f[%w]then%s*$") or s:match("%f[%w]do%s*$") or s:match("%f[%w]repeat%s*$") then
+						inc = true
+					elseif s:match("%f[%w]function%f[%W]") and not s:match("%f[%w]end[%s%)%,;]*$") then
+						inc = true
+					elseif s:match("[%{%(]%s*$") then
+						inc = true
+					end
+					if inc then
+						lvl += 1
+					end
 				end
 			end
+			return table.concat(out, "\n")
 		end
-		return table.concat(out, "\n")
+		AI:Button({ Name = "Format code", Description = "Tidies the indentation", Callback = function()
+			local c = labCode()
+			if c then
+				lab:Set(formatLua(c))
+				Win:Notify({ Title = "Formatted", Type = "success", Duration = 2 })
+			end
+		end })
+		local RISKS = {
+			{ "discord%.com/api/webhooks", "sends data to a Discord webhook", 3 },
+			{ "webhook", "mentions a webhook", 2 },
+			{ "roblosecurity", "touches the login cookie (account theft)", 3 },
+			{ "loadstring%s*%(%s*game:httpget", "runs code downloaded from the internet", 2 },
+			{ "httpget", "downloads from the internet", 1 },
+			{ "request%s*%(", "sends web requests", 1 },
+			{ "setclipboard", "writes to your clipboard", 1 },
+			{ "getfenv", "reads the environment (often used to hide things)", 1 },
+			{ "string%.char", "builds text from numbers (common in obfuscation)", 1 },
+			{ "\\%d%d?%d?\\%d%d?%d?\\%d%d?%d?", "heavily escaped text (obfuscation)", 2 },
+			{ "fireserver", "fires remotes (can be abused)", 1 },
+			{ "%.kick", "kicks players", 1 },
+			{ "password", "mentions passwords", 2 },
+			{ "token", "mentions tokens", 1 },
+			{ "while%s+true%s+do%s*\n?%s*[^\n]*\n?%s*end", "a loop with no wait (can freeze the game)", 2 },
+		}
+		AI:Button({ Name = "Security scan (offline)", Description = "Checks for risky patterns, no AI needed", Callback = function()
+			local c = labCode()
+			if not c then
+				return
+			end
+			local low, found, score = c:lower(), {}, 0
+			for _, r in ipairs(RISKS) do
+				local n = select(2, low:gsub(r[1], ""))
+				if n > 0 then
+					found[#found + 1] = "- " .. r[2] .. " (" .. n .. "x)"
+					score += r[3]
+				end
+			end
+			local level = score >= 5 and "HIGH" or score >= 2 and "MEDIUM" or "LOW"
+			chat:Add("bot", "**Security scan: " .. level .. " risk**\n" .. (#found > 0 and table.concat(found, "\n") or "Nothing suspicious found.") .. "\nThis only checks patterns. Ask the AI to review it for a deeper look.", { Instant = true, Error = level == "HIGH" })
+		end })
+
+		-- ---------- more AI commands: type them in the chat
+		AITOOLS.fix = { prompt = "Find and fix the bug or error in this. Say what was wrong in one line, then give the corrected code in a ```lua block.\n%s", hint = "<code or error message>", think = true }
+		AITOOLS.gen = { prompt = "Write a complete, working Roblox Luau script for: %s. It runs client-side in an executor. Clean structure, short comments, one ```lua block, then 2 lines on how to use it.", hint = "<what the script should do>", think = true }
+		AITOOLS.review = { prompt = "Review this Luau like a senior engineer: the 3 biggest problems, 2 good things, then a short improved version.\n%s", hint = "<code>", think = true }
+		AITOOLS.refactor = { prompt = "Refactor this for readability and speed without changing behaviour. New code in a ```lua block, then 3 bullets on what changed.\n%s", hint = "<code>", think = true }
+		AITOOLS.debug = { prompt = "Act as my debugging assistant. For this problem list the most likely causes, ranked, and the quickest test for each: %s", hint = "<what goes wrong>", think = true }
+		AITOOLS.secure = { prompt = "Security scan this script: webhooks, cookie or token stealing, hidden loadstring/HttpGet, obfuscation, remote spam, account risks. Give a risk rating (Low/Medium/High) and the exact patterns that worry you.\n%s", hint = "<code>", think = true }
+		AITOOLS.comment = { prompt = "Add clear, short comments to this code and return it in a ```lua block.\n%s", hint = "<code>" }
+		AITOOLS.docs = { prompt = "Look up the official Roblox documentation for: %s. Give the key API, a tiny example, and one gotcha.", hint = "<API or topic>", web = true }
+		AITOOLS.tips = { prompt = "Give me 5 best-practice tips for writing safe, fast Luau for executors, one line each. Topic (optional): %s" }
+		AITOOLS.tutor = { prompt = "Be my tutor on: %s. Start lesson 1: simple words, one tiny example, then one exercise. Wait for my answer before going on.", hint = "<topic>" }
+		AITOOLS.design = { prompt = "Be my creative design assistant for: %s. Give a color palette (hex codes), a layout idea, 3 details that make it feel premium, and one bold surprising touch.", hint = "<what to design>" }
+		AITOOLS.ideas = { prompt = "Give me 5 bizarre but buildable ideas about: %s. One line each, make them specific.", hint = "<topic>" }
+
+		AI:Section("Brain")
+		AI:Toggle({ Name = "Think deeper", Description = "Slower, better on hard problems", Flag = "aiDeep", Callback = function(v)
+			opt.deep = v
+		end })
+		AI:Toggle({ Name = "Live web", Description = "Searches the web for fresh facts", Flag = "aiWeb", Callback = function(v)
+			opt.web = v
+		end })
+		AI:Toggle({ Name = "Double-check answers", Description = "Reviews and fixes its own answer first", Flag = "aiRefine", Callback = function(v)
+			opt.refine = v
+		end })
+		AI:Toggle({ Name = "Show its steps", Description = "Explains how it got the answer", Flag = "aiReason", Callback = function(v)
+			opt.reason = v
+		end })
+		AI:Section("Voice")
+		AI:Toggle({ Name = "Voice (talk back)", Description = "I read my answers out loud", Flag = "aiVoice", Callback = function(on)
+			voiceOn = on
+			if not on then
+				stopVoice()
+			end
+		end })
+		AI:Slider({ Name = "Voice speed", Min = 0.7, Max = 1.6, Default = 1, Step = 0.1, Flag = "aiVoiceSpeed", Callback = function(v)
+			voiceSpeed = v
+		end })
+		AI:Dropdown({ Name = "Voice language", Options = { "en", "es", "fr", "de", "pt", "it", "ja", "ko", "ru", "tr", "ar", "id" }, Default = "en", Flag = "aiVoiceLang", Callback = function(v)
+			voiceLang = tostring(v)
+		end })
+		AI:Button({ Name = "Stop talking", Callback = stopVoice })
+		AI:Section("Personality")
+		AI:Dropdown({ Name = "Style", Options = { "Rebel (default)", "Chaos gremlin", "Scripter", "Teacher", "Sarcastic", "Professional", "Roleplay", "Tutor", "Designer", "Debugger" }, Default = "Rebel (default)", Flag = "aiPersona", Callback = function(v)
+			persona = PERSONAS[v] and v or persona
+		end })
+		AI:Dropdown({ Name = "Reply language", Options = { "English", "Malay", "Indonesian", "Spanish", "French", "German", "Portuguese", "Arabic", "Hindi", "Japanese", "Korean", "Chinese", "Turkish", "Russian" }, Default = "English", Flag = "aiLang", Callback = function(v)
+			replyLang = v
+		end })
+		AI:Button({ Name = "Forget what you know about me", Risky = true, Callback = function()
+			memory = ""
+			pcall(function()
+				if delfile and isfile and isfile(MEMFILE) then
+					delfile(MEMFILE)
+				end
+			end)
+			Win:Notify({ Title = "Rebel AI", Text = "Memory cleared.", Type = "success" })
+		end })
+
+		AI:Section("Cool stuff")
+		AI:Toggle({ Name = "Rainbow rings", Description = "Every glowing edge turns rainbow", Flag = "aiRainbow", Callback = function(on)
+			Win:SetRainbow(on)
+		end })
+		AI:Button({ Name = "Theme from my avatar", Description = "Colors the panel like your character", Callback = function()
+			pcall(function()
+				Win:ThemeFromAvatar()
+			end)
+		end })
+		AI:Button({ Name = "Roast my username", Description = "Friendly, I promise", Callback = function()
+			chat:Submit("Roast my Roblox username '" .. lp.Name .. "' in two funny, friendly sentences.")
+		end })
+		AI:Button({ Name = "Surprise me", Description = "A random fun fact, riddle or mini-game", Callback = function()
+			local pick = { "Tell me a mind-blowing fact I've never heard, in 2 sentences.", "Give me a clever riddle and wait for my answer.", "Let's play a 5-question trivia game, one question at a time, starting now.", "Start a tiny text adventure set in a haunted Roblox lobby and ask what I do." }
+			chat:Submit(pick[math.random(#pick)])
+		end })
+
+		if pendingGreeting then
+			chat:Add("bot", pendingGreeting, { Speed = 120 })
+			pendingGreeting = nil
+		end
 	end
-	AI:Button({ Name = "Format code", Description = "Tidies the indentation", Callback = function()
-		local c = labCode()
-		if c then
-			lab:Set(formatLua(c))
-			Win:Notify({ Title = "Formatted", Type = "success", Duration = 2 })
-		end
-	end })
-	local RISKS = {
-		{ "discord%.com/api/webhooks", "sends data to a Discord webhook", 3 },
-		{ "webhook", "mentions a webhook", 2 },
-		{ "roblosecurity", "touches the login cookie (account theft)", 3 },
-		{ "loadstring%s*%(%s*game:httpget", "runs code downloaded from the internet", 2 },
-		{ "httpget", "downloads from the internet", 1 },
-		{ "request%s*%(", "sends web requests", 1 },
-		{ "setclipboard", "writes to your clipboard", 1 },
-		{ "getfenv", "reads the environment (often used to hide things)", 1 },
-		{ "string%.char", "builds text from numbers (common in obfuscation)", 1 },
-		{ "\\%d%d?%d?\\%d%d?%d?\\%d%d?%d?", "heavily escaped text (obfuscation)", 2 },
-		{ "fireserver", "fires remotes (can be abused)", 1 },
-		{ "%.kick", "kicks players", 1 },
-		{ "password", "mentions passwords", 2 },
-		{ "token", "mentions tokens", 1 },
-		{ "while%s+true%s+do%s*\n?%s*[^\n]*\n?%s*end", "a loop with no wait (can freeze the game)", 2 },
-	}
-	AI:Button({ Name = "Security scan (offline)", Description = "Checks for risky patterns, no AI needed", Callback = function()
-		local c = labCode()
-		if not c then
-			return
-		end
-		local low, found, score = c:lower(), {}, 0
-		for _, r in ipairs(RISKS) do
-			local n = select(2, low:gsub(r[1], ""))
-			if n > 0 then
-				found[#found + 1] = "- " .. r[2] .. " (" .. n .. "x)"
-				score += r[3]
-			end
-		end
-		local level = score >= 5 and "HIGH" or score >= 2 and "MEDIUM" or "LOW"
-		chat:Add("bot", "**Security scan: " .. level .. " risk**\n" .. (#found > 0 and table.concat(found, "\n") or "Nothing suspicious found.") .. "\nThis only checks patterns. Ask the AI to review it for a deeper look.", { Instant = true, Error = level == "HIGH" })
-	end })
-
-	-- ---------- more AI commands: type them in the chat
-	AITOOLS.fix = { prompt = "Find and fix the bug or error in this. Say what was wrong in one line, then give the corrected code in a ```lua block.\n%s", hint = "<code or error message>", think = true }
-	AITOOLS.gen = { prompt = "Write a complete, working Roblox Luau script for: %s. It runs client-side in an executor. Clean structure, short comments, one ```lua block, then 2 lines on how to use it.", hint = "<what the script should do>", think = true }
-	AITOOLS.review = { prompt = "Review this Luau like a senior engineer: the 3 biggest problems, 2 good things, then a short improved version.\n%s", hint = "<code>", think = true }
-	AITOOLS.refactor = { prompt = "Refactor this for readability and speed without changing behaviour. New code in a ```lua block, then 3 bullets on what changed.\n%s", hint = "<code>", think = true }
-	AITOOLS.debug = { prompt = "Act as my debugging assistant. For this problem list the most likely causes, ranked, and the quickest test for each: %s", hint = "<what goes wrong>", think = true }
-	AITOOLS.secure = { prompt = "Security scan this script: webhooks, cookie or token stealing, hidden loadstring/HttpGet, obfuscation, remote spam, account risks. Give a risk rating (Low/Medium/High) and the exact patterns that worry you.\n%s", hint = "<code>", think = true }
-	AITOOLS.comment = { prompt = "Add clear, short comments to this code and return it in a ```lua block.\n%s", hint = "<code>" }
-	AITOOLS.docs = { prompt = "Look up the official Roblox documentation for: %s. Give the key API, a tiny example, and one gotcha.", hint = "<API or topic>", web = true }
-	AITOOLS.tips = { prompt = "Give me 5 best-practice tips for writing safe, fast Luau for executors, one line each. Topic (optional): %s" }
-	AITOOLS.tutor = { prompt = "Be my tutor on: %s. Start lesson 1: simple words, one tiny example, then one exercise. Wait for my answer before going on.", hint = "<topic>" }
-	AITOOLS.design = { prompt = "Be my creative design assistant for: %s. Give a color palette (hex codes), a layout idea, 3 details that make it feel premium, and one bold surprising touch.", hint = "<what to design>" }
-	AITOOLS.ideas = { prompt = "Give me 5 bizarre but buildable ideas about: %s. One line each, make them specific.", hint = "<topic>" }
-
-	AI:Section("Brain")
-	AI:Toggle({ Name = "Think deeper", Description = "Slower, better on hard problems", Flag = "aiDeep", Callback = function(v)
-		opt.deep = v
-	end })
-	AI:Toggle({ Name = "Live web", Description = "Searches the web for fresh facts", Flag = "aiWeb", Callback = function(v)
-		opt.web = v
-	end })
-	AI:Toggle({ Name = "Double-check answers", Description = "Reviews and fixes its own answer first", Flag = "aiRefine", Callback = function(v)
-		opt.refine = v
-	end })
-	AI:Toggle({ Name = "Show its steps", Description = "Explains how it got the answer", Flag = "aiReason", Callback = function(v)
-		opt.reason = v
-	end })
-	AI:Section("Voice")
-	AI:Toggle({ Name = "Voice (talk back)", Description = "I read my answers out loud", Flag = "aiVoice", Callback = function(on)
-		voiceOn = on
-		if not on then
-			stopVoice()
-		end
-	end })
-	AI:Slider({ Name = "Voice speed", Min = 0.7, Max = 1.6, Default = 1, Step = 0.1, Flag = "aiVoiceSpeed", Callback = function(v)
-		voiceSpeed = v
-	end })
-	AI:Dropdown({ Name = "Voice language", Options = { "en", "es", "fr", "de", "pt", "it", "ja", "ko", "ru", "tr", "ar", "id" }, Default = "en", Flag = "aiVoiceLang", Callback = function(v)
-		voiceLang = tostring(v)
-	end })
-	AI:Button({ Name = "Stop talking", Callback = stopVoice })
-	AI:Section("Personality")
-	AI:Dropdown({ Name = "Style", Options = { "Rebel (default)", "Chaos gremlin", "Scripter", "Teacher", "Sarcastic", "Professional", "Roleplay", "Tutor", "Designer", "Debugger" }, Default = "Rebel (default)", Flag = "aiPersona", Callback = function(v)
-		persona = PERSONAS[v] and v or persona
-	end })
-	AI:Dropdown({ Name = "Reply language", Options = { "English", "Malay", "Indonesian", "Spanish", "French", "German", "Portuguese", "Arabic", "Hindi", "Japanese", "Korean", "Chinese", "Turkish", "Russian" }, Default = "English", Flag = "aiLang", Callback = function(v)
-		replyLang = v
-	end })
-	AI:Button({ Name = "Forget what you know about me", Risky = true, Callback = function()
-		memory = ""
-		pcall(function()
-			if delfile and isfile and isfile(MEMFILE) then
-				delfile(MEMFILE)
-			end
-		end)
-		Win:Notify({ Title = "Rebel AI", Text = "Memory cleared.", Type = "success" })
-	end })
-
-	AI:Section("Cool stuff")
-	AI:Toggle({ Name = "Rainbow rings", Description = "Every glowing edge turns rainbow", Flag = "aiRainbow", Callback = function(on)
-		Win:SetRainbow(on)
-	end })
-	AI:Button({ Name = "Theme from my avatar", Description = "Colors the panel like your character", Callback = function()
-		pcall(function()
-			Win:ThemeFromAvatar()
-		end)
-	end })
-	AI:Button({ Name = "Roast my username", Description = "Friendly, I promise", Callback = function()
-		chat:Submit("Roast my Roblox username '" .. lp.Name .. "' in two funny, friendly sentences.")
-	end })
-	AI:Button({ Name = "Surprise me", Description = "A random fun fact, riddle or mini-game", Callback = function()
-		local pick = { "Tell me a mind-blowing fact I've never heard, in 2 sentences.", "Give me a clever riddle and wait for my answer.", "Let's play a 5-question trivia game, one question at a time, starting now.", "Start a tiny text adventure set in a haunted Roblox lobby and ask what I do." }
-		chat:Submit(pick[math.random(#pick)])
-	end })
 
 	local warm = false
 	-- the AI loading video: plays on top while the bot wakes up (3.5 to 7 seconds)
@@ -9056,12 +9120,27 @@ function Window:CreateAITab(o)
 		local part = hour < 5 and "very late at night" or hour < 12 and "morning" or hour < 18 and "afternoon" or "evening"
 		local g = ask({ { role = "user", parts = { { text = "Greet the player '" .. lp.DisplayName .. "' in ONE short, fun, original sentence. It is " .. part .. ". No questions. No tags." } } } }, { max = 60, temp = 1.2 })
 		warm = true
-		if g and chat then
-			chat:Add("bot", (g:gsub("%[%[.-%]%]", "")), { Speed = 120 })
+		if g then
+			g = g:gsub("%[%[.-%]%]", "")
+			if chat then
+				chat:Add("bot", g, { Speed = 120 })
+			else
+				pendingGreeting = g
+			end
 		end
 	end)
 	api.Ask = ask
-	api.Chat = chat
+	-- api.Chat builds the page on first use (the page also builds itself when you open the tab)
+	setmetatable(api, {
+		__index = function(_, k)
+			if k == "Chat" then
+				if buildUI then
+					buildUI()
+				end
+				return chat
+			end
+		end,
+	})
 	return AI, api
 end
 
