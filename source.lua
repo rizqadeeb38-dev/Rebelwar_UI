@@ -9144,4 +9144,680 @@ function Window:CreateAITab(o)
 	return AI, api
 end
 
+-- ============================================================ polish: watermark, command palette, stat tiles
+-- Win:CreateWatermark({ Text = "Rebelwar" })      a small pill in the corner: name + FPS + ping. :SetText(t) :Show(bool) :Destroy()
+-- Win:SetPalette({ Key = Enum.KeyCode.K })        Ctrl+K (or Win:OpenPalette()) opens a search that jumps to any tab or runs any command
+-- Tab:Stats({ { Name = "Kills", Value = 0 }, ... })   a row of number tiles. obj:Set(index or name, value)
+function Window:CreateWatermark(o)
+	o = o or {}
+	local win = self
+	local gui = win.Gui
+	local pill = new("Frame", {
+		AnchorPoint = Vector2.new(1, 0),
+		Position = o.Position or UDim2.new(1, -10, 0, 10),
+		Size = UDim2.fromOffset(40, 24),
+		AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundColor3 = Color3.fromRGB(14, 14, 18),
+		BackgroundTransparency = 0.15,
+		BorderSizePixel = 0,
+		ZIndex = 50,
+	}, gui)
+	corner(pill, 12)
+	local st = new("UIStroke", { Thickness = 1.2, Transparency = 0.2 }, pill)
+	new("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) }, pill)
+	local txt = new("TextLabel", {
+		BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(10, 24),
+		AutomaticSize = Enum.AutomaticSize.X,
+		Font = Enum.Font.GothamBold,
+		TextSize = 11,
+		TextColor3 = C.Text,
+		Text = "",
+		ZIndex = 51,
+	}, pill)
+	win:_onTheme(function(t)
+		st.Color = t.Accent
+	end)
+	local obj, base, frames, acc = { Frame = pill }, tostring(o.Text or "RebelUI"), 0, 0
+	local function ping()
+		local ok, v = pcall(function()
+			return math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue() + 0.5)
+		end)
+		return ok and v or nil
+	end
+	local conn = RunService.Heartbeat:Connect(function(dt)
+		frames += 1
+		acc += dt
+		if acc >= 0.5 then
+			local p = ping()
+			txt.Text = string.format("%s  |  %d fps%s", base, math.floor(frames / acc + 0.5), p and ("  |  " .. p .. " ms") or "")
+			frames, acc = 0, 0
+		end
+	end)
+	function obj:SetText(t)
+		base = tostring(t)
+	end
+	function obj:Show(on)
+		pill.Visible = on ~= false
+	end
+	function obj:Destroy()
+		conn:Disconnect()
+		pill:Destroy()
+	end
+	table.insert(win._cleanup or {}, function()
+		conn:Disconnect()
+	end)
+	return obj
+end
+
+function Window:OpenPalette()
+	local win = self
+	if win._palette and win._palette.Parent then
+		win._palette:Destroy()
+		win._palette = nil
+		return
+	end
+	local shade = new("TextButton", {
+		Text = "",
+		AutoButtonColor = false,
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Color3.new(0, 0, 0),
+		BackgroundTransparency = 0.45,
+		BorderSizePixel = 0,
+		ZIndex = 200,
+	}, win.Gui)
+	win._palette = shade
+	local box = new("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0.12, 0),
+		Size = UDim2.new(0, 340, 0, 300),
+		BackgroundColor3 = Color3.fromRGB(16, 16, 22),
+		BorderSizePixel = 0,
+		ZIndex = 201,
+	}, shade)
+	corner(box, 12)
+	local st = new("UIStroke", { Thickness = 1.5 }, box)
+	win:_onTheme(function(t)
+		if st.Parent then
+			st.Color = t.Accent
+		end
+	end)
+	local input = new("TextBox", {
+		Position = UDim2.fromOffset(10, 10),
+		Size = UDim2.new(1, -20, 0, 34),
+		BackgroundColor3 = Color3.fromRGB(28, 28, 36),
+		BorderSizePixel = 0,
+		Font = Enum.Font.Gotham,
+		TextSize = 13,
+		TextColor3 = C.Text,
+		PlaceholderText = "Search tabs and commands...",
+		PlaceholderColor3 = C.Dim,
+		Text = "",
+		ClearTextOnFocus = false,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		ZIndex = 202,
+	}, box)
+	corner(input, 8)
+	new("UIPadding", { PaddingLeft = UDim.new(0, 10) }, input)
+	local list = new("ScrollingFrame", {
+		Position = UDim2.fromOffset(10, 52),
+		Size = UDim2.new(1, -20, 1, -62),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 3,
+		CanvasSize = UDim2.new(),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		ZIndex = 202,
+	}, box)
+	new("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }, list)
+	local function close()
+		if shade.Parent then
+			shade:Destroy()
+		end
+		win._palette = nil
+	end
+	local function fill()
+		for _, c in ipairs(list:GetChildren()) do
+			if c:IsA("GuiObject") then
+				c:Destroy()
+			end
+		end
+		local q, n = input.Text:lower(), 0
+		local function add(title, sub, fn)
+			if q ~= "" and not (title:lower():find(q, 1, true) or sub:lower():find(q, 1, true)) then
+				return
+			end
+			n += 1
+			if n > 40 then
+				return
+			end
+			local b = new("TextButton", {
+				Text = "",
+				AutoButtonColor = false,
+				Size = UDim2.new(1, -4, 0, 34),
+				BackgroundColor3 = Color3.fromRGB(26, 26, 34),
+				BorderSizePixel = 0,
+				LayoutOrder = n,
+				ZIndex = 203,
+			}, list)
+			corner(b, 8)
+			new("TextLabel", {
+				BackgroundTransparency = 1,
+				Position = UDim2.fromOffset(10, 0),
+				Size = UDim2.new(0.6, -10, 1, 0),
+				Text = title,
+				Font = Enum.Font.GothamBold,
+				TextSize = 12,
+				TextColor3 = C.Text,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextTruncate = Enum.TextTruncate.AtEnd,
+				ZIndex = 204,
+			}, b)
+			new("TextLabel", {
+				BackgroundTransparency = 1,
+				Position = UDim2.new(0.6, 0, 0, 0),
+				Size = UDim2.new(0.4, -10, 1, 0),
+				Text = sub,
+				Font = Enum.Font.Gotham,
+				TextSize = 10,
+				TextColor3 = C.Dim,
+				TextXAlignment = Enum.TextXAlignment.Right,
+				TextTruncate = Enum.TextTruncate.AtEnd,
+				ZIndex = 204,
+			}, b)
+			b.MouseButton1Click:Connect(function()
+				close()
+				pcall(fn)
+			end)
+		end
+		for _, tb in ipairs(win._tabs or {}) do
+			if tb.Select then
+				add("Go to " .. tostring(tb.Name or "tab"), "tab", function()
+					win:Toggle(true)
+					tb:Select()
+				end)
+			end
+		end
+		local names = {}
+		for k in pairs(win._commands or {}) do
+			names[#names + 1] = k
+		end
+		table.sort(names)
+		for _, k in ipairs(names) do
+			add("Run: " .. k, win._commands[k].desc, function()
+				win:RunCommand(k)
+			end)
+		end
+		if n == 0 then
+			new("TextLabel", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 30), Text = "Nothing found.", Font = Enum.Font.Gotham, TextSize = 11, TextColor3 = C.Dim, ZIndex = 203 }, list)
+		end
+	end
+	input:GetPropertyChangedSignal("Text"):Connect(fill)
+	shade.MouseButton1Click:Connect(close)
+	fill()
+	pcall(function()
+		input:CaptureFocus()
+	end)
+end
+
+function Window:SetPalette(o)
+	o = o or {}
+	local win = self
+	if win._paletteConn then
+		win._paletteConn:Disconnect()
+	end
+	local key = o.Key or Enum.KeyCode.K
+	win._paletteConn = UIS.InputBegan:Connect(function(i, gp)
+		if i.KeyCode == key and (UIS:IsKeyDown(Enum.KeyCode.LeftControl) or UIS:IsKeyDown(Enum.KeyCode.RightControl)) then
+			win:OpenPalette()
+		end
+	end)
+	return win
+end
+
+function Tab:Stats(items)
+	local win = self.Win
+	items = items or {}
+	local row = self:_row(52)
+	local n = math.max(#items, 1)
+	local vals, byName = {}, {}
+	for i, it in ipairs(items) do
+		local tile = new("Frame", {
+			Position = UDim2.new((i - 1) / n, i == 1 and 6 or 3, 0, 4),
+			Size = UDim2.new(1 / n, (i == 1 or i == n) and -9 or -6, 1, -8),
+			BackgroundColor3 = Color3.fromRGB(26, 26, 34),
+			BorderSizePixel = 0,
+		}, row)
+		corner(tile, 8)
+		local v = label(tile, tostring(it.Value or 0), 15, C.Text, true)
+		v.Position = UDim2.fromOffset(8, 4)
+		v.Size = UDim2.new(1, -16, 0, 22)
+		local nm = label(tile, tostring(it.Name or ""), 9, C.Dim, false)
+		nm.Position = UDim2.fromOffset(8, 26)
+		nm.Size = UDim2.new(1, -16, 0, 12)
+		vals[i] = v
+		byName[tostring(it.Name)] = v
+		win:_onTheme(function(t)
+			v.TextColor3 = t.Accent:Lerp(C.White, 0.35)
+		end)
+	end
+	local obj = {}
+	function obj:Set(k, value)
+		local l = vals[k] or byName[tostring(k)]
+		if l then
+			l.Text = tostring(value)
+		end
+	end
+	return register(self, {}, obj, "Stats")
+end
+
+-- ============================================================ more: tab badges, background dim, tab hotkeys, chips, steps, timeline, list, table
+-- tab:SetBadge(5) / tab:SetBadge("NEW") / tab:SetBadge(nil)    a small bubble on the tab button
+-- Win:SetDim(0.5)                                              darkens the game behind the panel while it is open (0 = off)
+-- Win:SetTabHotkeys()                                          Ctrl+1 ... Ctrl+9 jump to the tabs
+-- Tab:Chips({ "Legit", "Rage" }, { Closable = true, Callback = fn })   Tab:Steps({ "Pick", "Tune", "Go" }, 1)   Tab:Timeline({ { Title, Time, Text } })
+-- Tab:List({ Items = {...}, Multi = true, Search = true, Callback = fn })   Tab:Table({ Columns = {...}, Rows = {{...}}, PageSize = 8 })
+function Tab:SetBadge(v)
+	local btn = self.TabButton
+	if not btn then
+		return
+	end
+	local b = self._badge
+	if v == nil or v == false or v == 0 then
+		if b then
+			b:Destroy()
+			self._badge = nil
+		end
+		return
+	end
+	if not b then
+		b = new("TextLabel", {
+			AnchorPoint = Vector2.new(1, 0.5),
+			Position = UDim2.new(1, -6, 0.5, 0),
+			Size = UDim2.fromOffset(18, 16),
+			AutomaticSize = Enum.AutomaticSize.X,
+			BackgroundColor3 = Color3.fromRGB(235, 50, 60),
+			BorderSizePixel = 0,
+			Font = Enum.Font.GothamBold,
+			TextSize = 9,
+			TextColor3 = C.White,
+			ZIndex = 8,
+		}, btn)
+		corner(b, 8)
+		new("UIPadding", { PaddingLeft = UDim.new(0, 4), PaddingRight = UDim.new(0, 4) }, b)
+		self._badge = b
+	end
+	local n = tonumber(v)
+	b.Text = n and (n > 99 and "99+" or tostring(math.floor(n))) or tostring(v)
+end
+
+function Window:SetDim(amount)
+	amount = math.clamp(tonumber(amount) or 0, 0, 1)
+	local win = self
+	if not win._dim then
+		win._dim = new("Frame", {
+			Size = UDim2.fromScale(1, 1),
+			BackgroundColor3 = Color3.new(0, 0, 0),
+			BorderSizePixel = 0,
+			Active = false,
+			ZIndex = 0,
+			Visible = false,
+		}, win.Gui)
+		local function sync()
+			if win._dim and win._dim.Parent then
+				win._dim.Visible = win.Main.Visible and win._dimAmount > 0
+			end
+		end
+		win.Main:GetPropertyChangedSignal("Visible"):Connect(sync)
+		win._dimSync = sync
+	end
+	win._dimAmount = amount
+	tween(win._dim, 0.25, { BackgroundTransparency = 1 - amount * 0.8 })
+	win._dimSync()
+	return win
+end
+
+function Window:SetTabHotkeys()
+	local win = self
+	if win._hotkeyConn then
+		win._hotkeyConn:Disconnect()
+	end
+	local keys = { Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four, Enum.KeyCode.Five, Enum.KeyCode.Six, Enum.KeyCode.Seven, Enum.KeyCode.Eight, Enum.KeyCode.Nine }
+	win._hotkeyConn = UIS.InputBegan:Connect(function(i, gp)
+		if gp or not (UIS:IsKeyDown(Enum.KeyCode.LeftControl) or UIS:IsKeyDown(Enum.KeyCode.RightControl)) then
+			return
+		end
+		for n, k in ipairs(keys) do
+			if i.KeyCode == k and win._tabs[n] and win._tabs[n].Select then
+				win._tabs[n]:Select()
+				return
+			end
+		end
+	end)
+	return win
+end
+
+function Tab:Chips(items, o)
+	o = o or {}
+	local win = self.Win
+	local row = self:_row(30)
+	row.AutomaticSize = Enum.AutomaticSize.Y
+	new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Wraps = true, Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Center }, row)
+	new("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5), PaddingRight = UDim.new(0, 8) }, row)
+	local obj, chips = {}, {}
+	local function make(text)
+		local c = new("TextButton", {
+			Size = UDim2.fromOffset(20, 20),
+			AutomaticSize = Enum.AutomaticSize.X,
+			AutoButtonColor = false,
+			Text = tostring(text) .. (o.Closable and "  ✕" or ""),
+			Font = Enum.Font.GothamMedium,
+			TextSize = 10,
+			TextColor3 = C.Text,
+			BorderSizePixel = 0,
+			LayoutOrder = #chips + 1,
+		}, row)
+		corner(c, 10)
+		new("UIPadding", { PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9) }, c)
+		win:_onTheme(function(t)
+			if c.Parent then
+				c.BackgroundColor3 = t.Accent:Lerp(Color3.new(0, 0, 0), 0.55)
+			end
+		end)
+		c.MouseButton1Click:Connect(function()
+			if o.Closable then
+				c:Destroy()
+				for i, v in ipairs(chips) do
+					if v == c then
+						table.remove(chips, i)
+						break
+					end
+				end
+			end
+			if o.Callback then
+				task.spawn(o.Callback, text, o.Closable and "closed" or "tapped")
+			end
+		end)
+		chips[#chips + 1] = c
+	end
+	for _, t in ipairs(items or {}) do
+		make(t)
+	end
+	function obj:Add(text)
+		make(text)
+	end
+	function obj:Count()
+		return #chips
+	end
+	return register(self, o, obj, "Chips")
+end
+
+function Tab:Steps(names, current)
+	local win = self.Win
+	names = names or {}
+	local row = self:_row(46)
+	local n = math.max(#names, 1)
+	local dots, labs = {}, {}
+	local obj = { Current = 1 }
+	for i, nm in ipairs(names) do
+		local cx = (i - 0.5) / n
+		if i < n then
+			local line = new("Frame", { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(cx, 10, 0, 16), Size = UDim2.new(1 / n, -20, 0, 2), BackgroundColor3 = Color3.fromRGB(50, 50, 60), BorderSizePixel = 0 }, row)
+			dots[i] = { line = line }
+		else
+			dots[i] = {}
+		end
+		local d = new("TextLabel", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(cx, 0, 0, 16), Size = UDim2.fromOffset(20, 20), BackgroundColor3 = Color3.fromRGB(50, 50, 60), BorderSizePixel = 0, Text = tostring(i), Font = Enum.Font.GothamBold, TextSize = 10, TextColor3 = C.Text, ZIndex = 3 }, row)
+		corner(d, 10)
+		dots[i].dot = d
+		local l = new("TextLabel", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(cx, 0, 0, 29), Size = UDim2.new(1 / n, -4, 0, 12), BackgroundTransparency = 1, Text = tostring(nm), Font = Enum.Font.Gotham, TextSize = 9, TextColor3 = C.Dim, TextTruncate = Enum.TextTruncate.AtEnd }, row)
+		labs[i] = l
+	end
+	function obj:Set(k)
+		k = math.clamp(math.floor(tonumber(k) or 1), 1, n)
+		self.Current = k
+		local t = win.Theme
+		for i, v in ipairs(dots) do
+			local done, cur = i < k, i == k
+			v.dot.BackgroundColor3 = (done or cur) and t.Accent or Color3.fromRGB(50, 50, 60)
+			v.dot.Text = done and "✓" or tostring(i)
+			if v.line then
+				v.line.BackgroundColor3 = done and t.Accent or Color3.fromRGB(50, 50, 60)
+			end
+			labs[i].TextColor3 = cur and C.Text or C.Dim
+		end
+	end
+	function obj:Next()
+		self:Set(self.Current + 1)
+	end
+	function obj:Back()
+		self:Set(self.Current - 1)
+	end
+	function obj:Get()
+		return self.Current
+	end
+	win:_onTheme(function()
+		obj:Set(obj.Current)
+	end)
+	obj:Set(current or 1)
+	return register(self, {}, obj, "Steps")
+end
+
+function Tab:Timeline(events)
+	local win = self.Win
+	events = events or {}
+	local row = self:_row(10)
+	row.AutomaticSize = Enum.AutomaticSize.Y
+	row.Size = UDim2.new(1, 0, 0, 10)
+	new("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }, row)
+	new("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 10) }, row)
+	local obj, count = {}, 0
+	function obj:Add(ev)
+		count += 1
+		local e = new("Frame", { Size = UDim2.new(1, 0, 0, 14), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = ev.Newest and -count or count }, row)
+		local dot = new("Frame", { Position = UDim2.fromOffset(0, 3), Size = UDim2.fromOffset(8, 8), BackgroundColor3 = ev.Color or win.Theme.Accent, BorderSizePixel = 0 }, e)
+		corner(dot, 4)
+		local t = label(e, tostring(ev.Title or ""), 11, C.Text, true)
+		t.Position = UDim2.fromOffset(16, 0)
+		t.Size = UDim2.new(1, -90, 0, 14)
+		local tm = label(e, tostring(ev.Time or ""), 9, C.Dim, false)
+		tm.TextXAlignment = Enum.TextXAlignment.Right
+		tm.Position = UDim2.new(1, -70, 0, 1)
+		tm.Size = UDim2.fromOffset(70, 12)
+		if ev.Text then
+			local d = new("TextLabel", { Position = UDim2.fromOffset(16, 15), Size = UDim2.new(1, -16, 0, 12), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Text = tostring(ev.Text), Font = Enum.Font.Gotham, TextSize = 10, TextColor3 = C.Dim, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top }, e)
+			e.Size = UDim2.new(1, 0, 0, 30)
+		end
+	end
+	for _, ev in ipairs(events) do
+		obj:Add(ev)
+	end
+	return register(self, {}, obj, "Timeline")
+end
+
+function Tab:List(o)
+	o = o or {}
+	local win = self.Win
+	local items = o.Items or {}
+	local multi = o.Multi
+	local selected = {}
+	local rowH = 24
+	local shown = math.min(o.Height and math.floor(o.Height / rowH) or 6, math.max(#items, 1))
+	local row = self:_row(10 + (o.Search and 30 or 0) + shown * rowH + 20)
+	local y = 6
+	local box
+	if o.Search then
+		box = new("TextBox", { Position = UDim2.fromOffset(8, 6), Size = UDim2.new(1, -16, 0, 24), BackgroundColor3 = Color3.fromRGB(28, 28, 36), BorderSizePixel = 0, Font = Enum.Font.Gotham, TextSize = 11, TextColor3 = C.Text, PlaceholderText = "Search...", PlaceholderColor3 = C.Dim, Text = "", ClearTextOnFocus = false, TextXAlignment = Enum.TextXAlignment.Left }, row)
+		corner(box, 6)
+		new("UIPadding", { PaddingLeft = UDim.new(0, 8) }, box)
+		y = 36
+	end
+	local scroll = new("ScrollingFrame", { Position = UDim2.fromOffset(8, y), Size = UDim2.new(1, -16, 0, shown * rowH), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y }, row)
+	new("UIListLayout", { Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder }, scroll)
+	local info = label(row, "", 9, C.Dim, false)
+	info.Position = UDim2.new(0, 10, 1, -16)
+	info.Size = UDim2.new(1, -20, 0, 12)
+	local obj, buttons = {}, {}
+	local function count()
+		local n = 0
+		for _ in pairs(selected) do
+			n += 1
+		end
+		return n
+	end
+	local function paint()
+		local t = win.Theme
+		for name, b in pairs(buttons) do
+			b.BackgroundColor3 = selected[name] and t.Accent:Lerp(Color3.new(0, 0, 0), 0.45) or Color3.fromRGB(26, 26, 34)
+		end
+		info.Text = (multi and (count() .. " selected  ·  ") or "") .. #items .. " items"
+	end
+	for i, name in ipairs(items) do
+		name = tostring(name)
+		local b = new("TextButton", { Size = UDim2.new(1, -4, 0, rowH - 2), AutoButtonColor = false, BorderSizePixel = 0, Text = name, Font = Enum.Font.Gotham, TextSize = 11, TextColor3 = C.Text, TextXAlignment = Enum.TextXAlignment.Left, LayoutOrder = i }, scroll)
+		corner(b, 6)
+		new("UIPadding", { PaddingLeft = UDim.new(0, 8) }, b)
+		buttons[name] = b
+		b.MouseButton1Click:Connect(function()
+			if multi then
+				selected[name] = not selected[name] or nil
+			else
+				selected = { [name] = true }
+			end
+			paint()
+			if o.Callback then
+				local list = {}
+				for k in pairs(selected) do
+					list[#list + 1] = k
+				end
+				table.sort(list)
+				task.spawn(o.Callback, multi and list or list[1])
+			end
+		end)
+	end
+	if box then
+		box:GetPropertyChangedSignal("Text"):Connect(function()
+			local q = box.Text:lower()
+			for name, b in pairs(buttons) do
+				b.Visible = q == "" or name:lower():find(q, 1, true) ~= nil
+			end
+		end)
+	end
+	function obj:Get()
+		local list = {}
+		for k in pairs(selected) do
+			list[#list + 1] = k
+		end
+		table.sort(list)
+		return multi and list or list[1]
+	end
+	function obj:Clear()
+		selected = {}
+		paint()
+	end
+	win:_onTheme(paint)
+	return register(self, o, obj, "List")
+end
+
+function Tab:Table(o)
+	o = o or {}
+	local win = self.Win
+	local cols = o.Columns or {}
+	local rows = o.Rows or {}
+	local pageSize, page, sortCol, sortDesc = o.PageSize or 8, 1, nil, false
+	local nc = math.max(#cols, 1)
+	local rh = 22
+	local row = self:_row(30 + pageSize * rh + 28)
+	local head = new("Frame", { Position = UDim2.fromOffset(6, 4), Size = UDim2.new(1, -12, 0, 22), BackgroundTransparency = 1 }, row)
+	local body = new("Frame", { Position = UDim2.fromOffset(6, 28), Size = UDim2.new(1, -12, 0, pageSize * rh), BackgroundTransparency = 1, ClipsDescendants = true }, row)
+	local nav = new("Frame", { Position = UDim2.new(0, 6, 1, -24), Size = UDim2.new(1, -12, 0, 20), BackgroundTransparency = 1 }, row)
+	local info = label(nav, "", 9, C.Dim, false)
+	info.Size = UDim2.new(0.5, 0, 1, 0)
+	local function navBtn(txt, xs)
+		local b = new("TextButton", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(xs, 0, 0.5, 0), Size = UDim2.fromOffset(26, 18), BackgroundColor3 = Color3.fromRGB(34, 34, 44), BorderSizePixel = 0, Text = txt, Font = Enum.Font.GothamBold, TextSize = 11, TextColor3 = C.Text, AutoButtonColor = false }, nav)
+		corner(b, 5)
+		return b
+	end
+	local nextB, prevB = navBtn(">", 1), navBtn("<", 1)
+	prevB.Position = UDim2.new(1, -30, 0.5, 0)
+	local obj = {}
+	local function render()
+		for _, c in ipairs(body:GetChildren()) do
+			c:Destroy()
+		end
+		local list = table.clone(rows)
+		if sortCol then
+			table.sort(list, function(a, b)
+				local x, y = a[sortCol], b[sortCol]
+				if type(x) == "number" and type(y) == "number" then
+					if sortDesc then return x > y end
+					return x < y
+				end
+				x, y = tostring(x):lower(), tostring(y):lower()
+				if sortDesc then return x > y end
+				return x < y
+			end)
+		end
+		local pages = math.max(1, math.ceil(#list / pageSize))
+		page = math.clamp(page, 1, pages)
+		for r = 1, pageSize do
+			local data = list[(page - 1) * pageSize + r]
+			if not data then
+				break
+			end
+			local line = new("Frame", { Position = UDim2.fromOffset(0, (r - 1) * rh), Size = UDim2.new(1, 0, 0, rh - 1), BackgroundColor3 = r % 2 == 0 and Color3.fromRGB(24, 24, 32) or Color3.fromRGB(20, 20, 27), BorderSizePixel = 0 }, body)
+			corner(line, 4)
+			for ci = 1, nc do
+				local c = label(line, tostring(data[ci] == nil and "" or data[ci]), 10, C.Text, false)
+				c.Position = UDim2.new((ci - 1) / nc, 6, 0, 0)
+				c.Size = UDim2.new(1 / nc, -8, 1, 0)
+			end
+		end
+		info.Text = string.format("Showing %d-%d of %d  ·  page %d/%d", #list == 0 and 0 or (page - 1) * pageSize + 1, math.min(page * pageSize, #list), #list, page, pages)
+	end
+	for ci, name in ipairs(cols) do
+		local h = new("TextButton", { Position = UDim2.new((ci - 1) / nc, 0, 0, 0), Size = UDim2.new(1 / nc, -2, 1, 0), BackgroundColor3 = Color3.fromRGB(34, 34, 44), BorderSizePixel = 0, Text = tostring(name), Font = Enum.Font.GothamBold, TextSize = 10, TextColor3 = C.Text, AutoButtonColor = false, TextTruncate = Enum.TextTruncate.AtEnd }, head)
+		corner(h, 5)
+		h.MouseButton1Click:Connect(function()
+			if sortCol == ci then
+				sortDesc = not sortDesc
+			else
+				sortCol, sortDesc = ci, false
+			end
+			for i2, b in ipairs(head:GetChildren()) do
+				if b:IsA("TextButton") then
+					b.Text = tostring(cols[b.LayoutOrder] or "") .. ((b.LayoutOrder == sortCol) and (sortDesc and " ▼" or " ▲") or "")
+				end
+			end
+			render()
+		end)
+		h.LayoutOrder = ci
+	end
+	nextB.MouseButton1Click:Connect(function()
+		page += 1
+		render()
+	end)
+	prevB.MouseButton1Click:Connect(function()
+		page -= 1
+		render()
+	end)
+	function obj:SetRows(r)
+		rows = r or {}
+		render()
+	end
+	function obj:AddRow(r)
+		rows[#rows + 1] = r
+		render()
+	end
+	win:_onTheme(function(t)
+		for _, b in ipairs(head:GetChildren()) do
+			if b:IsA("TextButton") then
+				b.TextColor3 = t.Accent:Lerp(C.White, 0.5)
+			end
+		end
+	end)
+	render()
+	return register(self, {}, obj, "Table")
+end
+
 return RebelUI
