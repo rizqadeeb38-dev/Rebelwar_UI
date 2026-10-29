@@ -2053,11 +2053,18 @@ The panel keeps gliding a little when you let go while dragging (`Inertia = fals
 | `source.lua` | The library (RebelUI v1.0.0). Load it with `loadstring(game:HttpGet("https://raw.githubusercontent.com/rizqadeeb38-dev/Rebelwar_UI/main/source.lua"))()` |
 | `Example.lua` | The demo panel with the loading screen. It uses every element and every kind of toggle. Copy parts into your own script |
 | `README.md` | This tutorial |
+| `MyScript.lua` | A small starter script: copy it, change the names |
+| `DISCORD_POSTS.md` | Ready-to-paste posts for the `#examples` and `#documentation` channels |
 | `LICENSE` | MIT license |
 
 ## Help and community
 
-Questions, bugs or ideas? Join the Discord: **https://discord.gg/Kq7N4gzH22**
+Questions, bugs or ideas? Join the **RebelUI & Resources** Discord: **https://discord.gg/8s7RR3wZ6b**
+
+- `#examples`: the tutorial `source.lua` and ready-made examples to copy
+- `#documentation`: every document we have
+
+The Rebelwar hub server is **https://discord.gg/Kq7N4gzH22**
 
 ## License
 
@@ -2163,20 +2170,25 @@ local Load = UI:Loading({
 
 ## AI or no AI (`Win:CreateAITab`)
 
-The library has no AI in it unless you ask for it. To add the AI tab:
+The library has no AI in it unless you ask for it:
 
 ```lua
 local AITab, ai = Win:CreateAITab({
 	Name = "AI",
 	Icon = 114659273298746,
-	Keys = { "your-gemini-key-1", "your-gemini-key-2" }, -- add as many as you like, it rotates between them
-	-- KeysReversed = true, -- if you stored them backwards so they are not plain text
+	Proxy = "https://your-worker.workers.dev", -- BEST: your own small server holds the keys (ai_proxy_worker.js)
+	-- KeyFile = "RebelAI_keys.txt",           -- or a file in YOUR executor's workspace folder, one key per line
+	-- Keys = { "key1", "key2" },              -- or written in the script (anyone who can read the script can read them)
 })
 -- ai.Ask(contents), ai.Brief(hud, done) for the HUD's AI BRIEF button, ai.Boot(video) for an AI loading video, ai.Chat
 ```
 
-Without `Keys` the tab shows "AI is off". To have no AI at all, do not call it (in `Example.lua`, set `USE_AI = false` at the top). Anyone can read a key that is inside a public file, so for a public repo use your own keys and expect to rotate them.
+**Never put keys in a public file.** A reversed or scrambled key is still readable, and Google disables keys it finds on GitHub, which would silently turn the AI off. Use one of these instead:
 
+1. **Proxy (best).** Deploy `ai_proxy_worker.js` as a free Cloudflare Worker, add your keys as the secret `GEMINI_KEYS` (separated by commas), and set `Proxy` to the worker address. The keys never leave the server and players need nothing.
+2. **Key file.** Put `RebelAI_keys.txt` (one key per line) in your executor's workspace folder. It is read on your device only, so the AI works for you and stays off for everyone else.
+
+Without any of these the tab shows "AI is off". To have no AI at all, do not call it (in `Example.lua`, set `USE_AI = false`).
 
 ## Animations and effects
 
@@ -2230,3 +2242,16 @@ The **Code lab** takes code and can **explain, fix, review, refactor, comment, s
 ## What is not in here (and why)
 
 Real background blur, book-flip animations, a drag-and-drop builder, a split-view editor, a macro recorder, cloud sync, sound packs, a public gallery with likes, light mode, image / video / voice cloning and "watching video or listening to audio" are not possible or not safe to fake inside a Roblox executor, so they are not included. Votes, badges and notes are saved on your own device only.
+
+
+## If the panel freezes or does not open
+
+`Example.lua` is built so a phone never has to do everything at once:
+
+- The loading screen is shown first, and every step is printed on it ("Building the AI tab...").
+- Big pages (Elements, AI, Tools) are built only when you open them, and the full-screen HUD is built the first time you open it. In your own script: `Build = function(tab) ... end` on `CreateTab`, and `Win:SetAssistant({ ... })` instead of `Win:GameAssistant({ ... })`.
+- Videos are off. Set `USE_VIDEOS = true` at the top of `Example.lua` only after the panel opens fine without them.
+- A watchdog closes the loading screen and opens the panel after 25 seconds no matter what, and tapping the loading screen skips it after 2.5 seconds.
+- Every step is written to `RebelUI_boot.txt` in your executor's workspace folder. **If anything ever stops, the last line of that file tells you exactly where.**
+
+Tips for weak phones: `Win:SetReduceMotion(true)`, turn off ripples and scan lines in Settings, and leave Rainbow rings and the HUD for stronger devices.
