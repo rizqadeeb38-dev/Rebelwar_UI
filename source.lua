@@ -2303,6 +2303,9 @@ local function register(self, o, obj, kind)
 	if kind then
 		self._items = self._items or {}
 		table.insert(self._items, { kind = kind, o = o, obj = obj })
+		local W = self.Win
+		W._all = W._all or {}
+		table.insert(W._all, { kind = kind, o = o, obj = obj, tab = self })
 	end
 	if o.Tooltip and row then
 		self.Win:_tip(row, o.Tooltip)
@@ -3606,7 +3609,21 @@ function Tab:Image(o)
 		Image = asset(o.Image),
 		ScaleType = o.Crop and Enum.ScaleType.Crop or Enum.ScaleType.Fit,
 	}, row)
-	corner(img, 6)
+	corner(img, o.Circle and 500 or 6)
+	if o.Circle then
+		img.Size = UDim2.fromOffset(h - 12, h - 12)
+		img.Position = UDim2.new(0.5, -(h - 12) / 2, 0, 6)
+		img.ScaleType = Enum.ScaleType.Crop
+	end
+	if RebelUI._imageEffect and o.Effect then
+		RebelUI._imageEffect(img, o.Effect, self.Win.Theme)
+	end
+	if o.OnClick then
+		local hitb = new("TextButton", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", ZIndex = 5 }, img)
+		hitb.MouseButton1Click:Connect(function()
+			task.spawn(o.OnClick)
+		end)
+	end
 	local cap
 	if o.Caption then
 		cap = label(row, o.Caption, 9, C.Dim, false)
@@ -6290,12 +6307,14 @@ function RebelUI:KeyGate(o)
 		AutoButtonColor = false,
 		BorderSizePixel = 0,
 	}, gui)
+	local CARD_W = 320
 	local card = new("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(300, 196),
+		Size = UDim2.fromOffset(CARD_W, 200),
 		BackgroundColor3 = Color3.new(1, 1, 1),
 		Active = true,
+		ClipsDescendants = true,
 	}, back)
 	corner(card, 12)
 	new("UIGradient", { Rotation = 90, Color = ColorSequence.new(theme.BG0, theme.BG1) }, card)
@@ -6307,30 +6326,104 @@ function RebelUI:KeyGate(o)
 	end)
 	tween(scl, 0.35, { Scale = 1 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 
+	-- named colors for buttons: Color = "Green" or Color3.fromRGB(...)
+	local BTN = {
+		Green = Color3.fromRGB(46, 170, 90), Blue = Color3.fromRGB(52, 120, 235), Red = Color3.fromRGB(215, 50, 60),
+		Gold = Color3.fromRGB(225, 170, 40), Purple = Color3.fromRGB(135, 85, 225), Pink = Color3.fromRGB(230, 70, 160),
+		Orange = Color3.fromRGB(235, 120, 40), Cyan = Color3.fromRGB(35, 180, 210), Gray = Color3.fromRGB(70, 70, 82),
+		Discord = Color3.fromRGB(88, 101, 242),
+	}
+	local function pickColor(c, default)
+		if typeof(c) == "Color3" then
+			return c
+		end
+		return BTN[tostring(c)] or default
+	end
+
+	local y = 0
+	local gate = {}
+	-- an image from Roblox (an asset id), across the top. Effect = "Pulse" | "Float" | "Shimmer" | "Glow" | "None"
+	if o.Image then
+		local ih = o.ImageHeight or 84
+		local pic = new("ImageLabel", {
+			BackgroundColor3 = theme.Inset,
+			BorderSizePixel = 0,
+			Size = UDim2.new(1, 0, 0, ih),
+			Image = asset(o.Image),
+			ScaleType = o.ImageFit and Enum.ScaleType.Fit or Enum.ScaleType.Crop,
+			ClipsDescendants = true,
+		}, card)
+		local fade = new("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, 0, 0, 30), BackgroundColor3 = theme.BG0, BorderSizePixel = 0 }, pic)
+		new("UIGradient", { Rotation = 90, Transparency = NumberSequence.new(1, 0) }, fade)
+		RebelUI._imageEffect(pic, o.ImageEffect or "Shimmer", theme)
+		y = ih + 4
+	end
+	local tx = 16
+	if o.Logo then
+		local lg = new("ImageLabel", { Position = UDim2.fromOffset(14, y + 8), Size = UDim2.fromOffset(34, 34), BackgroundColor3 = theme.Inset, BorderSizePixel = 0, Image = asset(o.Logo), ScaleType = Enum.ScaleType.Crop }, card)
+		corner(lg, 17)
+		new("UIStroke", { Color = theme.Glow, Thickness = 1.5 }, lg)
+		RebelUI._imageEffect(lg, o.LogoEffect or "Pulse", theme)
+		tx = 56
+	end
 	local title = label(card, o.Title or "Enter your key", 15, theme.Glow, true)
-	title.Position = UDim2.fromOffset(16, 12)
-	title.Size = UDim2.new(1, -52, 0, 22)
+	title.Position = UDim2.fromOffset(tx, y + 10)
+	title.Size = UDim2.new(1, -tx - 36, 0, 22)
 	title.Font = Enum.Font.GothamBlack
 	local sub = label(card, o.Subtitle or "Paste the key and tap Continue.", 10, C.Dim, false)
-	sub.Position = UDim2.fromOffset(16, 34)
-	sub.Size = UDim2.new(1, -32, 0, 14)
+	sub.Position = UDim2.fromOffset(tx, y + 32)
+	sub.Size = UDim2.new(1, -tx - 16, 0, 14)
 	local closeB = new("TextButton", {
 		Position = UDim2.new(1, -30, 0, 8),
 		Size = UDim2.fromOffset(22, 22),
-		BackgroundTransparency = 1,
+		BackgroundColor3 = Color3.new(0, 0, 0),
+		BackgroundTransparency = o.Image and 0.45 or 1,
 		Text = "X",
 		TextColor3 = Color3.fromRGB(235, 40, 50),
 		TextSize = 12,
 		Font = Enum.Font.GothamBold,
 		AutoButtonColor = false,
+		ZIndex = 5,
 	}, card)
+	corner(closeB, 11)
+	y = y + 56
+
+	-- a note: a colored box with a message, for example how to get the key
+	if o.Note then
+		local noteColor = pickColor(o.NoteColor, theme.Accent)
+		local text = (o.NoteIcon and (tostring(o.NoteIcon) .. "  ") or "") .. tostring(o.Note)
+		local lines = 0
+		for part in (text .. "\n"):gmatch("(.-)\n") do
+			lines += math.max(1, math.ceil(#part / 44))
+		end
+		local nh = 14 + lines * 13
+		local nb = new("Frame", { Position = UDim2.fromOffset(16, y), Size = UDim2.new(1, -32, 0, nh), BackgroundColor3 = noteColor:Lerp(Color3.new(0, 0, 0), 0.7), BorderSizePixel = 0 }, card)
+		corner(nb, 8)
+		new("UIStroke", { Color = noteColor, Thickness = 1, Transparency = 0.35, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, nb)
+		local bar = new("Frame", { Size = UDim2.new(0, 3, 1, -10), Position = UDim2.fromOffset(5, 5), BackgroundColor3 = noteColor, BorderSizePixel = 0 }, nb)
+		corner(bar, 2)
+		local nt = new("TextLabel", {
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(15, 0),
+			Size = UDim2.new(1, -22, 1, 0),
+			Text = text,
+			TextWrapped = true,
+			TextSize = 10,
+			Font = Enum.Font.GothamMedium,
+			TextColor3 = C.Text,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextYAlignment = Enum.TextYAlignment.Center,
+		}, nb)
+		y = y + nh + 8
+	end
+
 	local box = new("TextBox", {
-		Position = UDim2.fromOffset(16, 62),
+		Position = UDim2.fromOffset(16, y),
 		Size = UDim2.new(1, -32, 0, 34),
 		BackgroundColor3 = theme.Inset,
 		BorderSizePixel = 0,
 		Text = "",
-		PlaceholderText = "your key",
+		PlaceholderText = o.Placeholder or "your key",
 		PlaceholderColor3 = C.Dim,
 		TextColor3 = C.Text,
 		TextSize = 12,
@@ -6339,15 +6432,25 @@ function RebelUI:KeyGate(o)
 	}, card)
 	corner(box, 8)
 	new("UIStroke", { Color = theme.Dark, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, box)
+	y = y + 38
 	local status = label(card, "", 10, C.Dim, false)
-	status.Position = UDim2.fromOffset(16, 100)
+	status.Position = UDim2.fromOffset(16, y)
 	status.Size = UDim2.new(1, -32, 0, 14)
+	y = y + 18
 
-	local function button(text, x, w, accent)
+	-- buttons: Continue, then your own (Buttons = { { Name, Color, Link, Callback } }). Link = "Get key" shortcut.
+	local list = {}
+	if o.Link then
+		list[#list + 1] = { Name = o.LinkName or "Get key", Color = o.LinkColor or "Green", Link = o.Link }
+	end
+	for _, b in ipairs(o.Buttons or {}) do
+		list[#list + 1] = b
+	end
+	local function button(text, x, yy, wFrac, wOff, color, glow)
 		local b = new("TextButton", {
-			Position = UDim2.new(0, x, 0, 124),
-			Size = UDim2.new(w, -6, 0, 34),
-			BackgroundColor3 = accent and theme.Accent or theme.Item,
+			Position = UDim2.new(x, x == 0 and 16 or 3, 0, yy),
+			Size = UDim2.new(wFrac, wOff, 0, 34),
+			BackgroundColor3 = color,
 			BorderSizePixel = 0,
 			Text = text,
 			TextColor3 = C.Text,
@@ -6356,27 +6459,54 @@ function RebelUI:KeyGate(o)
 			AutoButtonColor = false,
 		}, card)
 		corner(b, 8)
-		if accent then
-			new("UIStroke", { Color = theme.Glow, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, b)
-		end
+		new("UIStroke", { Color = color:Lerp(Color3.new(1, 1, 1), 0.45), Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, b)
+		local base = color
+		b.MouseEnter:Connect(function()
+			tween(b, 0.12, { BackgroundColor3 = base:Lerp(Color3.new(1, 1, 1), 0.18) })
+		end)
+		b.MouseLeave:Connect(function()
+			tween(b, 0.12, { BackgroundColor3 = base })
+		end)
+		b.MouseButton1Down:Connect(function()
+			tween(b, 0.08, { Size = UDim2.new(wFrac, wOff - 4, 0, 30) })
+		end)
+		b.MouseButton1Up:Connect(function()
+			tween(b, 0.1, { Size = UDim2.new(wFrac, wOff, 0, 34) })
+		end)
 		return b
 	end
-	local hasLink = o.Link ~= nil
-	local go = button("Continue", 16, hasLink and 0.5 or 1, true)
-	if not hasLink then
-		go.Size = UDim2.new(1, -32, 0, 34)
-	end
-	local getB
-	if hasLink then
-		getB = button("Get key", 0, 0.5, false)
-		getB.Position = UDim2.new(0.5, 6, 0, 124)
-		getB.Size = UDim2.new(0.5, -22, 0, 34)
-		go.Size = UDim2.new(0.5, -22, 0, 34)
+	local go = button(o.ContinueText or "Continue", 0, y, 1, -32, pickColor(o.ContinueColor, theme.Accent), true)
+	y = y + 40
+	local i = 1
+	while i <= #list do
+		local pair = (list[i + 1] ~= nil) and 2 or 1
+		for k = 0, pair - 1 do
+			local def = list[i + k]
+			local b
+			if pair == 2 then
+				b = button(tostring(def.Name or "Link"), k * 0.5, y, 0.5, k == 0 and -19 or -19, pickColor(def.Color, BTN.Gray))
+			else
+				b = button(tostring(def.Name or "Link"), 0, y, 1, -32, pickColor(def.Color, BTN.Gray))
+			end
+			b.MouseButton1Click:Connect(function()
+				if def.Callback then
+					task.spawn(def.Callback)
+				end
+				if def.Link then
+					local ok = type(setclipboard) == "function" and pcall(setclipboard, tostring(def.Link))
+					status.TextColor3 = C.Dim
+					status.Text = ok and (def.Message or "Link copied. Paste it in your browser.") or tostring(def.Link)
+				end
+			end)
+		end
+		y = y + 40
+		i = i + pair
 	end
 	local foot = label(card, o.Footer or "", 9, C.Dim, false)
-	foot.Position = UDim2.fromOffset(16, 168)
+	foot.Position = UDim2.fromOffset(16, y + 2)
 	foot.Size = UDim2.new(1, -32, 0, 14)
 	foot.TextXAlignment = Enum.TextXAlignment.Center
+	card.Size = UDim2.fromOffset(CARD_W, y + (o.Footer and 22 or 8))
 
 	local result, savedKey
 	local busy = false
@@ -6392,12 +6522,21 @@ function RebelUI:KeyGate(o)
 			local k = trim(box.Text)
 			if valid(k) then
 				status.TextColor3 = C.Green
-				status.Text = "Correct. Welcome!"
+				status.Text = o.SuccessText or "Correct. Welcome!"
 				if o.Save ~= false and type(writefile) == "function" then
 					pcall(writefile, file, k)
 				end
 				savedKey = k
-				task.wait(0.5)
+				if o.Boom ~= false then
+					pcall(RebelUI.Boom, gui, { Color = theme.Glow, Count = 28, Text = o.BoomText })
+					tween(card, 0.12, { Rotation = 1.5 })
+					task.delay(0.12, function()
+						tween(card, 0.4, { Rotation = 0 }, Enum.EasingStyle.Elastic)
+					end)
+					task.wait(0.9)
+				else
+					task.wait(0.5)
+				end
 				result = true
 			else
 				tries += 1
@@ -6417,13 +6556,6 @@ function RebelUI:KeyGate(o)
 			submit()
 		end
 	end)
-	if getB then
-		getB.MouseButton1Click:Connect(function()
-			local ok = type(setclipboard) == "function" and pcall(setclipboard, tostring(o.Link))
-			status.TextColor3 = C.Dim
-			status.Text = ok and "Link copied. Paste it in your browser." or tostring(o.Link)
-		end)
-	end
 	closeB.MouseButton1Click:Connect(function()
 		result = false
 	end)
@@ -9818,6 +9950,620 @@ function Tab:Table(o)
 	end)
 	render()
 	return register(self, {}, obj, "Table")
+end
+
+-- ============================================================ BOOM, image effects, open boom, panic key, hold button, undo toast, mini pill
+-- RebelUI.Boom(parent, { Color, Count, Text, Origin })   a flash, rings and sparks. Win:Boom()  Win:SetOpenBoom("first" | "always" | false)
+-- Tab:Image({ Image, Height, Crop, Effect = "Pulse"|"Float"|"Shimmer"|"Glow"|"Spin"|"Rainbow"|"None", Circle = true, OnClick = fn })
+-- Win:SetPanicKey(Enum.KeyCode.Delete)   hides every RebelUI window and stops its effects; press again to bring them back
+-- Tab:HoldButton({ Name, Seconds = 1, Callback })   Win:NotifyUndo({ Text, OnUndo })   Win:CreateMini({ Toggles = { toggleObj, ... } })
+function RebelUI._imageEffect(img, effect, theme)
+	effect = tostring(effect or "None")
+	if effect == "None" or not img or not img.Parent then
+		return
+	end
+	local TweenService = game:GetService("TweenService")
+	local function loop(inst, props, t, style)
+		local ok, tw = pcall(function()
+			return TweenService:Create(inst, TweenInfo.new(t, style or Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), props)
+		end)
+		if ok and tw then
+			tw:Play()
+		end
+	end
+	local accent = (theme and theme.Glow) or Color3.fromRGB(255, 80, 90)
+	if effect == "Pulse" then
+		local sc = new("UIScale", { Scale = 1 }, img)
+		loop(sc, { Scale = 1.06 }, 0.9)
+	elseif effect == "Float" then
+		local p = img.Position
+		loop(img, { Position = p + UDim2.fromOffset(0, -4) }, 1.2)
+	elseif effect == "Glow" then
+		local st = new("UIStroke", { Color = accent, Thickness = 2, Transparency = 0.2 }, img)
+		loop(st, { Thickness = 4, Transparency = 0.7 }, 0.9)
+	elseif effect == "Rainbow" then
+		local st = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2 }, img)
+		local g = new("UIGradient", { Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 60, 60)), ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 220, 60)), ColorSequenceKeypoint.new(0.66, Color3.fromRGB(60, 200, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 60, 60)) }) }, st)
+		loop(g, { Rotation = 360 }, 3, Enum.EasingStyle.Linear)
+	elseif effect == "Spin" then
+		loop(img, { Rotation = 360 }, 6, Enum.EasingStyle.Linear)
+	elseif effect == "Shimmer" then
+		local sh = new("Frame", { Size = UDim2.new(0.25, 0, 1.4, 0), Position = UDim2.new(-0.4, 0, -0.2, 0), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.82, BorderSizePixel = 0, Rotation = 18, ZIndex = (img.ZIndex or 1) + 1 }, img)
+		loop(sh, { Position = UDim2.new(1.2, 0, -0.2, 0) }, 1.8, Enum.EasingStyle.Quad)
+	end
+end
+
+function RebelUI.Boom(parent, o)
+	o = o or {}
+	if not parent then
+		return
+	end
+	local color = o.Color or Color3.fromRGB(255, 200, 80)
+	local count = math.clamp(math.floor(o.Count or 24), 4, 60)
+	local origin = o.Origin or UDim2.fromScale(0.5, 0.5)
+	local vp = (workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize) or Vector2.new(800, 450)
+	local R = math.min(vp.X, vp.Y) * 0.55
+	local holder = new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 300, Active = false }, parent)
+	local flash = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = color:Lerp(Color3.new(1, 1, 1), 0.6), BackgroundTransparency = 0.55, BorderSizePixel = 0, ZIndex = 300 }, holder)
+	tween(flash, 0.35, { BackgroundTransparency = 1 })
+	for i = 1, 3 do
+		local r = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = origin, Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1, ZIndex = 301 }, holder)
+		corner(r, 500)
+		local st = new("UIStroke", { Color = i == 2 and Color3.new(1, 1, 1) or color, Thickness = 5 - i, Transparency = 0.05 }, r)
+		task.delay((i - 1) * 0.09, function()
+			if r.Parent then
+				tween(r, 0.6, { Size = UDim2.fromOffset(R * (0.6 + i * 0.3), R * (0.6 + i * 0.3)) }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+				tween(st, 0.6, { Transparency = 1, Thickness = 1 })
+			end
+		end)
+	end
+	for i = 1, count do
+		local ang = (i / count) * math.pi * 2 + math.random() * 0.3
+		local dist = R * (0.35 + math.random() * 0.65)
+		local sp = new("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = origin,
+			Size = UDim2.fromOffset(4, math.random(10, 22)),
+			BackgroundColor3 = (i % 3 == 0) and Color3.new(1, 1, 1) or color,
+			BorderSizePixel = 0,
+			Rotation = math.deg(ang) + 90,
+			ZIndex = 302,
+		}, holder)
+		corner(sp, 2)
+		tween(sp, 0.55 + math.random() * 0.35, {
+			Position = UDim2.new(origin.X.Scale, origin.X.Offset + math.cos(ang) * dist, origin.Y.Scale, origin.Y.Offset + math.sin(ang) * dist),
+			BackgroundTransparency = 1,
+			Size = UDim2.fromOffset(2, 4),
+		}, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	end
+	if o.Text then
+		local t = new("TextLabel", { AnchorPoint = Vector2.new(0.5, 0.5), Position = origin, Size = UDim2.fromOffset(300, 60), BackgroundTransparency = 1, Text = tostring(o.Text), Font = Enum.Font.GothamBlack, TextSize = 44, TextColor3 = Color3.new(1, 1, 1), TextStrokeTransparency = 0.2, TextStrokeColor3 = color, ZIndex = 303 }, holder)
+		local sc = new("UIScale", { Scale = 0.2 }, t)
+		tween(sc, 0.35, { Scale = 1.15 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+		task.delay(0.7, function()
+			if t.Parent then
+				tween(t, 0.4, { TextTransparency = 1, TextStrokeTransparency = 1 })
+			end
+		end)
+	end
+	task.delay(1.4, function()
+		holder:Destroy()
+	end)
+end
+
+function Window:Boom(o)
+	o = o or {}
+	if self.ReduceMotion or not self.Gui then
+		return
+	end
+	local origin
+	pcall(function()
+		local m = self.Main
+		origin = UDim2.fromOffset(m.AbsolutePosition.X + m.AbsoluteSize.X / 2, m.AbsolutePosition.Y + m.AbsoluteSize.Y / 2)
+	end)
+	RebelUI.Boom(self.Gui, { Color = o.Color or self.Theme.Glow, Count = o.Count or 30, Text = o.Text, Origin = origin })
+	if o.Shake ~= false then
+		self:Shake(1.6, 0.35)
+	end
+end
+
+function Window:SetOpenBoom(mode)
+	self.OpenBoom = mode
+	self._boomed = false
+	if not Window._boomWrapped then
+		Window._boomWrapped = true
+		local base = Window.Toggle
+		function Window:Toggle(state)
+			local was = self.Open
+			base(self, state)
+			if self.Open and not was and self.OpenBoom and (self.OpenBoom == "always" or not self._boomed) then
+				self._boomed = true
+				task.defer(function()
+					pcall(self.Boom, self, { Text = self.BoomText })
+				end)
+			end
+		end
+	end
+	return self
+end
+
+function Window:SetPanicKey(key)
+	local win = self
+	if win._panicConn then
+		win._panicConn:Disconnect()
+	end
+	key = key or Enum.KeyCode.Delete
+	win._panicConn = UIS.InputBegan:Connect(function(i, gp)
+		if gp or i.KeyCode ~= key then
+			return
+		end
+		win._panic = not win._panic
+		if win._panic then
+			win._panicWas = win.Open
+			win:Toggle(false)
+			if win._fab then
+				win._fabWas = win._fab.Visible
+				win._fab.Visible = false
+			end
+			if win._bar then
+				pcall(win._bar.Show, win._bar, false)
+			end
+		else
+			if win._fab then
+				win._fab.Visible = win._fabWas ~= false and not win.Open
+			end
+			if win._bar and win._hasBar then
+				pcall(win._bar.Show, win._bar, true)
+			end
+			if win._panicWas then
+				win:Toggle(true)
+			end
+		end
+	end)
+	return win
+end
+
+function Tab:HoldButton(o)
+	o = o or {}
+	local win = self.Win
+	local secs = math.max(0.3, o.Seconds or 1)
+	local row = self:_row(36)
+	local fill = new("Frame", { Size = UDim2.fromScale(0, 1), BackgroundTransparency = 0.55, BorderSizePixel = 0, ZIndex = 2 }, row)
+	corner(fill, 8)
+	local nm = label(row, o.Name or "Hold to confirm", 12, C.Text, true)
+	nm.Position = UDim2.fromOffset(12, 0)
+	nm.Size = UDim2.new(1, -24, 1, 0)
+	nm.ZIndex = 3
+	win:_onTheme(function(t)
+		fill.BackgroundColor3 = o.Danger and Color3.fromRGB(215, 50, 60) or t.Accent
+	end)
+	local hit = new("TextButton", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", ZIndex = 4 }, row)
+	local token = 0
+	local function release()
+		token += 1
+		tween(fill, 0.15, { Size = UDim2.fromScale(0, 1) })
+	end
+	hit.MouseButton1Down:Connect(function()
+		token += 1
+		local mine = token
+		fill.Size = UDim2.fromScale(0, 1)
+		tween(fill, secs, { Size = UDim2.fromScale(1, 1) }, Enum.EasingStyle.Linear)
+		task.delay(secs, function()
+			if token == mine then
+				token += 1
+				tween(fill, 0.25, { Size = UDim2.fromScale(0, 1) })
+				if o.Callback then
+					task.spawn(o.Callback)
+				end
+			end
+		end)
+	end)
+	hit.MouseButton1Up:Connect(release)
+	hit.MouseLeave:Connect(release)
+	return register(self, o, {}, "HoldButton")
+end
+
+function Window:NotifyUndo(o)
+	o = o or {}
+	local done = false
+	return self:Notify({
+		Title = o.Title or "Done",
+		Text = o.Text or "Changed.",
+		Duration = o.Duration or 5,
+		Actions = { { Name = o.UndoName or "Undo", Callback = function()
+			if not done then
+				done = true
+				if o.OnUndo then
+					task.spawn(o.OnUndo)
+				end
+			end
+		end } },
+	})
+end
+
+function Window:CreateMini(o)
+	o = o or {}
+	local win = self
+	local items = o.Toggles or {}
+	local pill = new("Frame", {
+		Position = o.Position or UDim2.new(0, 12, 0.5, 0),
+		Size = UDim2.fromOffset(120, 18 + #items * 28),
+		BackgroundColor3 = Color3.fromRGB(14, 14, 18),
+		BackgroundTransparency = 0.1,
+		BorderSizePixel = 0,
+		ZIndex = 60,
+		Active = true,
+	}, win.Gui)
+	corner(pill, 12)
+	local st = new("UIStroke", { Thickness = 1.3 }, pill)
+	win:_onTheme(function(t)
+		st.Color = t.Accent
+	end)
+	local grip = new("TextButton", { Size = UDim2.new(1, 0, 0, 16), BackgroundTransparency = 1, Text = "· · ·", TextColor3 = C.Dim, TextSize = 12, Font = Enum.Font.GothamBold, ZIndex = 61 }, pill)
+	local dragging, off
+	grip.InputBegan:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			off = Vector2.new(i.Position.X, i.Position.Y) - pill.AbsolutePosition
+		end
+	end)
+	UIS.InputChanged:Connect(function(i)
+		if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+			pill.Position = UDim2.fromOffset(i.Position.X - off.X, i.Position.Y - off.Y)
+		end
+	end)
+	UIS.InputEnded:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+		end
+	end)
+	for n, tg in ipairs(items) do
+		local b = new("TextButton", { Position = UDim2.fromOffset(6, 16 + (n - 1) * 28), Size = UDim2.new(1, -12, 0, 24), AutoButtonColor = false, BorderSizePixel = 0, Text = tostring(tg.Name or ("Toggle " .. n)), TextSize = 10, Font = Enum.Font.GothamBold, TextColor3 = C.Text, ZIndex = 61 }, pill)
+		corner(b, 8)
+		local function paint()
+			local on = false
+			pcall(function()
+				on = tg:Get() == true
+			end)
+			b.BackgroundColor3 = on and win.Theme.Accent or Color3.fromRGB(34, 34, 44)
+		end
+		b.MouseButton1Click:Connect(function()
+			pcall(function()
+				tg:Set(not tg:Get())
+			end)
+			paint()
+		end)
+		win:_onTheme(paint)
+		paint()
+	end
+	local obj = { Frame = pill }
+	function obj:Show(on)
+		pill.Visible = on ~= false
+	end
+	function obj:Destroy()
+		pill:Destroy()
+	end
+	return obj
+end
+
+-- ============================================================ sub-tabs, columns, containers, favorites, theme editor
+-- local sub = Tab:SubTabs({ "Aim", "Visuals", "Misc" })   sub.Aim:Toggle({...})  sub[2]:Slider({...})  sub:Select("Misc")
+-- local cols = Tab:Columns(2)                              cols[1]:Toggle({...})  cols[2]:Button({...})   (stacks into one column on a narrow panel)
+-- local box = Tab:Container()                              a frame that takes every element method; box:Clear() removes what is inside
+-- Win:CreateFavoritesTab({ Name = "Favorites" })           players pick toggles and buttons from other tabs and use them in one place
+-- Win:CreateThemeEditor({ Name = "Theme" })                a color picker for every theme color, with copy / paste of the whole theme
+local function makeContainer(parentTab, parentFrame)
+	local frame = new("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BorderSizePixel = 0 }, parentFrame)
+	local lay = new("UIListLayout", { Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder }, frame)
+	local c = setmetatable({ Win = parentTab.Win, Name = parentTab.Name, Page = frame, _n = 0, Parent = parentTab }, Tab)
+	function c:Clear()
+		for _, ch in ipairs(frame:GetChildren()) do
+			if ch:IsA("GuiObject") then
+				ch:Destroy()
+			end
+		end
+		c._n, c._items, c._secs = 0, nil, nil
+	end
+	function c:SetVisible(v)
+		frame.Visible = v ~= false
+	end
+	return c, frame
+end
+
+function Tab:Container()
+	local wrap = new("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, LayoutOrder = self:_next(), BorderSizePixel = 0 }, self.Page)
+	local c = makeContainer(self, wrap)
+	return c
+end
+
+function Tab:SubTabs(names, o)
+	o = o or {}
+	local win = self.Win
+	local wrap = new("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, LayoutOrder = self:_next(), BorderSizePixel = 0 }, self.Page)
+	new("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }, wrap)
+	local strip = new("ScrollingFrame", { Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 0, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.X, ScrollingDirection = Enum.ScrollingDirection.X, LayoutOrder = 0 }, wrap)
+	new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Center }, strip)
+	new("UIPadding", { PaddingLeft = UDim.new(0, 2), PaddingTop = UDim.new(0, 2) }, strip)
+	local obj, btns, boxes, current = { Names = names }, {}, {}, nil
+	local function paint()
+		for nm, b in pairs(btns) do
+			local on = nm == current
+			b.BackgroundColor3 = on and win.Theme.Accent or Color3.fromRGB(34, 34, 44)
+			b.TextColor3 = on and C.White or C.Dim
+		end
+	end
+	for i, nm in ipairs(names or {}) do
+		nm = tostring(nm)
+		local b = new("TextButton", { Size = UDim2.fromOffset(20, 26), AutomaticSize = Enum.AutomaticSize.X, AutoButtonColor = false, BorderSizePixel = 0, Text = nm, Font = Enum.Font.GothamBold, TextSize = 11, LayoutOrder = i }, strip)
+		corner(b, 13)
+		new("UIPadding", { PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14) }, b)
+		btns[nm] = b
+		local holder = new("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, LayoutOrder = i, Visible = false, BorderSizePixel = 0 }, wrap)
+		local c = makeContainer(self, holder)
+		c.Name = nm
+		boxes[nm] = holder
+		obj[nm] = c
+		obj[i] = c
+		b.MouseButton1Click:Connect(function()
+			obj:Select(nm)
+		end)
+	end
+	function obj:Select(nm)
+		nm = tostring(nm)
+		if not boxes[nm] then
+			return
+		end
+		current = nm
+		for k, h in pairs(boxes) do
+			h.Visible = k == nm
+		end
+		paint()
+	end
+	win:_onTheme(paint)
+	if names and names[1] then
+		obj:Select(o.Default or names[1])
+	end
+	return obj
+end
+
+function Tab:Columns(n, o)
+	o = o or {}
+	n = math.clamp(math.floor(tonumber(n) or 2), 2, 3)
+	local win = self.Win
+	local gap = 6
+	local wrap = new("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, LayoutOrder = self:_next(), BorderSizePixel = 0 }, self.Page)
+	local lay = new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, gap), SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Top }, wrap)
+	local obj, frames = {}, {}
+	for i = 1, n do
+		local holder = new("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1 / n, -gap * (n - 1) / n, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, LayoutOrder = i, BorderSizePixel = 0 }, wrap)
+		local c = makeContainer(self, holder)
+		obj[i] = c
+		frames[i] = holder
+	end
+	local function relayout()
+		local w = 0
+		pcall(function()
+			w = win.Main.AbsoluteSize.X
+		end)
+		local narrow = w > 0 and w < (o.MinWidth or 480)
+		lay.FillDirection = narrow and Enum.FillDirection.Vertical or Enum.FillDirection.Horizontal
+		for _, f in ipairs(frames) do
+			f.Size = narrow and UDim2.new(1, 0, 0, 0) or UDim2.new(1 / n, -gap * (n - 1) / n, 0, 0)
+		end
+	end
+	pcall(function()
+		win.Main:GetPropertyChangedSignal("AbsoluteSize"):Connect(relayout)
+	end)
+	relayout()
+	return obj
+end
+
+function Window:CreateFavoritesTab(o)
+	o = o or {}
+	local win = self
+	local FILE = o.File or "RebelUI_favorites.txt"
+	local chosen = {}
+	pcall(function()
+		if type(isfile) == "function" and isfile(FILE) then
+			for line in tostring(readfile(FILE)):gmatch("[^\n]+") do
+				chosen[line] = true
+			end
+		end
+	end)
+	local function saveFile()
+		pcall(function()
+			if type(writefile) == "function" then
+				local out = {}
+				for k in pairs(chosen) do
+					out[#out + 1] = k
+				end
+				table.sort(out)
+				writefile(FILE, table.concat(out, "\n"))
+			end
+		end)
+	end
+	local tab
+	local body
+	body = function()
+		local picker = tab:Container()
+		local shown = tab:Container()
+		local gen = 0
+		local function key(e)
+			return tostring(e.tab.Name) .. ": " .. tostring(e.o.Name)
+		end
+		local function build()
+			gen += 1
+			local mine = gen
+			shown:Clear()
+			shown:Section("Your favorites")
+			local any = false
+			for _, e in ipairs(win._all or {}) do
+				if (e.kind == "Toggle" or e.kind == "Button") and e.o.Name and e.tab ~= tab and chosen[key(e)] then
+					any = true
+					if e.kind == "Toggle" then
+						local m = shown:Toggle({ Name = tostring(e.o.Name), Default = (function() local ok, v = pcall(e.obj.Get, e.obj) return ok and v == true end)(), Callback = function(v)
+							pcall(function()
+								if e.obj:Get() ~= v then
+									e.obj:Set(v)
+								end
+							end)
+						end })
+						local acc = 0
+						table.insert(win._frame, function(_, dt)
+							if mine ~= gen then
+								return
+							end
+							acc += dt or 0
+							if acc < 0.2 then
+								return
+							end
+							acc = 0
+							pcall(function()
+								local v = e.obj:Get()
+								if m:Get() ~= v then
+									m:Set(v)
+								end
+							end)
+						end)
+					else
+						shown:Button({ Name = tostring(e.o.Name), Description = e.o.Description, Callback = function()
+							if e.o.Callback then
+								task.spawn(e.o.Callback)
+							end
+						end })
+					end
+				end
+			end
+			if not any then
+				shown:Label("Nothing yet. Choose some above, then tap Show.")
+			end
+		end
+		local function pickerUI()
+			picker:Clear()
+			picker:Section("Choose favorites")
+			local items, lookup = {}, {}
+			for _, e in ipairs(win._all or {}) do
+				if (e.kind == "Toggle" or e.kind == "Button") and e.o.Name and e.tab ~= tab then
+					local k = key(e)
+					if not lookup[k] then
+						lookup[k] = true
+						items[#items + 1] = k
+					end
+				end
+			end
+			table.sort(items)
+			if #items == 0 then
+				picker:Label("Open your other tabs once so their toggles and buttons appear here, then tap Refresh.")
+			else
+				local list = picker:List({ Items = items, Multi = true, Search = true, Height = 150 })
+				picker:Button({ Name = "Show these as favorites", Callback = function()
+					chosen = {}
+					for _, k in ipairs(list:Get() or {}) do
+						chosen[k] = true
+					end
+					saveFile()
+					build()
+					win:Notify({ Title = "Favorites updated", Type = "success" })
+				end })
+			end
+			picker:Button({ Name = "Refresh the list", Callback = function()
+				pickerUI()
+				build()
+			end })
+		end
+
+		pickerUI()
+		build()
+	end
+	tab = win:CreateTab({ Name = o.Name or "Favorites", Icon = o.Icon, Title = o.Title or "⭐ FAVORITES", Description = o.Description or "Pick toggles and buttons from your other tabs. They show up here so you can reach them fast." , Build = function(t)
+		tab = t
+		body()
+	end })
+	return tab
+end
+
+function Window:CreateThemeEditor(o)
+	o = o or {}
+	local win = self
+	local tab
+	local body
+	local startName = win.ThemeName
+	body = function()
+		local FIELDS = { { "Accent", "Accent" }, { "Glow", "Glow (bright edge)" }, { "Dark", "Dark (shadows)" }, { "BG0", "Background top" }, { "BG1", "Background bottom" }, { "Item", "Row color" }, { "ItemOn", "Row color (on)" }, { "Inset", "Input boxes" } }
+		local function setField(k, c)
+			local t = {}
+			for kk, vv in pairs(win.Theme) do
+				t[kk] = vv
+			end
+			t[k] = c
+			win.Theme = t
+			win.ThemeName = "Custom"
+			for _, fn in ipairs(win._fns) do
+				pcall(fn, t)
+			end
+		end
+		local function hex(c)
+			return string.format("%02X%02X%02X", math.floor(c.R * 255 + 0.5), math.floor(c.G * 255 + 0.5), math.floor(c.B * 255 + 0.5))
+		end
+		local function unhex(s)
+			s = tostring(s):gsub("#", "")
+			if #s ~= 6 or s:find("[^%x]") then
+				return nil
+			end
+			return Color3.fromRGB(tonumber(s:sub(1, 2), 16), tonumber(s:sub(3, 4), 16), tonumber(s:sub(5, 6), 16))
+		end
+		tab:Section("Colors")
+		for _, f in ipairs(FIELDS) do
+			local k = f[1]
+			tab:Color({ Name = f[2], Default = win.Theme[k] or win.Theme.Accent, Callback = function(c)
+				setField(k, c)
+			end })
+		end
+		tab:Section("Share")
+		tab:Button({ Name = "Copy theme code", Description = "Send it to a friend", Callback = function()
+			local parts = {}
+			for _, f in ipairs(FIELDS) do
+				parts[#parts + 1] = hex(win.Theme[f[1]] or win.Theme.Accent)
+			end
+			local code = "RBLF:" .. table.concat(parts, ",")
+			local ok = type(setclipboard) == "function" and pcall(setclipboard, code)
+			win:Notify({ Title = ok and "Copied" or "Your executor can't copy", Text = ok and "Paste it anywhere." or code, Type = ok and "success" or "warn" })
+		end })
+		tab:Input({ Name = "Paste a theme code", Placeholder = "RBLF:...", Callback = function(text)
+			text = tostring(text or ""):gsub("%s", "")
+			if text:sub(1, 5) ~= "RBLF:" then
+				if win:Import(text) then
+					win:Notify({ Title = "Theme applied", Type = "success" })
+				else
+					win:Notify({ Title = "That is not a theme code", Type = "warn" })
+				end
+				return
+			end
+			local i, okAll = 0, true
+			for h in text:sub(6):gmatch("[^,]+") do
+				i += 1
+				local f, c = FIELDS[i], unhex(h)
+				if f and c then
+					setField(f[1], c)
+				else
+					okAll = false
+				end
+			end
+			win:Notify({ Title = okAll and "Theme applied" or "Part of the code was wrong", Type = okAll and "success" or "warn" })
+		end })
+		tab:Button({ Name = "Reset to the starting theme", Callback = function()
+			if startName and startName ~= "Custom" then
+				win:SetTheme(startName)
+				win:Notify({ Title = "Theme reset", Type = "success" })
+			end
+		end })
+
+	end
+	tab = win:CreateTab({ Name = o.Name or "Theme", Icon = o.Icon, Title = o.Title or "🎨 THEME EDITOR", Description = o.Description or "Change every color live. Copy the code to share your theme." , Build = function(t)
+		tab = t
+		body()
+	end })
+	return tab
 end
 
 return RebelUI
