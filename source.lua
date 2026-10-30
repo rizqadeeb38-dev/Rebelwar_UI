@@ -6307,24 +6307,51 @@ function RebelUI:KeyGate(o)
 		AutoButtonColor = false,
 		BorderSizePixel = 0,
 	}, gui)
-	local CARD_W = 320
+	-- ---------- a wide card: picture on the left, the form on the right (one column when there is no picture)
+	local vp = (workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize) or Vector2.new(800, 450)
+	local LW = (o.Image or o.Logo) and (o.SideWidth or 210) or 0
+	local FW = o.FormWidth or 340
+	local CARD_W = LW + FW
 	local card = new("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(CARD_W, 200),
+		Size = UDim2.fromOffset(CARD_W, 260),
 		BackgroundColor3 = Color3.new(1, 1, 1),
 		Active = true,
 		ClipsDescendants = true,
 	}, back)
-	corner(card, 12)
+	corner(card, 14)
 	new("UIGradient", { Rotation = 90, Color = ColorSequence.new(theme.BG0, theme.BG1) }, card)
 	local scl = new("UIScale", { Scale = 0.7 }, card)
-	local ring = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1.5 }, card)
+	local ring = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2 }, card)
 	local rg = new("UIGradient", { Color = ringSeq(theme) }, ring)
 	local spin = RunService.RenderStepped:Connect(function()
 		rg.Rotation = (os.clock() * 80) % 360
 	end)
-	tween(scl, 0.35, { Scale = 1 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+	-- a background picture for the whole card, with its own opacity (BackgroundOpacity 0..1, default 0.25)
+	if o.Background then
+		local bg = new("ImageLabel", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Image = asset(o.Background), ScaleType = Enum.ScaleType.Crop, ImageTransparency = 1 - math.clamp(o.BackgroundOpacity or 0.25, 0, 1), ZIndex = 0 }, card)
+		RebelUI._imageEffect(bg, o.BackgroundEffect or "None", theme)
+	end
+	-- floating dots (cheap: a few tweens)
+	if o.Particles ~= false and not o.ReduceMotion then
+		for i = 1, 14 do
+			local d = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(math.random(), 1.05), Size = UDim2.fromOffset(math.random(2, 4), math.random(2, 4)), BackgroundColor3 = theme.Glow, BackgroundTransparency = 0.55, BorderSizePixel = 0, ZIndex = 1 }, card)
+			corner(d, 4)
+			task.delay(math.random() * 3, function()
+				pcall(function()
+					local tw = game:GetService("TweenService"):Create(d, TweenInfo.new(4 + math.random() * 4, Enum.EasingStyle.Linear, Enum.EasingDirection.In, -1), { Position = UDim2.fromScale(math.random(), -0.05), BackgroundTransparency = 1 })
+					tw:Play()
+				end)
+			end)
+		end
+	end
+	local fit = math.min(1, (vp.Y * 0.92) / 300, (vp.X * 0.94) / CARD_W)
+	local function fitScale(h)
+		fit = math.min(1, (vp.Y * 0.92) / h, (vp.X * 0.94) / CARD_W)
+		return fit
+	end
+	tween(scl, 0.4, { Scale = fit }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 
 	-- named colors for buttons: Color = "Green" or Color3.fromRGB(...)
 	local BTN = {
@@ -6340,87 +6367,81 @@ function RebelUI:KeyGate(o)
 		return BTN[tostring(c)] or default
 	end
 
-	local y = 0
-	local gate = {}
-	-- an image from Roblox (an asset id), across the top. Effect = "Pulse" | "Float" | "Shimmer" | "Glow" | "None"
-	if o.Image then
-		local ih = o.ImageHeight or 84
-		local pic = new("ImageLabel", {
-			BackgroundColor3 = theme.Inset,
-			BorderSizePixel = 0,
-			Size = UDim2.new(1, 0, 0, ih),
-			Image = asset(o.Image),
-			ScaleType = o.ImageFit and Enum.ScaleType.Fit or Enum.ScaleType.Crop,
-			ClipsDescendants = true,
-		}, card)
-		local fade = new("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, 0, 0, 30), BackgroundColor3 = theme.BG0, BorderSizePixel = 0 }, pic)
-		new("UIGradient", { Rotation = 90, Transparency = NumberSequence.new(1, 0) }, fade)
-		RebelUI._imageEffect(pic, o.ImageEffect or "Shimmer", theme)
-		y = ih + 4
+	-- left side: the picture, a logo and the title over it
+	if LW > 0 then
+		local side = new("Frame", { Size = UDim2.new(0, LW, 1, 0), BackgroundColor3 = theme.Inset, BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 2 }, card)
+		if o.Image then
+			local pic = new("ImageLabel", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Image = asset(o.Image), ScaleType = o.ImageFit and Enum.ScaleType.Fit or Enum.ScaleType.Crop, ZIndex = 2 }, side)
+			RebelUI._imageEffect(pic, o.ImageEffect or "Shimmer", theme)
+		end
+		local shade = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BorderSizePixel = 0, ZIndex = 3 }, side)
+		new("UIGradient", { Rotation = 90, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.55, 0.75), NumberSequenceKeypoint.new(1, 0.15) }) }, shade)
+		local edge = new("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.new(0, 2, 1, 0), BackgroundColor3 = theme.Glow, BorderSizePixel = 0, BackgroundTransparency = 0.35, ZIndex = 4 }, side)
+		if o.Logo then
+			local lg = new("ImageLabel", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -44), Size = UDim2.fromOffset(64, 64), BackgroundColor3 = theme.Inset, BorderSizePixel = 0, Image = asset(o.Logo), ScaleType = Enum.ScaleType.Crop, ZIndex = 5 }, side)
+			corner(lg, 32)
+			new("UIStroke", { Color = theme.Glow, Thickness = 2 }, lg)
+			RebelUI._imageEffect(lg, o.LogoEffect or "Pulse", theme)
+		end
+		local tag = label(side, o.Tagline or "", 9, C.Text, false)
+		tag.Position = UDim2.new(0, 8, 1, -34)
+		tag.Size = UDim2.new(1, -16, 0, 28)
+		tag.TextXAlignment = Enum.TextXAlignment.Center
+		tag.TextWrapped = true
+		tag.ZIndex = 5
 	end
-	local tx = 16
-	if o.Logo then
-		local lg = new("ImageLabel", { Position = UDim2.fromOffset(14, y + 8), Size = UDim2.fromOffset(34, 34), BackgroundColor3 = theme.Inset, BorderSizePixel = 0, Image = asset(o.Logo), ScaleType = Enum.ScaleType.Crop }, card)
-		corner(lg, 17)
-		new("UIStroke", { Color = theme.Glow, Thickness = 1.5 }, lg)
-		RebelUI._imageEffect(lg, o.LogoEffect or "Pulse", theme)
-		tx = 56
-	end
-	local title = label(card, o.Title or "Enter your key", 15, theme.Glow, true)
-	title.Position = UDim2.fromOffset(tx, y + 10)
-	title.Size = UDim2.new(1, -tx - 36, 0, 22)
+
+	-- right side: the form
+	local fx = LW + 18
+	local fw = FW - 36
+	local y = 14
+	local title = label(card, o.Title or "Enter your key", 18, theme.Glow, true)
+	title.Position = UDim2.fromOffset(fx, y)
+	title.Size = UDim2.fromOffset(fw - 26, 24)
 	title.Font = Enum.Font.GothamBlack
+	title.ZIndex = 6
 	local sub = label(card, o.Subtitle or "Paste the key and tap Continue.", 10, C.Dim, false)
-	sub.Position = UDim2.fromOffset(tx, y + 32)
-	sub.Size = UDim2.new(1, -tx - 16, 0, 14)
+	sub.Position = UDim2.fromOffset(fx, y + 25)
+	sub.Size = UDim2.fromOffset(fw, 14)
+	sub.ZIndex = 6
 	local closeB = new("TextButton", {
 		Position = UDim2.new(1, -30, 0, 8),
 		Size = UDim2.fromOffset(22, 22),
 		BackgroundColor3 = Color3.new(0, 0, 0),
-		BackgroundTransparency = o.Image and 0.45 or 1,
+		BackgroundTransparency = 0.45,
 		Text = "X",
 		TextColor3 = Color3.fromRGB(235, 40, 50),
 		TextSize = 12,
 		Font = Enum.Font.GothamBold,
 		AutoButtonColor = false,
-		ZIndex = 5,
+		ZIndex = 8,
 	}, card)
 	corner(closeB, 11)
-	y = y + 56
+	y = y + 48
 
-	-- a note: a colored box with a message, for example how to get the key
 	if o.Note then
 		local noteColor = pickColor(o.NoteColor, theme.Accent)
 		local text = (o.NoteIcon and (tostring(o.NoteIcon) .. "  ") or "") .. tostring(o.Note)
+		local per = math.max(20, math.floor(fw / 6.2))
 		local lines = 0
 		for part in (text .. "\n"):gmatch("(.-)\n") do
-			lines += math.max(1, math.ceil(#part / 44))
+			lines += math.max(1, math.ceil(#part / per))
 		end
 		local nh = 14 + lines * 13
-		local nb = new("Frame", { Position = UDim2.fromOffset(16, y), Size = UDim2.new(1, -32, 0, nh), BackgroundColor3 = noteColor:Lerp(Color3.new(0, 0, 0), 0.7), BorderSizePixel = 0 }, card)
+		local nb = new("Frame", { Position = UDim2.fromOffset(fx, y), Size = UDim2.fromOffset(fw, nh), BackgroundColor3 = noteColor:Lerp(Color3.new(0, 0, 0), 0.7), BackgroundTransparency = 0.12, BorderSizePixel = 0, ZIndex = 6 }, card)
 		corner(nb, 8)
 		new("UIStroke", { Color = noteColor, Thickness = 1, Transparency = 0.35, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, nb)
-		local bar = new("Frame", { Size = UDim2.new(0, 3, 1, -10), Position = UDim2.fromOffset(5, 5), BackgroundColor3 = noteColor, BorderSizePixel = 0 }, nb)
+		local bar = new("Frame", { Size = UDim2.new(0, 3, 1, -10), Position = UDim2.fromOffset(5, 5), BackgroundColor3 = noteColor, BorderSizePixel = 0, ZIndex = 7 }, nb)
 		corner(bar, 2)
-		local nt = new("TextLabel", {
-			BackgroundTransparency = 1,
-			Position = UDim2.fromOffset(15, 0),
-			Size = UDim2.new(1, -22, 1, 0),
-			Text = text,
-			TextWrapped = true,
-			TextSize = 10,
-			Font = Enum.Font.GothamMedium,
-			TextColor3 = C.Text,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			TextYAlignment = Enum.TextYAlignment.Center,
-		}, nb)
+		new("TextLabel", { BackgroundTransparency = 1, Position = UDim2.fromOffset(15, 0), Size = UDim2.new(1, -22, 1, 0), Text = text, TextWrapped = true, TextSize = 10, Font = Enum.Font.GothamMedium, TextColor3 = C.Text, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 7 }, nb)
 		y = y + nh + 8
 	end
 
 	local box = new("TextBox", {
-		Position = UDim2.fromOffset(16, y),
-		Size = UDim2.new(1, -32, 0, 34),
+		Position = UDim2.fromOffset(fx, y),
+		Size = UDim2.fromOffset(fw, 34),
 		BackgroundColor3 = theme.Inset,
+		BackgroundTransparency = 0.1,
 		BorderSizePixel = 0,
 		Text = "",
 		PlaceholderText = o.Placeholder or "your key",
@@ -6429,16 +6450,23 @@ function RebelUI:KeyGate(o)
 		TextSize = 12,
 		Font = Enum.Font.GothamMedium,
 		ClearTextOnFocus = false,
+		ZIndex = 6,
 	}, card)
 	corner(box, 8)
-	new("UIStroke", { Color = theme.Dark, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, box)
+	local boxStroke = new("UIStroke", { Color = theme.Dark, Thickness = 1.2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, box)
+	box.Focused:Connect(function()
+		tween(boxStroke, 0.15, { Color = theme.Glow })
+	end)
+	box.FocusLost:Connect(function()
+		tween(boxStroke, 0.15, { Color = theme.Dark })
+	end)
 	y = y + 38
 	local status = label(card, "", 10, C.Dim, false)
-	status.Position = UDim2.fromOffset(16, y)
-	status.Size = UDim2.new(1, -32, 0, 14)
+	status.Position = UDim2.fromOffset(fx, y)
+	status.Size = UDim2.fromOffset(fw, 14)
+	status.ZIndex = 6
 	y = y + 18
 
-	-- buttons: Continue, then your own (Buttons = { { Name, Color, Link, Callback } }). Link = "Get key" shortcut.
 	local list = {}
 	if o.Link then
 		list[#list + 1] = { Name = o.LinkName or "Get key", Color = o.LinkColor or "Green", Link = o.Link }
@@ -6446,10 +6474,10 @@ function RebelUI:KeyGate(o)
 	for _, b in ipairs(o.Buttons or {}) do
 		list[#list + 1] = b
 	end
-	local function button(text, x, yy, wFrac, wOff, color, glow)
+	local function button(text, px, py, pw, color)
 		local b = new("TextButton", {
-			Position = UDim2.new(x, x == 0 and 16 or 3, 0, yy),
-			Size = UDim2.new(wFrac, wOff, 0, 34),
+			Position = UDim2.fromOffset(px, py),
+			Size = UDim2.fromOffset(pw, 34),
 			BackgroundColor3 = color,
 			BorderSizePixel = 0,
 			Text = text,
@@ -6457,37 +6485,35 @@ function RebelUI:KeyGate(o)
 			TextSize = 12,
 			Font = Enum.Font.GothamBold,
 			AutoButtonColor = false,
+			ZIndex = 6,
 		}, card)
 		corner(b, 8)
 		new("UIStroke", { Color = color:Lerp(Color3.new(1, 1, 1), 0.45), Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, b)
-		local base = color
+		local g = new("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(190, 190, 190)) }, b)
 		b.MouseEnter:Connect(function()
-			tween(b, 0.12, { BackgroundColor3 = base:Lerp(Color3.new(1, 1, 1), 0.18) })
+			tween(b, 0.12, { BackgroundColor3 = color:Lerp(Color3.new(1, 1, 1), 0.18) })
 		end)
 		b.MouseLeave:Connect(function()
-			tween(b, 0.12, { BackgroundColor3 = base })
+			tween(b, 0.12, { BackgroundColor3 = color })
 		end)
 		b.MouseButton1Down:Connect(function()
-			tween(b, 0.08, { Size = UDim2.new(wFrac, wOff - 4, 0, 30) })
+			tween(b, 0.08, { Size = UDim2.fromOffset(pw - 4, 30), Position = UDim2.fromOffset(px + 2, py + 2) })
 		end)
 		b.MouseButton1Up:Connect(function()
-			tween(b, 0.1, { Size = UDim2.new(wFrac, wOff, 0, 34) })
+			tween(b, 0.1, { Size = UDim2.fromOffset(pw, 34), Position = UDim2.fromOffset(px, py) })
 		end)
 		return b
 	end
-	local go = button(o.ContinueText or "Continue", 0, y, 1, -32, pickColor(o.ContinueColor, theme.Accent), true)
+	local go = button(o.ContinueText or "Continue", fx, y, fw, pickColor(o.ContinueColor, theme.Accent))
 	y = y + 40
+	local perRow = o.ButtonsPerRow or (#list >= 3 and 3 or 2)
 	local i = 1
 	while i <= #list do
-		local pair = (list[i + 1] ~= nil) and 2 or 1
-		for k = 0, pair - 1 do
+		local n = math.min(perRow, #list - i + 1)
+		local bw = math.floor((fw - (n - 1) * 6) / n)
+		for k = 0, n - 1 do
 			local def = list[i + k]
-			local b
-			if pair == 2 then
-				b = button(tostring(def.Name or "Link"), k * 0.5, y, 0.5, k == 0 and -19 or -19, pickColor(def.Color, BTN.Gray))
-			else
-				b = button(tostring(def.Name or "Link"), 0, y, 1, -32, pickColor(def.Color, BTN.Gray))
-			end
+			local b = button(tostring(def.Name or "Link"), fx + k * (bw + 6), y, bw, pickColor(def.Color, BTN.Gray))
 			b.MouseButton1Click:Connect(function()
 				if def.Callback then
 					task.spawn(def.Callback)
@@ -6500,13 +6526,15 @@ function RebelUI:KeyGate(o)
 			end)
 		end
 		y = y + 40
-		i = i + pair
+		i = i + n
 	end
 	local foot = label(card, o.Footer or "", 9, C.Dim, false)
-	foot.Position = UDim2.fromOffset(16, y + 2)
-	foot.Size = UDim2.new(1, -32, 0, 14)
-	foot.TextXAlignment = Enum.TextXAlignment.Center
-	card.Size = UDim2.fromOffset(CARD_W, y + (o.Footer and 22 or 8))
+	foot.Position = UDim2.fromOffset(fx, y)
+	foot.Size = UDim2.fromOffset(fw, 14)
+	foot.ZIndex = 6
+	local H = math.max(y + (o.Footer and 22 or 6), LW > 0 and 232 or 0)
+	card.Size = UDim2.fromOffset(CARD_W, H)
+	tween(scl, 0.4, { Scale = fitScale(H) }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 
 	local result, savedKey
 	local busy = false
@@ -8393,6 +8421,9 @@ function Window:CreateToolsTab(o)
 			win:Notify({ Title = ok and "Screenshot" or "Can't capture", Text = ok and "Taken." or "Your executor or this game blocks it.", Type = ok and "success" or "warn" })
 		end })
 	end
+	if win.CurrentTab == tab and buildUI then -- the Tools tab was the first tab and is already open: fill it now
+		buildUI()
+	end
 	return tab
 end
 
@@ -8603,81 +8634,313 @@ function Window:CreateAITab(o)
 		end
 		return table.concat(out)
 	end
+	-- ---- fast answers: several connections race, the first good answer wins ----
+	-- Before this, one slow or dead connection could block the next one for minutes. Now up to 3 run at once,
+	-- a connection that is still silent after 7 seconds no longer holds a slot, and a key Google rejects is skipped for 10 minutes.
+	local blocked = {}
+	local goodKey, goodModel
+	local PAR = 3
 	local function ask(contents, o)
 		o = o or {}
 		if not getReq then
 			return nil, "This executor can't make web requests."
 		end
-		local tries, last = 0, "no answer"
-		for mi, model in ipairs(MODELS) do
-			if not dead[model] then
-				for k = 0, #POOL - 1 do
-					local ki = (keyStart - 1 + k) % #POOL + 1
-					local id = ki .. model
-					if (cool[id] or 0) <= os.clock() then
-						tries += 1
-						if tries > 14 then
-							return nil, last
-						end
-						local useWeb = o.web and not dead.web
-						local body = {
-							tools = useWeb and { { google_search = {} } } or nil,
-							systemInstruction = { parts = { { text = o.sys or system() } } },
-							contents = contents,
-							generationConfig = {
-								maxOutputTokens = o.max or 700,
-								temperature = o.temp or 1,
-								thinkingConfig = { thinkingBudget = o.think or 0 },
-							},
-						}
-						local ok, res = pcall(getReq, {
-							Url = (PROXY and (PROXY .. "/v1beta/models/") or API) .. model .. ":generateContent",
-							Method = "POST",
-							Headers = PROXY and { ["Content-Type"] = "application/json" } or { ["Content-Type"] = "application/json", ["x-goog-api-key"] = POOL[ki] },
-							Body = HttpService:JSONEncode(body),
-						})
-						if ok and res then
-							local okD, data = pcall(HttpService.JSONDecode, HttpService, res.Body or "")
-							if okD and type(data) == "table" then
-								if data.error then
-									local code = res.StatusCode or data.error.code or 0
-									last = tostring(data.error.message or "error"):gsub("AIza[%w%-_]+", ""):sub(1, 90)
-									if useWeb and tostring(data.error.message):lower():find("search") then
-										dead.web = true
-										return ask(contents, o)
-									end
-									if code == 404 then
-										dead[model] = true
-										break
-									end
-									cool[id] = os.clock() + (code == 429 and 30 or 120)
-								else
-									local text = extract(data)
-									if text ~= "" then
-										keyStart = ki
-										return text
-									end
-									last = "empty answer"
-									cool[id] = os.clock() + 5
-								end
-							else
-								last = "bad reply (" .. tostring(res.StatusCode) .. ")"
-								cool[id] = os.clock() + 20
-							end
+		local deadline = os.clock() + (o.timeout or 35)
+		local result, last = nil, "no answer"
+		local combos, seen = {}, {}
+		local function add(ki, model, noWeb)
+			local id = ki .. "|" .. model .. (noWeb and "|w" or "")
+			if not seen[id] then
+				seen[id] = true
+				combos[#combos + 1] = { ki = ki, model = model, id = id, noWeb = noWeb }
+			end
+		end
+		if goodKey and goodModel then
+			add(goodKey, goodModel)
+		end
+		for _, model in ipairs(MODELS) do
+			for k = 0, #POOL - 1 do
+				add((keyStart - 1 + k) % #POOL + 1, model)
+			end
+		end
+		local flights, nextI, launched = {}, 1, 0
+		local function usable(c)
+			return not dead[c.model] and (blocked[c.ki] or 0) <= os.clock() and (cool[c.id] or 0) <= os.clock()
+		end
+		local function launch(c)
+			local rec = { t0 = os.clock(), done = false }
+			flights[#flights + 1] = rec
+			launched += 1
+			task.spawn(function()
+				local ki, model, id = c.ki, c.model, c.id
+				local useWeb = o.web and not dead.web and not c.noWeb
+				local gen = {
+					maxOutputTokens = o.max or 700,
+					temperature = o.temp or 1,
+				}
+				if model:find("2.5", 1, true) or model:find("latest", 1, true) or model:find("3", 1, true) then
+					gen.thinkingConfig = { thinkingBudget = o.think or 0 }
+				end
+				local body = {
+					tools = useWeb and { { google_search = {} } } or nil,
+					systemInstruction = { parts = { { text = o.sys or system() } } },
+					contents = contents,
+					generationConfig = gen,
+				}
+				local ok, res = pcall(getReq, {
+					Url = (PROXY and (PROXY .. "/v1beta/models/") or API) .. model .. ":generateContent",
+					Method = "POST",
+					Headers = PROXY and { ["Content-Type"] = "application/json" } or { ["Content-Type"] = "application/json", ["x-goog-api-key"] = POOL[ki] },
+					Body = HttpService:JSONEncode(body),
+				})
+				rec.done = true
+				if result then
+					return
+				end
+				if not (ok and res) then
+					last = "request failed"
+					cool[id] = os.clock() + 10
+					return
+				end
+				local okD, data = pcall(HttpService.JSONDecode, HttpService, res.Body or "")
+				if not (okD and type(data) == "table") then
+					last = "bad reply (" .. tostring(res.StatusCode) .. ")"
+					cool[id] = os.clock() + 20
+					return
+				end
+				if data.error then
+					local code = tonumber(res.StatusCode or data.error.code) or 0
+					local msg = tostring(data.error.message or "error")
+					local low = msg:lower()
+					last = (msg:gsub("AIza[%w%-_]+", "")):sub(1, 90)
+					if useWeb and low:find("search", 1, true) then
+						dead.web = true
+						add(ki, model, true)
+					elseif code == 404 then
+						dead[model] = true
+					elseif code == 403 or low:find("api key", 1, true) or low:find("leaked", 1, true) or low:find("permission", 1, true) then
+						if PROXY then
+							cool[id] = os.clock() + 20
 						else
-							last = "request failed"
-							cool[id] = os.clock() + 10
+							blocked[ki] = os.clock() + 600
 						end
+					elseif code == 429 then
+						cool[id] = os.clock() + 30
+					elseif code >= 500 then
+						cool[id] = os.clock() + 10
+					else
+						cool[id] = os.clock() + 120
+					end
+					return
+				end
+				local text = extract(data)
+				if text ~= "" then
+					result = text
+					keyStart, goodKey, goodModel = ki, ki, model
+				else
+					last = "empty answer"
+					cool[id] = os.clock() + 5
+				end
+			end)
+		end
+		while result == nil and os.clock() < deadline do
+			local active, alive = 0, false
+			for _, r in ipairs(flights) do
+				if not r.done then
+					alive = true
+					if os.clock() - r.t0 < 7 then
+						active += 1
 					end
 				end
 			end
+			while active < PAR and nextI <= #combos and launched < 18 do
+				local c = combos[nextI]
+				nextI += 1
+				if usable(c) then
+					launch(c)
+					active += 1
+					alive = true
+				end
+			end
+			if not alive and nextI > #combos then
+				break
+			end
+			task.wait(0.05)
+		end
+		if result then
+			return result
+		end
+		if os.clock() >= deadline then
+			last = "the connection is slow (" .. tostring(last) .. ")"
 		end
 		return nil, last
 	end
 
-	-- ---- voice: speaks the bot's replies with Google Translate's voice ----
+	-- ---- voice: boy and bot voices ----
+	-- Real voices come from Google's text-to-speech (the same connection as the chat). If that is not available the bot
+	-- falls back to a plain voice that is lowered and filtered so it still sounds like a boy or a bot. Each preset is a voice
+	-- name, a style line, and sound effects (pitch, robot, echo) that you can change with the sliders.
+	local VOICES = {
+		["Handsome Boy"] = { voice = "Orus", style = "Say this in a smooth, warm, confident voice of a handsome young man. Calm, charming, a little playful:", pitch = 0.97 },
+		["Smooth Boy"] = { voice = "Charon", style = "Say this in a soft, smooth, low voice of a relaxed young man:", pitch = 0.96 },
+		["Hype Boy"] = { voice = "Fenrir", style = "Say this in an energetic, excited voice of a cheerful young man:", pitch = 1.0 },
+		["Chill Boy"] = { voice = "Puck", style = "Say this in a laid-back, friendly voice of a young man:", pitch = 0.98 },
+		["Deep Hero"] = { voice = "Algenib", style = "Say this in a deep, heroic movie-trailer voice of a strong man:", pitch = 0.92 },
+		["Narrator"] = { voice = "Rasalgethi", style = "Say this like a calm, wise male storyteller:", pitch = 0.98 },
+		["Robot Bot"] = { voice = "Iapetus", style = "Say this in a flat, monotone, robotic voice:", pitch = 0.95, robot = 0.7 },
+		["Retro Bot"] = { voice = "Iapetus", style = "Say this in a mechanical, computer voice:", pitch = 0.88, robot = 0.9, echo = true, offline = true },
+		["Offline Boy (deepened)"] = { offline = true, pitch = 0.82 },
+	}
+	RebelUI.VoicePresets = { "Handsome Boy", "Smooth Boy", "Hype Boy", "Chill Boy", "Deep Hero", "Narrator", "Robot Bot", "Retro Bot", "Offline Boy (deepened)" }
 	local voiceOn, voiceSpeed, voiceLang = false, 1, "en"
+	local voicePreset, voicePitch, voiceRobot, voiceEcho = "Handsome Boy", 1, 0, false
+	local TTS_MODEL = "gemini-2.5-flash-preview-tts"
 	local sound, speakId = nil, 0
+
+	local DEC = {}
+	do
+		local alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+		for i = 1, #alphabet do
+			DEC[alphabet:byte(i)] = i - 1
+		end
+	end
+	local function b64fast(s)
+		s = s:gsub("[^%w%+/]", "")
+		local out, n = {}, 0
+		local byte, char = string.byte, string.char
+		for i = 1, #s - 3, 4 do
+			local a, b, c, d = byte(s, i, i + 3)
+			local v = DEC[a] * 262144 + DEC[b] * 4096 + DEC[c] * 64 + DEC[d]
+			n += 1
+			out[n] = char(math.floor(v / 65536), math.floor(v / 256) % 256, v % 256)
+		end
+		local rest = #s % 4
+		if rest >= 2 then
+			local i = #s - rest + 1
+			local a, b, c = byte(s, i, i + 2)
+			local v = DEC[a] * 262144 + DEC[b] * 4096 + (rest == 3 and DEC[c] * 64 or 0)
+			n += 1
+			out[n] = char(math.floor(v / 65536)) .. (rest == 3 and char(math.floor(v / 256) % 256) or "")
+		end
+		return table.concat(out)
+	end
+	local function wavOf(pcm, rate)
+		local n = #pcm
+		return string.pack("<c4I4c4c4I4I2I2I4I4I2I2c4I4", "RIFF", 36 + n, "WAVE", "fmt ", 16, 1, 1, rate, rate * 2, 2, 16, "data", n) .. pcm
+	end
+	-- Google text-to-speech: returns a WAV file as a string, or nil
+	local function ttsGoogle(text, preset)
+		if not getReq or not preset.voice then
+			return nil
+		end
+		local result
+		local deadline = os.clock() + 16
+		local started = 0
+		local order = {}
+		for k = 0, #POOL - 1 do
+			local ki = (keyStart - 1 + k) % #POOL + 1
+			if (blocked[ki] or 0) <= os.clock() then
+				order[#order + 1] = ki
+			end
+		end
+		local active = 0
+		local idx = 1
+		local function launch(ki)
+			active += 1
+			started += 1
+			task.spawn(function()
+				local ok, res = pcall(getReq, {
+					Url = (PROXY and (PROXY .. "/v1beta/models/") or API) .. TTS_MODEL .. ":generateContent",
+					Method = "POST",
+					Headers = PROXY and { ["Content-Type"] = "application/json" } or { ["Content-Type"] = "application/json", ["x-goog-api-key"] = POOL[ki] },
+					Body = HttpService:JSONEncode({
+						contents = { { parts = { { text = preset.style .. " " .. text } } } },
+						generationConfig = {
+							responseModalities = { "AUDIO" },
+							speechConfig = { voiceConfig = { prebuiltVoiceConfig = { voiceName = preset.voice } } },
+						},
+					}),
+				})
+				active -= 1
+				if result or not (ok and res) then
+					return
+				end
+				local okD, data = pcall(HttpService.JSONDecode, HttpService, res.Body or "")
+				if okD and type(data) == "table" and not data.error then
+					local part = data.candidates and data.candidates[1] and data.candidates[1].content and data.candidates[1].content.parts and data.candidates[1].content.parts[1]
+					local inline = part and (part.inlineData or part.inline_data)
+					if inline and inline.data then
+						local rate = tonumber(tostring(inline.mimeType or inline.mime_type or ""):match("rate=(%d+)")) or 24000
+						local okB, pcm = pcall(b64fast, inline.data)
+						if okB and pcm and #pcm > 1000 then
+							result = wavOf(pcm, rate)
+						end
+					end
+				elseif okD and type(data) == "table" and data.error then
+					local msg = tostring(data.error.message or ""):lower()
+					if tonumber(res.StatusCode) == 403 or msg:find("api key", 1, true) or msg:find("leaked", 1, true) then
+						if not PROXY then
+							blocked[ki] = os.clock() + 600
+						end
+					end
+				end
+			end)
+		end
+		while not result and os.clock() < deadline and started < 6 do
+			if active < 2 and order[idx] then
+				launch(order[idx])
+				idx += 1
+			elseif active == 0 and not order[idx] then
+				break
+			end
+			task.wait(0.05)
+		end
+		while not result and active > 0 and os.clock() < deadline do
+			task.wait(0.05)
+		end
+		return result
+	end
+	-- the fallback voice (Google Translate), lowered later by the pitch effect
+	local function ttsFallback(text)
+		local ok, res = pcall(getReq, {
+			Url = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=" .. voiceLang .. "&q=" .. HttpService:UrlEncode(text),
+			Method = "GET",
+		})
+		if ok and res and res.Body and #res.Body > 200 then
+			return res.Body
+		end
+	end
+	-- the voice changer: pitch, robot (distortion + chorus) and echo, as Roblox sound effects
+	local function applyEffects(snd, preset)
+		for _, ch in ipairs(snd:GetChildren()) do
+			if ch.Name == "RebelFX" then
+				ch:Destroy()
+			end
+		end
+		local function add(class, props)
+			pcall(function()
+				local e = Instance.new(class)
+				e.Name = "RebelFX"
+				for k, v in pairs(props) do
+					e[k] = v
+				end
+				e.Parent = snd
+			end)
+		end
+		local pitch = math.clamp((preset.pitch or 1) * voicePitch, 0.5, 1.6)
+		if math.abs(pitch - 1) > 0.01 then
+			add("PitchShiftSoundEffect", { Octave = pitch })
+		end
+		local robot = math.clamp(math.max(preset.robot or 0, voiceRobot), 0, 1)
+		if robot > 0.02 then
+			add("DistortionSoundEffect", { Level = 0.15 + robot * 0.5 })
+			add("ChorusSoundEffect", { Depth = 0.3 + robot * 0.5, Mix = 0.3 + robot * 0.4, Rate = 4 + robot * 8 })
+			add("EqualizerSoundEffect", { LowGain = -4, MidGain = 3 + robot * 4, HighGain = -2 })
+		end
+		if voiceEcho or preset.echo then
+			add("EchoSoundEffect", { Delay = 0.18, Feedback = 0.3, DryLevel = 0, WetLevel = -6 })
+		end
+	end
 	local function stopVoice()
 		speakId += 1
 		if sound then
@@ -8689,48 +8952,78 @@ function Window:CreateAITab(o)
 	local function speak(text)
 		stopVoice()
 		local my = speakId
-		text = text:gsub("```.-```", " code block. "):gsub("[%*`#_]", ""):gsub("%s+", " ")
+		text = text:gsub("```.-```", " code block. "):gsub("%[%[.-%]%]", ""):gsub("[%*`#_]", ""):gsub("%s+", " ")
 		if text == "" or not getReq or not getcustomasset or not writefile then
 			return false
 		end
 		task.spawn(function()
 			local chunks = {}
-			for s in text:gmatch("[^%.%!%?\n]+[%.%!%?]*") do
-				while #s > 180 do
-					local cut = s:sub(1, 180):match("^.*()%s") or 180
-					table.insert(chunks, s:sub(1, cut))
-					s = s:sub(cut + 1)
+			for sentence in text:gmatch("[^%.%!%?\n]+[%.%!%?]*") do
+				while #sentence > 200 do
+					local cut = sentence:sub(1, 200):match("^.*()%s") or 200
+					table.insert(chunks, sentence:sub(1, cut))
+					sentence = sentence:sub(cut + 1)
 				end
-				if s:match("%S") then
-					table.insert(chunks, s)
+				if sentence:match("%S") then
+					table.insert(chunks, sentence)
 				end
 			end
-			for i = 1, math.min(#chunks, 8) do
+			local preset = VOICES[voicePreset] or VOICES["Handsome Boy"]
+			local ready = {} -- prefetch: the next chunk is fetched while this one plays
+			local function fetch(i)
+				if ready[i] ~= nil then
+					return
+				end
+				ready[i] = false
+				task.spawn(function()
+					local data, ext = nil, "wav"
+					if not preset.offline then
+						data = ttsGoogle(chunks[i], preset)
+					end
+					if not data then
+						data = ttsFallback(chunks[i])
+						ext = "mp3"
+					end
+					ready[i] = data and { data = data, ext = ext } or { fail = true }
+				end)
+			end
+			fetch(1)
+			for i = 1, math.min(#chunks, 6) do
 				if my ~= speakId then
 					return
 				end
-				local ok, res = pcall(getReq, {
-					Url = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=" .. voiceLang .. "&q=" .. HttpService:UrlEncode(chunks[i]),
-					Method = "GET",
-				})
-				if ok and res and res.Body and #res.Body > 200 then
-					local file = "RebelAI_voice" .. (i % 2) .. ".mp3"
-					pcall(writefile, file, res.Body)
+				fetch(i + 1 <= #chunks and i + 1 or i)
+				local t0 = os.clock()
+				while (ready[i] == false or ready[i] == nil) and os.clock() - t0 < 20 and my == speakId do
+					task.wait(0.05)
+				end
+				local item = ready[i]
+				if item and item.data and my == speakId then
+					local file = "RebelAI_voice" .. (i % 2) .. "." .. item.ext
+					pcall(writefile, file, item.data)
 					local okA, asset = pcall(getcustomasset, file)
-					if okA and my == speakId then
+					if okA and asset then
 						if not sound then
 							sound = Instance.new("Sound")
 							sound.Name = "RebelAIVoice"
 							sound.Parent = SoundService
 						end
+						-- the fallback voice is deepened so it still sounds like a boy
+						local p = preset
+						if item.ext == "mp3" and not preset.offline then
+							p = { pitch = 0.84, robot = preset.robot, echo = preset.echo }
+						elseif item.ext == "mp3" then
+							p = preset
+						end
+						applyEffects(sound, p)
 						sound.SoundId = asset
 						sound.PlaybackSpeed = voiceSpeed
 						sound.Volume = 1.2
 						sound:Play()
-						local t0 = os.clock()
+						local w0 = os.clock()
 						repeat
 							task.wait(0.1)
-						until my ~= speakId or not sound.IsPlaying and os.clock() - t0 > 0.6 or os.clock() - t0 > 14
+						until my ~= speakId or not sound.IsPlaying and os.clock() - w0 > 0.8 or os.clock() - w0 > 40
 					end
 				end
 			end
@@ -8868,8 +9161,10 @@ function Window:CreateAITab(o)
 		local alive = true
 		task.spawn(function()
 			local i = math.random(#list)
+			local t0 = os.clock()
 			while alive do
-				chat:SetStatus(list[i])
+				local sec = math.floor(os.clock() - t0)
+				chat:SetStatus(sec >= 8 and (list[i] .. "  (" .. sec .. "s, trying another connection)") or list[i])
 				i = i % #list + 1
 				task.wait(1.1)
 			end
@@ -8883,7 +9178,15 @@ function Window:CreateAITab(o)
 			local it = intent(text)
 			local hard = it == "code" or it == "math" or opt.deep
 			local deep = hard or forceThink
-			local reply, err = ask(history, { think = deep and 1024 or 0, max = deep and 2400 or 900, web = opt.web or forceWeb })
+			local reply, err
+			local low = text:lower()
+			if #text < 60 and (low:find("your name", 1, true) or low:find("who are you", 1, true) or low:find("what are you", 1, true)) then
+				reply = "I'm **Rebel AI**, the assistant inside the Rebelwar panel. I can write Luau, invent weird game ideas, explain things and run the game assistant for you. What do you want to do?"
+			elseif it == "hello" then
+				reply = "Hey! I'm **Rebel AI**. What are we doing today?"
+			else
+				reply, err = ask(history, { think = deep and 1024 or 0, max = deep and 2400 or 900, web = opt.web or forceWeb })
+			end
 			if reply and opt.refine and #reply > 80 then
 				list = { "Double-checking my answer", "Hunting for mistakes", "Polishing it" }
 				local fixed = ask({ { role = "user", parts = { { text = "Review this draft answer to the player's message for mistakes, missing steps or anything unclear. Return ONLY the improved final answer (keep any [[...]] tags at the end). If it is already right, return it unchanged.\n\nPlayer: " .. text .. "\n\nDraft:\n" .. reply } } } }, { think = 512, max = 1600 })
@@ -9144,11 +9447,30 @@ function Window:CreateAITab(o)
 				stopVoice()
 			end
 		end })
+		AI:Dropdown({ Name = "Voice (boy / bot)", Options = RebelUI.VoicePresets, Default = "Handsome Boy", Flag = "aiVoicePreset", Callback = function(v)
+			if VOICES[v] then
+				voicePreset = v
+			end
+		end })
+		AI:Slider({ Name = "Voice pitch", Description = "Lower = deeper boy voice", Min = 0.7, Max = 1.3, Default = 1, Step = 0.05, Flag = "aiVoicePitch", Callback = function(v)
+			voicePitch = v
+		end })
+		AI:Slider({ Name = "Robot level", Description = "Adds the bot sound", Min = 0, Max = 1, Default = 0, Step = 0.1, Flag = "aiVoiceRobot", Callback = function(v)
+			voiceRobot = v
+		end })
+		AI:Toggle({ Name = "Echo", Flag = "aiVoiceEcho", Callback = function(on)
+			voiceEcho = on
+		end })
 		AI:Slider({ Name = "Voice speed", Min = 0.7, Max = 1.6, Default = 1, Step = 0.1, Flag = "aiVoiceSpeed", Callback = function(v)
 			voiceSpeed = v
 		end })
-		AI:Dropdown({ Name = "Voice language", Options = { "en", "es", "fr", "de", "pt", "it", "ja", "ko", "ru", "tr", "ar", "id" }, Default = "en", Flag = "aiVoiceLang", Callback = function(v)
+		AI:Dropdown({ Name = "Fallback language", Options = { "en", "es", "fr", "de", "pt", "it", "ja", "ko", "ru", "tr", "ar", "id" }, Default = "en", Flag = "aiVoiceLang", Callback = function(v)
 			voiceLang = tostring(v)
+		end })
+		AI:Button({ Name = "Test the voice", Description = "Plays a short sample with these settings", Callback = function()
+			if not speak("Hey, I'm Rebel AI. How do I sound? Pick the voice you like best.") then
+				Win:Notify({ Title = "Voice", Text = "This executor can't play sound files.", Type = "warn" })
+			end
 		end })
 		AI:Button({ Name = "Stop talking", Callback = stopVoice })
 		AI:Section("Personality")
@@ -9273,6 +9595,9 @@ function Window:CreateAITab(o)
 			end
 		end,
 	})
+	if Win.CurrentTab == AI and buildUI then -- the AI tab was the first tab and is already open: fill it now
+		buildUI()
+	end
 	return AI, api
 end
 
@@ -10564,6 +10889,41 @@ function Window:CreateThemeEditor(o)
 		body()
 	end })
 	return tab
+end
+
+-- Win:SetBackground({ Image = 125144167121839, Opacity = 0.22, Effect = "None" })   a picture behind the whole panel. Opacity 0 to 1. SetBackground() removes it.
+function Window:SetBackground(o)
+	o = type(o) == "table" and o or {}
+	if self._bgImg then
+		self._bgImg:Destroy()
+		self._bgImg = nil
+	end
+	if not o.Image or not self.Main then
+		return self
+	end
+	local img = new("ImageLabel", {
+		Name = "RebelBackground",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		Image = asset(o.Image),
+		ScaleType = o.Fit and Enum.ScaleType.Fit or Enum.ScaleType.Crop,
+		ImageTransparency = 1 - math.clamp(tonumber(o.Opacity) or 0.2, 0, 1),
+		ZIndex = 0,
+	}, self.Main)
+	corner(img, 14)
+	if o.Effect then
+		RebelUI._imageEffect(img, o.Effect, self.Theme)
+	end
+	self._bgImg = img
+	self._bgOpts = o
+	return self
+end
+
+function Window:SetBackgroundOpacity(v)
+	if self._bgImg then
+		self._bgImg.ImageTransparency = 1 - math.clamp(tonumber(v) or 0.2, 0, 1)
+	end
+	return self
 end
 
 return RebelUI
