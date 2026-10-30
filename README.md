@@ -2264,6 +2264,66 @@ local list = Tab:List({ Items = { "Alpha", "Beta" }, Multi = true, Search = true
 local tbl = Tab:Table({ Columns = { "Player", "Kills" }, Rows = { { "Ava", 12 }, { "Ben", 7 } }, PageSize = 8 }) -- tap a header to sort; tbl:SetRows(rows) tbl:AddRow(row)
 ```
 
+## Key screen with an image, a note and colored buttons (`UI:KeyGate`)
+
+```lua
+local ok, key = UI:KeyGate({
+	Name = "Rebelwar", Title = "REBELWAR", Subtitle = "Get your key, then paste it below.",
+	Image = 125144167121839,       -- a Roblox image across the top (any asset id)
+	ImageEffect = "Shimmer",       -- Shimmer, Pulse, Float, Glow, Rainbow, Spin or None
+	Logo = 114659273298746,        -- round logo next to the title
+	LogoEffect = "Rainbow",
+	Note = "Tap Get key, finish the LootLabs steps, and paste the key here.",
+	NoteIcon = "📌",
+	NoteColor = "Gold",            -- Green, Blue, Red, Gold, Purple, Pink, Orange, Cyan, Gray, Discord or a Color3
+	Link = "https://lootlabs.gg/your-link-here", LinkName = "Get key (LootLabs)", LinkColor = "Green", -- copies the link
+	Buttons = {                    -- as many colored buttons as you like, two per row
+		{ Name = "Discord", Color = "Discord", Link = "https://discord.gg/8s7RR3wZ6b" },
+		{ Name = "Help", Color = Color3.fromRGB(52, 120, 235), Callback = function() print("help") end },
+	},
+	Keys = { "REBEL-DEMO" },       -- or: Check = function(key) return key == "..." end (ask your own server)
+	Save = false,                  -- true remembers the key on this device
+	Boom = true, BoomText = "WELCOME", -- explosion when the key is right (Boom = false turns it off)
+})
+if not ok then return end
+```
+
+A key that is checked inside your script can be found by someone who looks hard. For real protection, check it on your own server with `Check`.
+
+## Boom, image effects, panic key, hold button, undo toast, mini pill
+
+```lua
+Win:SetOpenBoom("first")  -- an explosion the first time the panel opens ("always" = every time, false = off)
+Win:Boom({ Text = "BOOM" }) -- the explosion by hand: flash, rings and sparks (RebelUI.Boom(gui, opts) works on any ScreenGui)
+
+Tab:Image({ Image = 114659273298746, Height = 96, Circle = true, Effect = "Rainbow", OnClick = function() end })
+-- Effect: Pulse, Float, Glow, Rainbow, Spin, Shimmer or None. Any Roblox asset id works.
+
+Win:SetPanicKey(Enum.KeyCode.Delete)  -- hides every window and the open button; press again to bring them back
+Tab:HoldButton({ Name = "Hold to confirm", Seconds = 1, Danger = true, Callback = function() end })
+Win:NotifyUndo({ Text = "Setting changed", OnUndo = function() end }) -- a toast with an Undo button
+local pill = Win:CreateMini({ Toggles = { someToggle } }) -- a small draggable pill; pill:Show(false), pill:Destroy()
+```
+
+## Sub-tabs, columns, favorites and the theme editor
+
+```lua
+local sub = Tab:SubTabs({ "Aim", "Visuals", "Misc" })  -- pages inside one tab
+sub.Aim:Toggle({ Name = "Info" })                      -- every element works inside: sub.Visuals:Slider({...}), sub[3]:Button({...})
+sub:Select("Misc")
+
+local cols = Tab:Columns(2)                            -- 2 or 3 columns; on a narrow panel they stack into one
+cols[1]:Toggle({ Name = "Left" })
+cols[2]:Toggle({ Name = "Right" })
+
+local box = Tab:Container()                            -- a frame that takes every element; box:Clear() empties it
+
+Win:CreateFavoritesTab({ Icon = 123456 })  -- players pick toggles and buttons from other tabs and use them in one place (open the tabs once so they appear, then tap Refresh)
+Win:CreateThemeEditor({ Icon = 123456 })   -- a color picker for every theme color; copy the theme code or paste a friend's
+```
+
+Elements inside sub-tabs and columns save with `Flag` like any other element.
+
 ## What is not in here (and why)
 
 Real background blur, book-flip animations, a drag-and-drop builder, a split-view editor, a macro recorder, cloud sync, sound packs, a public gallery with likes, light mode, image / video / voice cloning and "watching video or listening to audio" are not possible or not safe to fake inside a Roblox executor, so they are not included. Votes, badges and notes are saved on your own device only.
