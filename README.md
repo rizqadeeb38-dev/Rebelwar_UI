@@ -2,9 +2,26 @@
 
 **A mobile-friendly panel library for Roblox executors. The same panel, top bar, toggles and loading screen as the Rebelwar Hub.**
 
-![Version](https://img.shields.io/badge/RebelUI-v1.0.0-e94b35)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Platform](https://img.shields.io/badge/works%20on-mobile%20%7C%20PC-blue)
+<p align="center">
+  <a href="https://discord.gg/8s7RR3wZ6b"><img alt="Join the Discord" src="https://img.shields.io/badge/JOIN%20THE%20DISCORD-5865F2?style=for-the-badge&logo=discord&logoColor=white"></a>
+  <a href="https://raw.githubusercontent.com/rizqadeeb38-dev/Rebelwar_UI/main/source.lua"><img alt="source.lua" src="https://img.shields.io/badge/GET%20source.lua-e94b35?style=for-the-badge&logo=lua&logoColor=white"></a>
+  <a href="https://raw.githubusercontent.com/rizqadeeb38-dev/Rebelwar_UI/main/Example.lua"><img alt="Example.lua" src="https://img.shields.io/badge/TRY%20Example.lua-2ea043?style=for-the-badge&logo=roblox&logoColor=white"></a>
+  <a href="#build-it-yourself"><img alt="Docs" src="https://img.shields.io/badge/READ%20THE%20DOCS-f5a524?style=for-the-badge&logo=readthedocs&logoColor=white"></a>
+</p>
+
+<p align="center">
+  <img alt="Version" src="https://img.shields.io/badge/RebelUI-v1.0.0-e94b35?style=flat-square">
+  <img alt="License" src="https://img.shields.io/badge/license-MIT-green?style=flat-square">
+  <img alt="Mobile" src="https://img.shields.io/badge/Mobile-setup-blue?style=flat-square">
+  <img alt="PC" src="https://img.shields.io/badge/PC-setup-8957e5?style=flat-square">
+  <img alt="Executor" src="https://img.shields.io/badge/tested%20on-Delta-black?style=flat-square">
+</p>
+
+<p align="center"><b>Run it in one line</b></p>
+
+```lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/rizqadeeb38-dev/Rebelwar_UI/main/Example.lua"))()
+```
 
 RebelUI gives you a finished panel in a few lines: a spinning-ring window with embers, tabs that have a **Roblox image next to the name** and their own header, **every kind of toggle** (name, description, icon, color, locked, key, checkbox), sliders, dropdowns, color pickers, notifications, a **top bar** where the player chooses what shows (FPS, Timer, Logo and more), a **loading screen**, 14 themes that change live, and saving.
 
@@ -2269,7 +2286,11 @@ local tbl = Tab:Table({ Columns = { "Player", "Kills" }, Rows = { { "Ava", 12 },
 ```lua
 local ok, key = UI:KeyGate({
 	Name = "Rebelwar", Title = "REBELWAR", Subtitle = "Get your key, then paste it below.",
-	Image = 125144167121839,       -- a Roblox image across the top (any asset id)
+	Image = 125144167121839,       -- the picture on the left (any Roblox asset id). The card is wide: picture left, form right
+	Tagline = "Rebelwar | by prorizz196",   -- small text under the logo on the picture
+	Background = 125144167121839,  -- a picture behind the whole card...
+	BackgroundOpacity = 0.22,      -- ...with its own opacity (0 to 1)
+	Particles = true,              -- floating dots (false = off)
 	ImageEffect = "Shimmer",       -- Shimmer, Pulse, Float, Glow, Rainbow, Spin or None
 	Logo = 114659273298746,        -- round logo next to the title
 	LogoEffect = "Rainbow",
@@ -2323,6 +2344,98 @@ Win:CreateThemeEditor({ Icon = 123456 })   -- a color picker for every theme col
 ```
 
 Elements inside sub-tabs and columns save with `Flag` like any other element.
+
+## A picture behind the panel, faster AI, boy and bot voices
+
+```lua
+Win:SetBackground({ Image = 125144167121839, Opacity = 0.18 }) -- a picture behind the whole panel (0 to 1). Win:SetBackground() removes it.
+Win:SetBackgroundOpacity(0.3)
+```
+
+**Faster AI.** The bot used to try one connection after another with no time limit, so one dead key could cost minutes.
+Now up to three connections run at once, the first good answer wins, a key Google rejects is skipped for 10 minutes, the pair
+that worked last time goes first, and a connection that is still silent after 7 seconds no longer holds a place. The chat shows the
+seconds while it works. Greetings and "what is your name" are answered on the spot. The Cloudflare Worker (`Proxy`) is still the best setup.
+
+**Voices.** In the AI tab, open Voice: pick Handsome Boy, Smooth Boy, Hype Boy, Chill Boy, Deep Hero, Narrator, Robot Bot, Retro Bot or Offline Boy.
+They use Google text-to-speech through the same connection as the chat (male voice names, plus a style line). Pitch, Robot level and Echo are
+the voice changer: they add Roblox sound effects on top. If Google's voice is not available the bot falls back to a plain voice that is lowered so it
+still sounds like a boy or a bot. A phone has to download and decode the audio, so the first words take a few seconds; the next sentence is fetched while the first plays.
+
+## Mobile and PC setups, the developer switch and the get-key buttons
+
+[![Discord](https://img.shields.io/badge/Questions%3F%20Ask%20in%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/8s7RR3wZ6b)
+
+**Mobile or PC, detected for you.** `UI.Device()` says `"Mobile"` (touch and no keyboard) or `"PC"`. Windows and key panels use it by themselves (`Setup = "Auto"`), or you force one with `Setup = "Mobile"` / `"PC"`:
+
+| | Mobile setup | PC setup |
+|---|---|---|
+| Panel | compact, fits a phone | wider and taller |
+| Open button | big, thumb-sized (54) | 44 |
+| Key panel | wide, 2 provider buttons per row | wider, 4 provider buttons in one row |
+| Tabs | swipe left / right to change tab | click or Ctrl+1 ... 9 |
+| AI answers | short, tap-friendly | a little more detail |
+
+```lua
+print(UI.Device(), UI.GetSetup("Auto"))
+local Win = UI:CreateWindow({ Title = "My Hub", Setup = "Auto", Ambient = true })
+```
+
+**The open button picture fills the whole button**, as a circle or a square, with the same theme color ring as every other panel:
+
+```lua
+local Win = UI:CreateWindow({ Title = "My Hub", Icon = 114659273298746 }) -- an asset id or a web link to a .png
+Win:SetTrigger("Square") -- "Circle", "Square" or "Bar"
+```
+
+**Developer switch: ON works, OFF does nothing.** Put it right after you load the library:
+
+```lua
+local SCRIPT_ON = true -- false = the script does nothing when somebody runs it
+local SWITCH_URL = nil -- optional: a text file that says "on" or "off", so you can turn it off for everyone later
+if not UI:Switch({ On = SCRIPT_ON, Url = SWITCH_URL, Name = "My Hub", Message = "Switched off for now." }) then
+	return
+end
+```
+
+When it is OFF, `CreateWindow` and `KeyGate` also do nothing, so even a script that forgets the `return` shows no panel. If `SWITCH_URL` can't be read the script keeps working (`FailOpen = false` turns that around).
+
+**Get-key picture buttons** (Linkvertise, Platoboost, Rekonise, Work.ink). The pictures are in `Assets/` and load by themselves (downloaded once, cached in the workspace folder). If a picture can't load, the button stays a colored button with the name:
+
+```lua
+local ok = UI:KeyGate({
+	Name = "My Hub", Title = "MY HUB", Keys = { "ABC-123" },
+	Providers = {
+		{ "Linkvertise", "https://linkvertise.com/your-link" },
+		{ "Platoboost", "https://auth.platoboost.com/your-link" },
+		{ "Rekonise", "https://rekonise.com/your-link" },
+		{ "Work.ink", "https://work.ink/your-link" },
+		-- your own: { Name = "Mine", Link = "https://...", Image = "https://.../pic.png", Color = "Purple" },
+	},
+	ProvidersText = "Get your key",
+	Buttons = { { Name = "Discord", Color = "Discord", Link = "https://discord.gg/8s7RR3wZ6b" } },
+})
+if not ok then return end
+```
+
+The key panel opens with a boom, the form slides in row by row, a line draws under the title, a shine sweeps over Continue, the ring pulses and a wrong key shakes the card. `ReduceMotion = true` turns it all off.
+
+**New in this update:** `Win:CreateNotificationsTab()` (every toast you saw, with an unread number on the tab), swipe between tabs on phones, `Ambient = true` (two soft glowing circles drift behind the panel), and an AI that follows what you ask, double-checks its answer, sends harder questions to the stronger models first and compiles any Luau it writes before giving it to you.
+
+## Summary feed with a red "still working" glow (`Tab:Activity`)
+
+Like the summary an AI app shows while it works: finished steps ("Ran a command" with the command under it), short notes, and one live step with a **pulsing red glow dot and shimmering text** while something is still running.
+
+```lua
+local act = Tab:Activity({ Title = "Summary" })
+act:Working("Sleuthing")                                -- red glow = still working
+act:Add({ Kind = "search" })                            -- Kind: command, search, read, note
+act:Add({ Kind = "command", Detail = "cd /tmp && ls" })
+act:Note("Adding a log of notifications.")
+act:Done()                                              -- the glow stops
+```
+
+The line on top counts the steps for you ("Searched the web, read 2 pages, ran 3 commands"). `act:Clear()` empties it, `act:IsWorking()` tells you if the glow is on.
 
 ## What is not in here (and why)
 
