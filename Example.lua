@@ -41,6 +41,19 @@ if not okRun or type(UI) ~= "table" or not UI.Loading or not UI.CreateWindow or 
 	return
 end
 
+-- ============================================================ DEVELOPER SWITCH
+-- SCRIPT_ON = true  -> the script works.   SCRIPT_ON = false -> it does nothing when someone runs it.
+-- SWITCH_URL (optional): a link to a text file that says "on" or "off". Change that file any time to turn the script on or off
+-- for everyone without re-uploading anything (for example a GitHub raw link to switch.txt). nil = only SCRIPT_ON counts.
+local SCRIPT_ON = true
+local SWITCH_URL = nil -- e.g. "https://raw.githubusercontent.com/rizqadeeb38-dev/Rebelwar_UI/main/switch.txt"
+if not UI:Switch({ On = SCRIPT_ON, Url = SWITCH_URL, Name = "Rebelwar", Message = "Rebelwar is switched off right now. Check the Discord for news." }) then
+	return
+end
+
+-- Setup: "Auto" picks the Mobile or PC layout by itself (touch and no keyboard = Mobile). Force one with "Mobile" or "PC".
+local SETUP = "Auto"
+
 local Load, Win -- made inside main()
 
 local function main()
@@ -88,9 +101,18 @@ local function keyGateOptions(save)
 		Note = "Tap Get key, finish the LootLabs steps, and paste the key here.\nThe key works for the whole day.",
 		NoteIcon = "📌",
 		NoteColor = "Gold", -- Green, Blue, Red, Gold, Purple, Pink, Orange, Cyan, Gray or a Color3
+		Setup = SETUP, -- Auto / Mobile / PC: the key panel sizes itself for the device
 		Link = GET_KEY_LINK,
 		LinkName = "Get key (LootLabs)",
 		LinkColor = "Green",
+		-- the four picture buttons (images load from the repo Assets folder). Put your own link in each one.
+		Providers = {
+			{ "Linkvertise", "https://linkvertise.com/your-link-here" },
+			{ "Platoboost", "https://auth.platoboost.com/your-link-here" },
+			{ "Rekonise", "https://rekonise.com/your-link-here" },
+			{ "Work.ink", "https://work.ink/your-link-here" },
+		},
+		ProvidersText = "Get your key",
 		Buttons = {
 			{ Name = "Discord", Color = "Discord", Link = "https://discord.gg/8s7RR3wZ6b", Message = "Invite copied. Paste it in your browser." },
 			{ Name = "Help", Color = "Blue", Link = "https://discord.gg/8s7RR3wZ6b", Message = "Ask in the Discord server." },
@@ -207,6 +229,8 @@ Win = UI:CreateWindow({
 	Theme = "Red", -- Red, Crimson, Blue, Green, Purple, Orange, Pink, Gold, Cyber, Blood, Ice, Mono
 	Open = false, -- stay closed until the loading screen is done
 	Opacity = 100, -- 100 = solid panel (10 to 100). Players can change it in Settings
+	Setup = SETUP, -- Auto / Mobile / PC. PC gets a wider panel, Mobile a big thumb-sized open button and swipe between tabs
+	Ambient = true, -- two soft glowing circles drift behind the panel
 	Search = true, -- the search box next to the page title
 	Resizable = true, -- drag the corner grip to resize
 	ToggleKey = Enum.KeyCode.RightShift, -- phones use the top bar instead
@@ -235,6 +259,24 @@ local function buildElements(Elements)
 	Elements:Chips({ "Legit", "Rage", "Closet" }, { Closable = true, Callback = function(name, what) Win:Notify({ Title = what, Text = name }) end })
 	local steps = Elements:Steps({ "Pick", "Tune", "Go" }, 1)
 	Elements:Button({ Name = "Next step", Callback = function() steps:Next() end })
+	-- a live "Summary" feed: finished steps, notes, and a red glowing step while something is still working
+	local feed = Elements:Activity({ Title = "Summary" })
+	Elements:Button({ Name = "Run the Summary demo", Description = "Red glow = still working", Callback = function()
+		feed:Clear()
+		task.spawn(function()
+			feed:Working("Sleuthing")
+			task.wait(1.2)
+			feed:Add({ Kind = "search" })
+			task.wait(1)
+			feed:Add({ Kind = "command", Detail = "cd /workspace && ls" })
+			feed:Note("Adding notification history to the window.")
+			task.wait(1.2)
+			feed:Add({ Kind = "command", Detail = "run all tests" })
+			task.wait(1)
+			feed:Done()
+			feed:Note("All done.")
+		end)
+	end })
 	Elements:Timeline({ { Title = "v1.0.0", Time = "today", Text = "RebelUI released" }, { Title = "Watermark + palette", Time = "today" } })
 	Elements:List({ Items = { "Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta" }, Multi = true, Search = true, Callback = function(v) print("picked", #v) end })
 	Elements:Table({ Columns = { "Player", "Kills", "Deaths" }, Rows = { { "Ava", 12, 3 }, { "Ben", 7, 9 }, { "Cy", 21, 2 }, { "Dee", 4, 4 }, { "Eli", 15, 6 } }, PageSize = 4 })
@@ -511,6 +553,7 @@ if USE_AI then
 end
 stage("Building the tools tab...", 0.85)
 local Tools = Win:CreateToolsTab({ Icon = LOGO, Features = { "More themes", "More crosshairs", "Macro recorder", "Cloud sync", "Sound packs" } })
+Win:CreateNotificationsTab({ Icon = LOGO }) -- every toast you saw, with an unread number on the tab
 Win:CreateFavoritesTab({ Icon = LOGO }) -- pick toggles and buttons from other tabs and use them in one place
 Win:CreateThemeEditor({ Icon = LOGO }) -- a color picker for every theme color, with copy / paste of the theme
 stage("Building settings...", 0.92)
