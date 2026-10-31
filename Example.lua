@@ -1,609 +1,588 @@
 --[[
-    RebelUI v1.0.0 · demo panel (the Rebelwar look)
+    𝐑𝐞𝐛𝐞𝐥𝐔𝐈 𝐯𝟏.𝟎.𝟎 · 𝐝𝐞𝐦𝐨 𝐩𝐚𝐧𝐞𝐥 (𝐭𝐡𝐞 𝐑𝐞𝐛𝐞𝐥𝐰𝐚𝐫 𝐥𝐨𝐨𝐤)
 
-    Run this file to SEE what RebelUI can do: a loading screen, the panel with its spinning ring,
-    a top bar (FPS + logo + timer), tabs with Roblox images next to the name, every kind of toggle,
-    sliders, colors, dropdowns, notifications, themes and saving.
+    𝐑𝐮𝐧 𝐭𝐡𝐢𝐬 𝐟𝐢𝐥𝐞 𝐭𝐨 𝐒𝐄𝐄 𝐰𝐡𝐚𝐭 𝐑𝐞𝐛𝐞𝐥𝐔𝐈 𝐜𝐚𝐧 𝐝𝐨: 𝐚 𝐥𝐨𝐚𝐝𝐢𝐧𝐠 𝐬𝐜𝐫𝐞𝐞𝐧, 𝐭𝐡𝐞 𝐩𝐚𝐧𝐞𝐥 𝐰𝐢𝐭𝐡 𝐢𝐭𝐬 𝐬𝐩𝐢𝐧𝐧𝐢𝐧𝐠 𝐫𝐢𝐧𝐠,
+    𝐚 𝐭𝐨𝐩 𝐛𝐚𝐫 (𝐅𝐏𝐒 + 𝐥𝐨𝐠𝐨 + 𝐭𝐢𝐦𝐞𝐫), 𝐭𝐚𝐛𝐬 𝐰𝐢𝐭𝐡 𝐑𝐨𝐛𝐥𝐨𝐱 𝐢𝐦𝐚𝐠𝐞𝐬 𝐧𝐞𝐱𝐭 𝐭𝐨 𝐭𝐡𝐞 𝐧𝐚𝐦𝐞, 𝐞𝐯𝐞𝐫𝐲 𝐤𝐢𝐧𝐝 𝐨𝐟 𝐭𝐨𝐠𝐠𝐥𝐞,
+    𝐬𝐥𝐢𝐝𝐞𝐫𝐬, 𝐜𝐨𝐥𝐨𝐫𝐬, 𝐝𝐫𝐨𝐩𝐝𝐨𝐰𝐧𝐬, 𝐧𝐨𝐭𝐢𝐟𝐢𝐜𝐚𝐭𝐢𝐨𝐧𝐬, 𝐭𝐡𝐞𝐦𝐞𝐬 𝐚𝐧𝐝 𝐬𝐚𝐯𝐢𝐧𝐠.
 
-    Tabs: Elements (one of everything), AI (chat with Rebel AI, with voice), Tools, Discord and Settings.
-    Copy any part you like into your own script. The tutorial is in README.md.
+    𝐓𝐚𝐛𝐬: 𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬 (𝐨𝐧𝐞 𝐨𝐟 𝐞𝐯𝐞𝐫𝐲𝐭𝐡𝐢𝐧𝐠), 𝐓𝐨𝐨𝐥𝐬, 𝐀𝐥𝐞𝐫𝐭𝐬, 𝐃𝐢𝐬𝐜𝐨𝐫𝐝 𝐚𝐧𝐝 𝐒𝐞𝐭𝐭𝐢𝐧𝐠𝐬.
+    𝐂𝐨𝐩𝐲 𝐚𝐧𝐲 𝐩𝐚𝐫𝐭 𝐲𝐨𝐮 𝐥𝐢𝐤𝐞 𝐢𝐧𝐭𝐨 𝐲𝐨𝐮𝐫 𝐨𝐰𝐧 𝐬𝐜𝐫𝐢𝐩𝐭. 𝐓𝐡𝐞 𝐭𝐮𝐭𝐨𝐫𝐢𝐚𝐥 𝐢𝐬 𝐢𝐧 𝐑𝐄𝐀𝐃𝐌𝐄.𝐦𝐝.
 ]]
 
--- To pin the library to one exact version (so a later push to the repo can never change what runs), replace "main" with a
--- commit id from GitHub (the long code next to a commit), e.g. REF = "3f2a9c1d...". "main" always loads the newest file.
-local REF = "main"
-local URL = "https://raw.githubusercontent.com/rizqadeeb38-dev/Rebelwar_UI/" .. REF .. "/source.lua"
+-- 𝐓𝐨 𝐩𝐢𝐧 𝐭𝐡𝐞 𝐥𝐢𝐛𝐫𝐚𝐫𝐲 𝐭𝐨 𝐨𝐧𝐞 𝐞𝐱𝐚𝐜𝐭 𝐯𝐞𝐫𝐬𝐢𝐨𝐧 (𝐬𝐨 𝐚 𝐥𝐚𝐭𝐞𝐫 𝐩𝐮𝐬𝐡 𝐭𝐨 𝐭𝐡𝐞 𝐫𝐞𝐩𝐨 𝐜𝐚𝐧 𝐧𝐞𝐯𝐞𝐫 𝐜𝐡𝐚𝐧𝐠𝐞 𝐰𝐡𝐚𝐭 𝐫𝐮𝐧𝐬), 𝐫𝐞𝐩𝐥𝐚𝐜𝐞 "𝐦𝐚𝐢𝐧" 𝐰𝐢𝐭𝐡 𝐚
+-- 𝐜𝐨𝐦𝐦𝐢𝐭 𝐢𝐝 𝐟𝐫𝐨𝐦 𝐆𝐢𝐭𝐇𝐮𝐛 (𝐭𝐡𝐞 𝐥𝐨𝐧𝐠 𝐜𝐨𝐝𝐞 𝐧𝐞𝐱𝐭 𝐭𝐨 𝐚 𝐜𝐨𝐦𝐦𝐢𝐭), 𝐞.𝐠. 𝐑𝐄𝐅 = "𝟑𝐟𝟐𝐚𝟗𝐜𝟏𝐝...". "𝐦𝐚𝐢𝐧" 𝐚𝐥𝐰𝐚𝐲𝐬 𝐥𝐨𝐚𝐝𝐬 𝐭𝐡𝐞 𝐧𝐞𝐰𝐞𝐬𝐭 𝐟𝐢𝐥𝐞.
+𝐥𝐨𝐜𝐚𝐥 𝐑𝐄𝐅 = "𝐦𝐚𝐢𝐧"
+𝐥𝐨𝐜𝐚𝐥 𝐔𝐑𝐋 = "𝐡𝐭𝐭𝐩𝐬://𝐫𝐚𝐰.𝐠𝐢𝐭𝐡𝐮𝐛𝐮𝐬𝐞𝐫𝐜𝐨𝐧𝐭𝐞𝐧𝐭.𝐜𝐨𝐦/𝐫𝐢𝐳𝐪𝐚𝐝𝐞𝐞𝐛𝟑𝟖-𝐝𝐞𝐯/𝐑𝐞𝐛𝐞𝐥𝐰𝐚𝐫_𝐔𝐈/" .. 𝐑𝐄𝐅 .. "/𝐬𝐨𝐮𝐫𝐜𝐞.𝐥𝐮𝐚"
 
--- shows a message on screen (phones can't see the console) and in the console
-local function problem(msg)
-	warn("[Rebelwar] " .. msg)
-	pcall(function()
-		game:GetService("StarterGui"):SetCore("SendNotification", { Title = "Rebelwar", Text = msg, Duration = 10 })
-	end)
-end
+-- 𝐬𝐡𝐨𝐰𝐬 𝐚 𝐦𝐞𝐬𝐬𝐚𝐠𝐞 𝐨𝐧 𝐬𝐜𝐫𝐞𝐞𝐧 (𝐩𝐡𝐨𝐧𝐞𝐬 𝐜𝐚𝐧'𝐭 𝐬𝐞𝐞 𝐭𝐡𝐞 𝐜𝐨𝐧𝐬𝐨𝐥𝐞) 𝐚𝐧𝐝 𝐢𝐧 𝐭𝐡𝐞 𝐜𝐨𝐧𝐬𝐨𝐥𝐞
+𝐥𝐨𝐜𝐚𝐥 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧 𝐩𝐫𝐨𝐛𝐥𝐞𝐦(𝐦𝐬𝐠)
+	𝐰𝐚𝐫𝐧("[𝐑𝐞𝐛𝐞𝐥𝐰𝐚𝐫] " .. 𝐦𝐬𝐠)
+	𝐩𝐜𝐚𝐥𝐥(𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧()
+		𝐠𝐚𝐦𝐞:𝐆𝐞𝐭𝐒𝐞𝐫𝐯𝐢𝐜𝐞("𝐒𝐭𝐚𝐫𝐭𝐞𝐫𝐆𝐮𝐢"):𝐒𝐞𝐭𝐂𝐨𝐫𝐞("𝐒𝐞𝐧𝐝𝐍𝐨𝐭𝐢𝐟𝐢𝐜𝐚𝐭𝐢𝐨𝐧", { 𝐓𝐢𝐭𝐥𝐞 = "𝐑𝐞𝐛𝐞𝐥𝐰𝐚𝐫", 𝐓𝐞𝐱𝐭 = 𝐦𝐬𝐠, 𝐃𝐮𝐫𝐚𝐭𝐢𝐨𝐧 = 𝟏𝟎 })
+	𝐞𝐧𝐝)
+𝐞𝐧𝐝
 
--- 1. download the library, and say clearly if something is wrong
-local okGet, src = pcall(function()
-	return game:HttpGet(URL)
-end)
-if not okGet or type(src) ~= "string" or #src < 2000 then
-	problem("Could not download source.lua. Is the repo public and is the file on the main branch?")
-	return
-end
-local fn, err = loadstring(src)
-if not fn then
-	problem("source.lua has an error: " .. tostring(err))
-	return
-end
-local okRun, UI = pcall(fn)
-if not okRun or type(UI) ~= "table" or not UI.Loading or not UI.CreateWindow or not UI.KeyGate then
-	problem("source.lua in the repo is an old version. Upload RebelUI v1.0.0 as source.lua.")
-	return
-end
+-- 𝟏. 𝐝𝐨𝐰𝐧𝐥𝐨𝐚𝐝 𝐭𝐡𝐞 𝐥𝐢𝐛𝐫𝐚𝐫𝐲, 𝐚𝐧𝐝 𝐬𝐚𝐲 𝐜𝐥𝐞𝐚𝐫𝐥𝐲 𝐢𝐟 𝐬𝐨𝐦𝐞𝐭𝐡𝐢𝐧𝐠 𝐢𝐬 𝐰𝐫𝐨𝐧𝐠
+𝐥𝐨𝐜𝐚𝐥 𝐨𝐤𝐆𝐞𝐭, 𝐬𝐫𝐜 = 𝐩𝐜𝐚𝐥𝐥(𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧()
+	𝐫𝐞𝐭𝐮𝐫𝐧 𝐠𝐚𝐦𝐞:𝐇𝐭𝐭𝐩𝐆𝐞𝐭(𝐔𝐑𝐋)
+𝐞𝐧𝐝)
+𝐢𝐟 𝐧𝐨𝐭 𝐨𝐤𝐆𝐞𝐭 𝐨𝐫 𝐭𝐲𝐩𝐞(𝐬𝐫𝐜) ~= "𝐬𝐭𝐫𝐢𝐧𝐠" 𝐨𝐫 #𝐬𝐫𝐜 < 𝟐𝟎𝟎𝟎 𝐭𝐡𝐞𝐧
+	𝐩𝐫𝐨𝐛𝐥𝐞𝐦("𝐂𝐨𝐮𝐥𝐝 𝐧𝐨𝐭 𝐝𝐨𝐰𝐧𝐥𝐨𝐚𝐝 𝐬𝐨𝐮𝐫𝐜𝐞.𝐥𝐮𝐚. 𝐈𝐬 𝐭𝐡𝐞 𝐫𝐞𝐩𝐨 𝐩𝐮𝐛𝐥𝐢𝐜 𝐚𝐧𝐝 𝐢𝐬 𝐭𝐡𝐞 𝐟𝐢𝐥𝐞 𝐨𝐧 𝐭𝐡𝐞 𝐦𝐚𝐢𝐧 𝐛𝐫𝐚𝐧𝐜𝐡?")
+	𝐫𝐞𝐭𝐮𝐫𝐧
+𝐞𝐧𝐝
+𝐥𝐨𝐜𝐚𝐥 𝐟𝐧, 𝐞𝐫𝐫 = 𝐥𝐨𝐚𝐝𝐬𝐭𝐫𝐢𝐧𝐠(𝐬𝐫𝐜)
+𝐢𝐟 𝐧𝐨𝐭 𝐟𝐧 𝐭𝐡𝐞𝐧
+	𝐩𝐫𝐨𝐛𝐥𝐞𝐦("𝐬𝐨𝐮𝐫𝐜𝐞.𝐥𝐮𝐚 𝐡𝐚𝐬 𝐚𝐧 𝐞𝐫𝐫𝐨𝐫: " .. 𝐭𝐨𝐬𝐭𝐫𝐢𝐧𝐠(𝐞𝐫𝐫))
+	𝐫𝐞𝐭𝐮𝐫𝐧
+𝐞𝐧𝐝
+𝐥𝐨𝐜𝐚𝐥 𝐨𝐤𝐑𝐮𝐧, 𝐔𝐈 = 𝐩𝐜𝐚𝐥𝐥(𝐟𝐧)
+𝐢𝐟 𝐧𝐨𝐭 𝐨𝐤𝐑𝐮𝐧 𝐨𝐫 𝐭𝐲𝐩𝐞(𝐔𝐈) ~= "𝐭𝐚𝐛𝐥𝐞" 𝐨𝐫 𝐧𝐨𝐭 𝐔𝐈.𝐋𝐨𝐚𝐝𝐢𝐧𝐠 𝐨𝐫 𝐧𝐨𝐭 𝐔𝐈.𝐂𝐫𝐞𝐚𝐭𝐞𝐖𝐢𝐧𝐝𝐨𝐰 𝐨𝐫 𝐧𝐨𝐭 𝐔𝐈.𝐊𝐞𝐲𝐆𝐚𝐭𝐞 𝐭𝐡𝐞𝐧
+	𝐩𝐫𝐨𝐛𝐥𝐞𝐦("𝐬𝐨𝐮𝐫𝐜𝐞.𝐥𝐮𝐚 𝐢𝐧 𝐭𝐡𝐞 𝐫𝐞𝐩𝐨 𝐢𝐬 𝐚𝐧 𝐨𝐥𝐝 𝐯𝐞𝐫𝐬𝐢𝐨𝐧. 𝐔𝐩𝐥𝐨𝐚𝐝 𝐑𝐞𝐛𝐞𝐥𝐔𝐈 𝐯𝟏.𝟎.𝟎 𝐚𝐬 𝐬𝐨𝐮𝐫𝐜𝐞.𝐥𝐮𝐚.")
+	𝐫𝐞𝐭𝐮𝐫𝐧
+𝐞𝐧𝐝
 
--- ============================================================ DEVELOPER SWITCH
--- SCRIPT_ON = true  -> the script works.   SCRIPT_ON = false -> it does nothing when someone runs it.
--- SWITCH_URL (optional): a link to a text file that says "on" or "off". Change that file any time to turn the script on or off
--- for everyone without re-uploading anything (for example a GitHub raw link to switch.txt). nil = only SCRIPT_ON counts.
-local SCRIPT_ON = true
-local SWITCH_URL = nil -- e.g. "https://raw.githubusercontent.com/rizqadeeb38-dev/Rebelwar_UI/main/switch.txt"
-if not UI:Switch({ On = SCRIPT_ON, Url = SWITCH_URL, Name = "Rebelwar", Message = "Rebelwar is switched off right now. Check the Discord for news." }) then
-	return
-end
+-- ============================================================ 𝐃𝐄𝐕𝐄𝐋𝐎𝐏𝐄𝐑 𝐒𝐖𝐈𝐓𝐂𝐇
+-- 𝐒𝐂𝐑𝐈𝐏𝐓_𝐎𝐍 = 𝐭𝐫𝐮𝐞  -> 𝐭𝐡𝐞 𝐬𝐜𝐫𝐢𝐩𝐭 𝐰𝐨𝐫𝐤𝐬.   𝐒𝐂𝐑𝐈𝐏𝐓_𝐎𝐍 = 𝐟𝐚𝐥𝐬𝐞 -> 𝐢𝐭 𝐝𝐨𝐞𝐬 𝐧𝐨𝐭𝐡𝐢𝐧𝐠 𝐰𝐡𝐞𝐧 𝐬𝐨𝐦𝐞𝐨𝐧𝐞 𝐫𝐮𝐧𝐬 𝐢𝐭.
+-- 𝐒𝐖𝐈𝐓𝐂𝐇_𝐔𝐑𝐋 (𝐨𝐩𝐭𝐢𝐨𝐧𝐚𝐥): 𝐚 𝐥𝐢𝐧𝐤 𝐭𝐨 𝐚 𝐭𝐞𝐱𝐭 𝐟𝐢𝐥𝐞 𝐭𝐡𝐚𝐭 𝐬𝐚𝐲𝐬 "𝐨𝐧" 𝐨𝐫 "𝐨𝐟𝐟". 𝐂𝐡𝐚𝐧𝐠𝐞 𝐭𝐡𝐚𝐭 𝐟𝐢𝐥𝐞 𝐚𝐧𝐲 𝐭𝐢𝐦𝐞 𝐭𝐨 𝐭𝐮𝐫𝐧 𝐭𝐡𝐞 𝐬𝐜𝐫𝐢𝐩𝐭 𝐨𝐧 𝐨𝐫 𝐨𝐟𝐟
+-- 𝐟𝐨𝐫 𝐞𝐯𝐞𝐫𝐲𝐨𝐧𝐞 𝐰𝐢𝐭𝐡𝐨𝐮𝐭 𝐫𝐞-𝐮𝐩𝐥𝐨𝐚𝐝𝐢𝐧𝐠 𝐚𝐧𝐲𝐭𝐡𝐢𝐧𝐠 (𝐟𝐨𝐫 𝐞𝐱𝐚𝐦𝐩𝐥𝐞 𝐚 𝐆𝐢𝐭𝐇𝐮𝐛 𝐫𝐚𝐰 𝐥𝐢𝐧𝐤 𝐭𝐨 𝐬𝐰𝐢𝐭𝐜𝐡.𝐭𝐱𝐭). 𝐧𝐢𝐥 = 𝐨𝐧𝐥𝐲 𝐒𝐂𝐑𝐈𝐏𝐓_𝐎𝐍 𝐜𝐨𝐮𝐧𝐭𝐬.
+𝐥𝐨𝐜𝐚𝐥 𝐒𝐂𝐑𝐈𝐏𝐓_𝐎𝐍 = 𝐭𝐫𝐮𝐞
+𝐥𝐨𝐜𝐚𝐥 𝐒𝐖𝐈𝐓𝐂𝐇_𝐔𝐑𝐋 = 𝐧𝐢𝐥 -- 𝐞.𝐠. "𝐡𝐭𝐭𝐩𝐬://𝐫𝐚𝐰.𝐠𝐢𝐭𝐡𝐮𝐛𝐮𝐬𝐞𝐫𝐜𝐨𝐧𝐭𝐞𝐧𝐭.𝐜𝐨𝐦/𝐫𝐢𝐳𝐪𝐚𝐝𝐞𝐞𝐛𝟑𝟖-𝐝𝐞𝐯/𝐑𝐞𝐛𝐞𝐥𝐰𝐚𝐫_𝐔𝐈/𝐦𝐚𝐢𝐧/𝐬𝐰𝐢𝐭𝐜𝐡.𝐭𝐱𝐭"
+𝐢𝐟 𝐧𝐨𝐭 𝐔𝐈:𝐒𝐰𝐢𝐭𝐜𝐡({ 𝐎𝐧 = 𝐒𝐂𝐑𝐈𝐏𝐓_𝐎𝐍, 𝐔𝐫𝐥 = 𝐒𝐖𝐈𝐓𝐂𝐇_𝐔𝐑𝐋, 𝐍𝐚𝐦𝐞 = "𝐑𝐞𝐛𝐞𝐥𝐰𝐚𝐫", 𝐌𝐞𝐬𝐬𝐚𝐠𝐞 = "𝐑𝐞𝐛𝐞𝐥𝐰𝐚𝐫 𝐢𝐬 𝐬𝐰𝐢𝐭𝐜𝐡𝐞𝐝 𝐨𝐟𝐟 𝐫𝐢𝐠𝐡𝐭 𝐧𝐨𝐰. 𝐂𝐡𝐞𝐜𝐤 𝐭𝐡𝐞 𝐃𝐢𝐬𝐜𝐨𝐫𝐝 𝐟𝐨𝐫 𝐧𝐞𝐰𝐬." }) 𝐭𝐡𝐞𝐧
+	𝐫𝐞𝐭𝐮𝐫𝐧
+𝐞𝐧𝐝
 
--- Setup: "Auto" picks the Mobile or PC layout by itself (touch and no keyboard = Mobile). Force one with "Mobile" or "PC".
-local SETUP = "Auto"
+-- 𝐒𝐞𝐭𝐮𝐩: "𝐀𝐮𝐭𝐨" 𝐩𝐢𝐜𝐤𝐬 𝐭𝐡𝐞 𝐌𝐨𝐛𝐢𝐥𝐞 𝐨𝐫 𝐏𝐂 𝐥𝐚𝐲𝐨𝐮𝐭 𝐛𝐲 𝐢𝐭𝐬𝐞𝐥𝐟 (𝐭𝐨𝐮𝐜𝐡 𝐚𝐧𝐝 𝐧𝐨 𝐤𝐞𝐲𝐛𝐨𝐚𝐫𝐝 = 𝐌𝐨𝐛𝐢𝐥𝐞). 𝐅𝐨𝐫𝐜𝐞 𝐨𝐧𝐞 𝐰𝐢𝐭𝐡 "𝐌𝐨𝐛𝐢𝐥𝐞" 𝐨𝐫 "𝐏𝐂".
+𝐥𝐨𝐜𝐚𝐥 𝐒𝐄𝐓𝐔𝐏 = "𝐀𝐮𝐭𝐨"
 
-local Load, Win -- made inside main()
+𝐥𝐨𝐜𝐚𝐥 𝐋𝐨𝐚𝐝, 𝐖𝐢𝐧 -- 𝐦𝐚𝐝𝐞 𝐢𝐧𝐬𝐢𝐝𝐞 𝐦𝐚𝐢𝐧()
 
-local function main()
-local Players = game:GetService("Players")
-local lp = Players.LocalPlayer
+𝐥𝐨𝐜𝐚𝐥 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧 𝐦𝐚𝐢𝐧()
+𝐥𝐨𝐜𝐚𝐥 𝐏𝐥𝐚𝐲𝐞𝐫𝐬 = 𝐠𝐚𝐦𝐞:𝐆𝐞𝐭𝐒𝐞𝐫𝐯𝐢𝐜𝐞("𝐏𝐥𝐚𝐲𝐞𝐫𝐬")
+𝐥𝐨𝐜𝐚𝐥 𝐥𝐩 = 𝐏𝐥𝐚𝐲𝐞𝐫𝐬.𝐋𝐨𝐜𝐚𝐥𝐏𝐥𝐚𝐲𝐞𝐫
 
--- Roblox image ids. Swap them for your own. A bare number works too.
-local LOGO = 114659273298746
-local BANNER = 125144167121839
--- Turn the AI tab on or off (false = no AI tab, no AI loading video, no web requests to Gemini).
-local USE_AI = true
--- Your own proxy address (see ai_proxy_worker.js), e.g. "https://rebel-ai.yourname.workers.dev". nil = use the key file.
-local AI_PROXY = nil
--- Videos are OFF by default because a phone has to download and decode them while the game is starting.
--- Turn them on (USE_VIDEOS = true) only after the panel opens fine without them.
-local USE_VIDEOS = false
--- Loading videos. Paste a direct .mp4 link (a GitHub raw link is the most reliable) or a video page link:
--- the library downloads it first (once), then plays it. Set to nil to turn a video off. Keep each under ~20 MB.
-local VIDEO = USE_VIDEOS and "https://raw.githubusercontent.com/rizqadeeb38-dev/Rebelwar_UI/main/1793093470606..mp4" or nil -- the Rebelwar logo loading video
-local AI_VIDEO = USE_VIDEOS and "https://raw.githubusercontent.com/rizqadeeb38-dev/Rebelwar_UI/main/1793093466230..mp4" or nil -- plays while Rebel AI wakes up
-local ICON = {
-	ESP = 71415024616002,
-	Settings = 81306187910490,
-	Discord = 106575470880507,
+-- 𝐑𝐨𝐛𝐥𝐨𝐱 𝐢𝐦𝐚𝐠𝐞 𝐢𝐝𝐬. 𝐒𝐰𝐚𝐩 𝐭𝐡𝐞𝐦 𝐟𝐨𝐫 𝐲𝐨𝐮𝐫 𝐨𝐰𝐧. 𝐀 𝐛𝐚𝐫𝐞 𝐧𝐮𝐦𝐛𝐞𝐫 𝐰𝐨𝐫𝐤𝐬 𝐭𝐨𝐨.
+𝐥𝐨𝐜𝐚𝐥 𝐋𝐎𝐆𝐎 = 𝟏𝟏𝟒𝟔𝟓𝟗𝟐𝟕𝟑𝟐𝟗𝟖𝟕𝟒𝟔
+𝐥𝐨𝐜𝐚𝐥 𝐁𝐀𝐍𝐍𝐄𝐑 = 𝟏𝟐𝟓𝟏𝟒𝟒𝟏𝟔𝟕𝟏𝟐𝟏𝟖𝟑𝟗
+-- 𝐕𝐢𝐝𝐞𝐨𝐬 𝐚𝐫𝐞 𝐎𝐅𝐅 𝐛𝐲 𝐝𝐞𝐟𝐚𝐮𝐥𝐭 𝐛𝐞𝐜𝐚𝐮𝐬𝐞 𝐚 𝐩𝐡𝐨𝐧𝐞 𝐡𝐚𝐬 𝐭𝐨 𝐝𝐨𝐰𝐧𝐥𝐨𝐚𝐝 𝐚𝐧𝐝 𝐝𝐞𝐜𝐨𝐝𝐞 𝐭𝐡𝐞𝐦 𝐰𝐡𝐢𝐥𝐞 𝐭𝐡𝐞 𝐠𝐚𝐦𝐞 𝐢𝐬 𝐬𝐭𝐚𝐫𝐭𝐢𝐧𝐠.
+-- 𝐓𝐮𝐫𝐧 𝐭𝐡𝐞𝐦 𝐨𝐧 (𝐔𝐒𝐄_𝐕𝐈𝐃𝐄𝐎𝐒 = 𝐭𝐫𝐮𝐞) 𝐨𝐧𝐥𝐲 𝐚𝐟𝐭𝐞𝐫 𝐭𝐡𝐞 𝐩𝐚𝐧𝐞𝐥 𝐨𝐩𝐞𝐧𝐬 𝐟𝐢𝐧𝐞 𝐰𝐢𝐭𝐡𝐨𝐮𝐭 𝐭𝐡𝐞𝐦.
+𝐥𝐨𝐜𝐚𝐥 𝐔𝐒𝐄_𝐕𝐈𝐃𝐄𝐎𝐒 = 𝐭𝐫𝐮𝐞
+-- 𝐋𝐨𝐚𝐝𝐢𝐧𝐠 𝐯𝐢𝐝𝐞𝐨𝐬. 𝐏𝐚𝐬𝐭𝐞 𝐚 𝐝𝐢𝐫𝐞𝐜𝐭 .𝐦𝐩𝟒 𝐥𝐢𝐧𝐤 (𝐚 𝐆𝐢𝐭𝐇𝐮𝐛 𝐫𝐚𝐰 𝐥𝐢𝐧𝐤 𝐢𝐬 𝐭𝐡𝐞 𝐦𝐨𝐬𝐭 𝐫𝐞𝐥𝐢𝐚𝐛𝐥𝐞) 𝐨𝐫 𝐚 𝐯𝐢𝐝𝐞𝐨 𝐩𝐚𝐠𝐞 𝐥𝐢𝐧𝐤:
+-- 𝐭𝐡𝐞 𝐥𝐢𝐛𝐫𝐚𝐫𝐲 𝐝𝐨𝐰𝐧𝐥𝐨𝐚𝐝𝐬 𝐢𝐭 𝐟𝐢𝐫𝐬𝐭 (𝐨𝐧𝐜𝐞), 𝐭𝐡𝐞𝐧 𝐩𝐥𝐚𝐲𝐬 𝐢𝐭. 𝐒𝐞𝐭 𝐭𝐨 𝐧𝐢𝐥 𝐭𝐨 𝐭𝐮𝐫𝐧 𝐚 𝐯𝐢𝐝𝐞𝐨 𝐨𝐟𝐟. 𝐊𝐞𝐞𝐩 𝐞𝐚𝐜𝐡 𝐮𝐧𝐝𝐞𝐫 ~𝟐𝟎 𝐌𝐁.
+𝐥𝐨𝐜𝐚𝐥 𝐕𝐈𝐃𝐄𝐎 = 𝐔𝐒𝐄_𝐕𝐈𝐃𝐄𝐎𝐒 𝐚𝐧𝐝 "𝐡𝐭𝐭𝐩𝐬://𝐫𝐚𝐰.𝐠𝐢𝐭𝐡𝐮𝐛𝐮𝐬𝐞𝐫𝐜𝐨𝐧𝐭𝐞𝐧𝐭.𝐜𝐨𝐦/𝐫𝐢𝐳𝐪𝐚𝐝𝐞𝐞𝐛𝟑𝟖-𝐝𝐞𝐯/𝐑𝐞𝐛𝐞𝐥𝐰𝐚𝐫_𝐔𝐈/𝐚𝐬𝐬𝐞𝐭𝐬/𝐋𝐨𝐠𝐨-𝐥𝐨𝐚𝐝𝐢𝐧𝐠.𝐩𝐧𝐠.𝐦𝐩𝟒" 𝐨𝐫 𝐧𝐢𝐥 -- 𝐭𝐡𝐞 𝐑𝐞𝐛𝐞𝐥𝐰𝐚𝐫 𝐥𝐨𝐠𝐨 𝐥𝐨𝐚𝐝𝐢𝐧𝐠 𝐯𝐢𝐝𝐞𝐨
+𝐥𝐨𝐜𝐚𝐥 𝐔𝐒𝐄_𝐀𝐂𝐓𝐈𝐕𝐀𝐓𝐄 = 𝐭𝐫𝐮𝐞 -- 𝐚𝐟𝐭𝐞𝐫 𝐥𝐨𝐚𝐝𝐢𝐧𝐠: 𝐚 𝐟𝐮𝐥𝐥-𝐬𝐜𝐫𝐞𝐞𝐧 𝐀𝐜𝐭𝐢𝐯𝐚𝐭𝐞 𝐜𝐨𝐯𝐞𝐫 𝐰𝐢𝐭𝐡 𝐭𝐡𝐞 𝐯𝐢𝐝𝐞𝐨. "𝐋𝐨𝐠𝐨" = 𝐣𝐮𝐬𝐭 𝐭𝐡𝐞 𝐥𝐨𝐠𝐨 + 𝐛𝐮𝐭𝐭𝐨𝐧. 𝐟𝐚𝐥𝐬𝐞 = 𝐨𝐟𝐟
+𝐥𝐨𝐜𝐚𝐥 𝐀𝐂𝐓𝐈𝐕𝐀𝐓𝐄_𝐌𝐎𝐃𝐄 = "𝐂𝐨𝐯𝐞𝐫"
+𝐥𝐨𝐜𝐚𝐥 𝐈𝐂𝐎𝐍 = {
+	𝐄𝐒𝐏 = 𝟕𝟏𝟒𝟏𝟓𝟎𝟐𝟒𝟔𝟏𝟔𝟎𝟎𝟐,
+	𝐒𝐞𝐭𝐭𝐢𝐧𝐠𝐬 = 𝟖𝟏𝟑𝟎𝟔𝟏𝟖𝟕𝟗𝟏𝟎𝟒𝟗𝟎,
+	𝐃𝐢𝐬𝐜𝐨𝐫𝐝 = 𝟏𝟎𝟔𝟓𝟕𝟓𝟒𝟕𝟎𝟖𝟖𝟎𝟓𝟎𝟕,
 }
--- Key screen. The panel is keyless by default. Set USE_KEY_GATE = true to ask for a key before the panel opens.
--- Put your own LootLabs (or any) link in GET_KEY_LINK. The "Get key" button copies it so the player can open it in a browser.
--- Honest note: a key that is checked inside this file can be read by someone who looks hard. For real protection
--- check the key on your own server with Check = function(key) ... end.
-local USE_KEY_GATE = false
-local GET_KEY_LINK = "https://lootlabs.gg/your-link-here" -- <- replace with your LootLabs link
-local KEYS = { "REBEL-DEMO" } -- keys that are accepted (or use Check)
-local function keyGateOptions(save)
-	return {
-		Name = "Rebelwar",
-		Title = "REBELWAR",
-		Subtitle = "Get your key, then paste it below.",
-		Image = BANNER, -- the picture on the left (any Roblox asset id)
-		Tagline = "Rebelwar  |  by prorizz196",
-		Background = BANNER, -- a picture behind the whole card...
-		BackgroundOpacity = 0.22, -- ...with its own opacity (0 to 1)
-		ImageEffect = "Shimmer", -- Shimmer, Pulse, Float, Glow, Rainbow, Spin or None
-		Logo = LOGO, -- round logo next to the title
-		LogoEffect = "Rainbow",
-		Note = "Tap Get key, finish the LootLabs steps, and paste the key here.\nThe key works for the whole day.",
-		NoteIcon = "📌",
-		NoteColor = "Gold", -- Green, Blue, Red, Gold, Purple, Pink, Orange, Cyan, Gray or a Color3
-		Setup = SETUP, -- Auto / Mobile / PC: the key panel sizes itself for the device
-		Video = VIDEO, -- a silent looping video at the top-left of the card (set USE_VIDEOS = true above). nil = just the picture
-		ProviderStyle = "Row", -- "Row" = a picture button + its own colored Copy button per line, "Grid" = compact picture tiles
-		-- the four picture buttons (images load from the repo Assets folder). Put your own link in each one.
-		Providers = {
-			{ "LootLabs", GET_KEY_LINK }, -- picture loads from imgur
-			{ "Linkvertise", "https://linkvertise.com/your-link-here" },
-			{ "Platoboost", "https://auth.platoboost.com/your-link-here" },
-			{ "Rekonise", "https://rekonise.com/your-link-here" },
-			{ "Work.ink", "https://work.ink/your-link-here" },
+-- 𝐊𝐞𝐲 𝐬𝐜𝐫𝐞𝐞𝐧. 𝐓𝐡𝐞 𝐩𝐚𝐧𝐞𝐥 𝐢𝐬 𝐤𝐞𝐲𝐥𝐞𝐬𝐬 𝐛𝐲 𝐝𝐞𝐟𝐚𝐮𝐥𝐭. 𝐒𝐞𝐭 𝐔𝐒𝐄_𝐊𝐄𝐘_𝐆𝐀𝐓𝐄 = 𝐭𝐫𝐮𝐞 𝐭𝐨 𝐚𝐬𝐤 𝐟𝐨𝐫 𝐚 𝐤𝐞𝐲 𝐛𝐞𝐟𝐨𝐫𝐞 𝐭𝐡𝐞 𝐩𝐚𝐧𝐞𝐥 𝐨𝐩𝐞𝐧𝐬.
+-- 𝐏𝐮𝐭 𝐲𝐨𝐮𝐫 𝐨𝐰𝐧 𝐋𝐨𝐨𝐭𝐋𝐚𝐛𝐬 (𝐨𝐫 𝐚𝐧𝐲) 𝐥𝐢𝐧𝐤 𝐢𝐧 𝐆𝐄𝐓_𝐊𝐄𝐘_𝐋𝐈𝐍𝐊. 𝐓𝐡𝐞 "𝐆𝐞𝐭 𝐤𝐞𝐲" 𝐛𝐮𝐭𝐭𝐨𝐧 𝐜𝐨𝐩𝐢𝐞𝐬 𝐢𝐭 𝐬𝐨 𝐭𝐡𝐞 𝐩𝐥𝐚𝐲𝐞𝐫 𝐜𝐚𝐧 𝐨𝐩𝐞𝐧 𝐢𝐭 𝐢𝐧 𝐚 𝐛𝐫𝐨𝐰𝐬𝐞𝐫.
+-- 𝐇𝐨𝐧𝐞𝐬𝐭 𝐧𝐨𝐭𝐞: 𝐚 𝐤𝐞𝐲 𝐭𝐡𝐚𝐭 𝐢𝐬 𝐜𝐡𝐞𝐜𝐤𝐞𝐝 𝐢𝐧𝐬𝐢𝐝𝐞 𝐭𝐡𝐢𝐬 𝐟𝐢𝐥𝐞 𝐜𝐚𝐧 𝐛𝐞 𝐫𝐞𝐚𝐝 𝐛𝐲 𝐬𝐨𝐦𝐞𝐨𝐧𝐞 𝐰𝐡𝐨 𝐥𝐨𝐨𝐤𝐬 𝐡𝐚𝐫𝐝. 𝐅𝐨𝐫 𝐫𝐞𝐚𝐥 𝐩𝐫𝐨𝐭𝐞𝐜𝐭𝐢𝐨𝐧
+-- 𝐜𝐡𝐞𝐜𝐤 𝐭𝐡𝐞 𝐤𝐞𝐲 𝐨𝐧 𝐲𝐨𝐮𝐫 𝐨𝐰𝐧 𝐬𝐞𝐫𝐯𝐞𝐫 𝐰𝐢𝐭𝐡 𝐂𝐡𝐞𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧(𝐤𝐞𝐲) ... 𝐞𝐧𝐝.
+𝐥𝐨𝐜𝐚𝐥 𝐔𝐒𝐄_𝐊𝐄𝐘_𝐆𝐀𝐓𝐄 = 𝐟𝐚𝐥𝐬𝐞
+𝐥𝐨𝐜𝐚𝐥 𝐆𝐄𝐓_𝐊𝐄𝐘_𝐋𝐈𝐍𝐊 = "𝐡𝐭𝐭𝐩𝐬://𝐥𝐨𝐨𝐭𝐥𝐚𝐛𝐬.𝐠𝐠/𝐲𝐨𝐮𝐫-𝐥𝐢𝐧𝐤-𝐡𝐞𝐫𝐞" -- <- 𝐫𝐞𝐩𝐥𝐚𝐜𝐞 𝐰𝐢𝐭𝐡 𝐲𝐨𝐮𝐫 𝐋𝐨𝐨𝐭𝐋𝐚𝐛𝐬 𝐥𝐢𝐧𝐤
+𝐥𝐨𝐜𝐚𝐥 𝐊𝐄𝐘𝐒 = { "𝐑𝐄𝐁𝐄𝐋-𝐃𝐄𝐌𝐎" } -- 𝐤𝐞𝐲𝐬 𝐭𝐡𝐚𝐭 𝐚𝐫𝐞 𝐚𝐜𝐜𝐞𝐩𝐭𝐞𝐝 (𝐨𝐫 𝐮𝐬𝐞 𝐂𝐡𝐞𝐜𝐤)
+𝐥𝐨𝐜𝐚𝐥 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧 𝐤𝐞𝐲𝐆𝐚𝐭𝐞𝐎𝐩𝐭𝐢𝐨𝐧𝐬(𝐬𝐚𝐯𝐞)
+	𝐫𝐞𝐭𝐮𝐫𝐧 {
+		𝐍𝐚𝐦𝐞 = "𝐑𝐞𝐛𝐞𝐥𝐰𝐚𝐫",
+		𝐓𝐢𝐭𝐥𝐞 = "𝐑𝐄𝐁𝐄𝐋𝐖𝐀𝐑",
+		𝐒𝐮𝐛𝐭𝐢𝐭𝐥𝐞 = "𝐆𝐞𝐭 𝐲𝐨𝐮𝐫 𝐤𝐞𝐲, 𝐭𝐡𝐞𝐧 𝐩𝐚𝐬𝐭𝐞 𝐢𝐭 𝐛𝐞𝐥𝐨𝐰.",
+		𝐈𝐦𝐚𝐠𝐞 = 𝐁𝐀𝐍𝐍𝐄𝐑, -- 𝐭𝐡𝐞 𝐩𝐢𝐜𝐭𝐮𝐫𝐞 𝐨𝐧 𝐭𝐡𝐞 𝐥𝐞𝐟𝐭 (𝐚𝐧𝐲 𝐑𝐨𝐛𝐥𝐨𝐱 𝐚𝐬𝐬𝐞𝐭 𝐢𝐝)
+		𝐓𝐚𝐠𝐥𝐢𝐧𝐞 = "𝐑𝐞𝐛𝐞𝐥𝐰𝐚𝐫  |  𝐛𝐲 𝐩𝐫𝐨𝐫𝐢𝐳𝐳𝟏𝟗𝟔",
+		𝐁𝐚𝐜𝐤𝐠𝐫𝐨𝐮𝐧𝐝 = 𝐁𝐀𝐍𝐍𝐄𝐑, -- 𝐚 𝐩𝐢𝐜𝐭𝐮𝐫𝐞 𝐛𝐞𝐡𝐢𝐧𝐝 𝐭𝐡𝐞 𝐰𝐡𝐨𝐥𝐞 𝐜𝐚𝐫𝐝...
+		𝐁𝐚𝐜𝐤𝐠𝐫𝐨𝐮𝐧𝐝𝐎𝐩𝐚𝐜𝐢𝐭𝐲 = 𝟎.𝟐𝟐, -- ...𝐰𝐢𝐭𝐡 𝐢𝐭𝐬 𝐨𝐰𝐧 𝐨𝐩𝐚𝐜𝐢𝐭𝐲 (𝟎 𝐭𝐨 𝟏)
+		𝐈𝐦𝐚𝐠𝐞𝐄𝐟𝐟𝐞𝐜𝐭 = "𝐒𝐡𝐢𝐦𝐦𝐞𝐫", -- 𝐒𝐡𝐢𝐦𝐦𝐞𝐫, 𝐏𝐮𝐥𝐬𝐞, 𝐅𝐥𝐨𝐚𝐭, 𝐆𝐥𝐨𝐰, 𝐑𝐚𝐢𝐧𝐛𝐨𝐰, 𝐒𝐩𝐢𝐧 𝐨𝐫 𝐍𝐨𝐧𝐞
+		𝐋𝐨𝐠𝐨 = 𝐋𝐎𝐆𝐎, -- 𝐫𝐨𝐮𝐧𝐝 𝐥𝐨𝐠𝐨 𝐧𝐞𝐱𝐭 𝐭𝐨 𝐭𝐡𝐞 𝐭𝐢𝐭𝐥𝐞
+		𝐋𝐨𝐠𝐨𝐄𝐟𝐟𝐞𝐜𝐭 = "𝐑𝐚𝐢𝐧𝐛𝐨𝐰",
+		𝐍𝐨𝐭𝐞 = "𝐓𝐚𝐩 𝐆𝐞𝐭 𝐤𝐞𝐲, 𝐟𝐢𝐧𝐢𝐬𝐡 𝐭𝐡𝐞 𝐋𝐨𝐨𝐭𝐋𝐚𝐛𝐬 𝐬𝐭𝐞𝐩𝐬, 𝐚𝐧𝐝 𝐩𝐚𝐬𝐭𝐞 𝐭𝐡𝐞 𝐤𝐞𝐲 𝐡𝐞𝐫𝐞.\𝐧𝐓𝐡𝐞 𝐤𝐞𝐲 𝐰𝐨𝐫𝐤𝐬 𝐟𝐨𝐫 𝐭𝐡𝐞 𝐰𝐡𝐨𝐥𝐞 𝐝𝐚𝐲.",
+		𝐍𝐨𝐭𝐞𝐈𝐜𝐨𝐧 = "📌",
+		𝐍𝐨𝐭𝐞𝐂𝐨𝐥𝐨𝐫 = "𝐆𝐨𝐥𝐝", -- 𝐆𝐫𝐞𝐞𝐧, 𝐁𝐥𝐮𝐞, 𝐑𝐞𝐝, 𝐆𝐨𝐥𝐝, 𝐏𝐮𝐫𝐩𝐥𝐞, 𝐏𝐢𝐧𝐤, 𝐎𝐫𝐚𝐧𝐠𝐞, 𝐂𝐲𝐚𝐧, 𝐆𝐫𝐚𝐲 𝐨𝐫 𝐚 𝐂𝐨𝐥𝐨𝐫𝟑
+		𝐒𝐞𝐭𝐮𝐩 = 𝐒𝐄𝐓𝐔𝐏, -- 𝐀𝐮𝐭𝐨 / 𝐌𝐨𝐛𝐢𝐥𝐞 / 𝐏𝐂: 𝐭𝐡𝐞 𝐤𝐞𝐲 𝐩𝐚𝐧𝐞𝐥 𝐬𝐢𝐳𝐞𝐬 𝐢𝐭𝐬𝐞𝐥𝐟 𝐟𝐨𝐫 𝐭𝐡𝐞 𝐝𝐞𝐯𝐢𝐜𝐞
+		𝐕𝐢𝐝𝐞𝐨 = 𝐕𝐈𝐃𝐄𝐎, -- 𝐚 𝐬𝐢𝐥𝐞𝐧𝐭 𝐥𝐨𝐨𝐩𝐢𝐧𝐠 𝐯𝐢𝐝𝐞𝐨 𝐚𝐭 𝐭𝐡𝐞 𝐭𝐨𝐩-𝐥𝐞𝐟𝐭 𝐨𝐟 𝐭𝐡𝐞 𝐜𝐚𝐫𝐝 (𝐬𝐞𝐭 𝐔𝐒𝐄_𝐕𝐈𝐃𝐄𝐎𝐒 = 𝐭𝐫𝐮𝐞 𝐚𝐛𝐨𝐯𝐞). 𝐧𝐢𝐥 = 𝐣𝐮𝐬𝐭 𝐭𝐡𝐞 𝐩𝐢𝐜𝐭𝐮𝐫𝐞
+		𝐏𝐫𝐨𝐯𝐢𝐝𝐞𝐫𝐒𝐭𝐲𝐥𝐞 = "𝐑𝐨𝐰", -- "𝐑𝐨𝐰" = 𝐚 𝐩𝐢𝐜𝐭𝐮𝐫𝐞 𝐛𝐮𝐭𝐭𝐨𝐧 + 𝐢𝐭𝐬 𝐨𝐰𝐧 𝐜𝐨𝐥𝐨𝐫𝐞𝐝 𝐂𝐨𝐩𝐲 𝐛𝐮𝐭𝐭𝐨𝐧 𝐩𝐞𝐫 𝐥𝐢𝐧𝐞, "𝐆𝐫𝐢𝐝" = 𝐜𝐨𝐦𝐩𝐚𝐜𝐭 𝐩𝐢𝐜𝐭𝐮𝐫𝐞 𝐭𝐢𝐥𝐞𝐬
+		-- 𝐭𝐡𝐞 𝐟𝐨𝐮𝐫 𝐩𝐢𝐜𝐭𝐮𝐫𝐞 𝐛𝐮𝐭𝐭𝐨𝐧𝐬 (𝐢𝐦𝐚𝐠𝐞𝐬 𝐥𝐨𝐚𝐝 𝐟𝐫𝐨𝐦 𝐭𝐡𝐞 𝐫𝐞𝐩𝐨 𝐀𝐬𝐬𝐞𝐭𝐬 𝐟𝐨𝐥𝐝𝐞𝐫). 𝐏𝐮𝐭 𝐲𝐨𝐮𝐫 𝐨𝐰𝐧 𝐥𝐢𝐧𝐤 𝐢𝐧 𝐞𝐚𝐜𝐡 𝐨𝐧𝐞.
+		𝐏𝐫𝐨𝐯𝐢𝐝𝐞𝐫𝐬 = {
+			{ "𝐋𝐨𝐨𝐭𝐋𝐚𝐛𝐬", 𝐆𝐄𝐓_𝐊𝐄𝐘_𝐋𝐈𝐍𝐊 }, -- 𝐩𝐢𝐜𝐭𝐮𝐫𝐞 𝐥𝐨𝐚𝐝𝐬 𝐟𝐫𝐨𝐦 𝐢𝐦𝐠𝐮𝐫
+			{ "𝐋𝐢𝐧𝐤𝐯𝐞𝐫𝐭𝐢𝐬𝐞", "𝐡𝐭𝐭𝐩𝐬://𝐥𝐢𝐧𝐤𝐯𝐞𝐫𝐭𝐢𝐬𝐞.𝐜𝐨𝐦/𝐲𝐨𝐮𝐫-𝐥𝐢𝐧𝐤-𝐡𝐞𝐫𝐞" },
+			{ "𝐏𝐥𝐚𝐭𝐨𝐛𝐨𝐨𝐬𝐭", "𝐡𝐭𝐭𝐩𝐬://𝐚𝐮𝐭𝐡.𝐩𝐥𝐚𝐭𝐨𝐛𝐨𝐨𝐬𝐭.𝐜𝐨𝐦/𝐲𝐨𝐮𝐫-𝐥𝐢𝐧𝐤-𝐡𝐞𝐫𝐞" },
+			{ "𝐑𝐞𝐤𝐨𝐧𝐢𝐬𝐞", "𝐡𝐭𝐭𝐩𝐬://𝐫𝐞𝐤𝐨𝐧𝐢𝐬𝐞.𝐜𝐨𝐦/𝐲𝐨𝐮𝐫-𝐥𝐢𝐧𝐤-𝐡𝐞𝐫𝐞" },
+			{ "𝐖𝐨𝐫𝐤.𝐢𝐧𝐤", "𝐡𝐭𝐭𝐩𝐬://𝐰𝐨𝐫𝐤.𝐢𝐧𝐤/𝐲𝐨𝐮𝐫-𝐥𝐢𝐧𝐤-𝐡𝐞𝐫𝐞" },
 		},
-		ProvidersText = "Get your key",
-		Buttons = {
-			{ Name = "Discord", Color = "Discord", Link = "https://discord.gg/8s7RR3wZ6b", Message = "Invite copied. Paste it in your browser." },
-			{ Name = "Help", Color = "Blue", Link = "https://discord.gg/8s7RR3wZ6b", Message = "Ask in the Discord server." },
+		𝐏𝐫𝐨𝐯𝐢𝐝𝐞𝐫𝐬𝐓𝐞𝐱𝐭 = "𝐆𝐞𝐭 𝐲𝐨𝐮𝐫 𝐤𝐞𝐲",
+		𝐁𝐮𝐭𝐭𝐨𝐧𝐬 = {
+			{ 𝐍𝐚𝐦𝐞 = "𝐃𝐢𝐬𝐜𝐨𝐫𝐝", 𝐂𝐨𝐥𝐨𝐫 = "𝐃𝐢𝐬𝐜𝐨𝐫𝐝", 𝐋𝐢𝐧𝐤 = "𝐡𝐭𝐭𝐩𝐬://𝐝𝐢𝐬𝐜𝐨𝐫𝐝.𝐠𝐠/𝟖𝐬𝟕𝐑𝐑𝟑𝐰𝐙𝟔𝐛", 𝐌𝐞𝐬𝐬𝐚𝐠𝐞 = "𝐈𝐧𝐯𝐢𝐭𝐞 𝐜𝐨𝐩𝐢𝐞𝐝. 𝐏𝐚𝐬𝐭𝐞 𝐢𝐭 𝐢𝐧 𝐲𝐨𝐮𝐫 𝐛𝐫𝐨𝐰𝐬𝐞𝐫." },
+			{ 𝐍𝐚𝐦𝐞 = "𝐇𝐞𝐥𝐩", 𝐂𝐨𝐥𝐨𝐫 = "𝐁𝐥𝐮𝐞", 𝐋𝐢𝐧𝐤 = "𝐡𝐭𝐭𝐩𝐬://𝐝𝐢𝐬𝐜𝐨𝐫𝐝.𝐠𝐠/𝟖𝐬𝟕𝐑𝐑𝟑𝐰𝐙𝟔𝐛", 𝐌𝐞𝐬𝐬𝐚𝐠𝐞 = "𝐀𝐬𝐤 𝐢𝐧 𝐭𝐡𝐞 𝐃𝐢𝐬𝐜𝐨𝐫𝐝 𝐬𝐞𝐫𝐯𝐞𝐫." },
 		},
-		Keys = KEYS,
-		Save = save, -- true remembers the key on this device
-		Boom = true, -- explosion effect when the key is right
-		BoomText = "WELCOME",
-		Theme = "Red",
+		𝐊𝐞𝐲𝐬 = 𝐊𝐄𝐘𝐒,
+		𝐒𝐚𝐯𝐞 = 𝐬𝐚𝐯𝐞, -- 𝐭𝐫𝐮𝐞 𝐫𝐞𝐦𝐞𝐦𝐛𝐞𝐫𝐬 𝐭𝐡𝐞 𝐤𝐞𝐲 𝐨𝐧 𝐭𝐡𝐢𝐬 𝐝𝐞𝐯𝐢𝐜𝐞
+		𝐁𝐨𝐨𝐦 = 𝐭𝐫𝐮𝐞, -- 𝐞𝐱𝐩𝐥𝐨𝐬𝐢𝐨𝐧 𝐞𝐟𝐟𝐞𝐜𝐭 𝐰𝐡𝐞𝐧 𝐭𝐡𝐞 𝐤𝐞𝐲 𝐢𝐬 𝐫𝐢𝐠𝐡𝐭
+		𝐁𝐨𝐨𝐦𝐓𝐞𝐱𝐭 = 𝐔𝐈.𝐅𝐚𝐧𝐜𝐲("𝐋𝐄𝐓𝐒 𝐆𝐎!", "𝐁𝐨𝐥𝐝"),
+		𝐓𝐡𝐞𝐦𝐞 = "𝐑𝐞𝐝",
 	}
-end
-local DISCORD = "https://discord.gg/8s7RR3wZ6b" -- the official RebelUI & Resources server
+𝐞𝐧𝐝
+𝐥𝐨𝐜𝐚𝐥 𝐃𝐈𝐒𝐂𝐎𝐑𝐃 = "𝐡𝐭𝐭𝐩𝐬://𝐝𝐢𝐬𝐜𝐨𝐫𝐝.𝐠𝐠/𝟖𝐬𝟕𝐑𝐑𝟑𝐰𝐙𝟔𝐛" -- 𝐭𝐡𝐞 𝐨𝐟𝐟𝐢𝐜𝐢𝐚𝐥 𝐑𝐞𝐛𝐞𝐥𝐔𝐈 & 𝐑𝐞𝐬𝐨𝐮𝐫𝐜𝐞𝐬 𝐬𝐞𝐫𝐯𝐞𝐫
 
--- ============================================================ 1. loading screen
-if USE_KEY_GATE then
-	local okKey = UI:KeyGate(keyGateOptions(true))
-	if not okKey then
-		return
-	end
-end
-local gameName = "Unknown game"
-pcall(function()
-	gameName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
-end)
+-- ============================================================ 𝟎. 𝐬𝐭𝐚𝐫𝐭 𝐝𝐨𝐰𝐧𝐥𝐨𝐚𝐝𝐢𝐧𝐠 𝐭𝐡𝐞 𝐯𝐢𝐝𝐞𝐨 𝐑𝐈𝐆𝐇𝐓 𝐍𝐎𝐖 (𝐟𝐢𝐫𝐬𝐭 𝐫𝐮𝐧 𝐨𝐧𝐥𝐲, 𝐤𝐞𝐩𝐭 𝐚𝐟𝐭𝐞𝐫 𝐭𝐡𝐚𝐭)
+𝐥𝐨𝐜𝐚𝐥 𝐯𝐢𝐝𝐑𝐞𝐚𝐝𝐲, 𝐯𝐢𝐝𝐏𝐚𝐭𝐡 = 𝐧𝐨𝐭 𝐕𝐈𝐃𝐄𝐎, 𝐧𝐢𝐥
+𝐢𝐟 𝐕𝐈𝐃𝐄𝐎 𝐭𝐡𝐞𝐧
+	𝐭𝐚𝐬𝐤.𝐬𝐩𝐚𝐰𝐧(𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧()
+		𝐥𝐨𝐜𝐚𝐥 𝐨𝐤𝐕, 𝐚 = 𝐩𝐜𝐚𝐥𝐥(𝐔𝐈.𝐑𝐞𝐬𝐨𝐥𝐯𝐞𝐌𝐞𝐝𝐢𝐚, 𝐕𝐈𝐃𝐄𝐎)
+		𝐯𝐢𝐝𝐏𝐚𝐭𝐡 = 𝐨𝐤𝐕 𝐚𝐧𝐝 𝐚 𝐨𝐫 𝐧𝐢𝐥
+		𝐯𝐢𝐝𝐑𝐞𝐚𝐝𝐲 = 𝐭𝐫𝐮𝐞
+	𝐞𝐧𝐝)
+𝐞𝐧𝐝
 
-Load = UI:Loading({
-	Title = "Rebelwar",
-	Subtitle = "made by prorizz196",
-	Logo = LOGO, -- the round logo with the spinning ring
-	Banner = BANNER, -- the slow zooming picture behind everything
-	Footer = "discord.gg/8s7RR3wZ6b  |  RebelUI v" .. UI.Version,
-	Theme = "Red",
+-- ============================================================ 𝟏. 𝐥𝐨𝐚𝐝𝐢𝐧𝐠 𝐬𝐜𝐫𝐞𝐞𝐧
+𝐢𝐟 𝐔𝐒𝐄_𝐊𝐄𝐘_𝐆𝐀𝐓𝐄 𝐭𝐡𝐞𝐧
+	𝐥𝐨𝐜𝐚𝐥 𝐨𝐤𝐊𝐞𝐲 = 𝐔𝐈:𝐊𝐞𝐲𝐆𝐚𝐭𝐞(𝐤𝐞𝐲𝐆𝐚𝐭𝐞𝐎𝐩𝐭𝐢𝐨𝐧𝐬(𝐭𝐫𝐮𝐞))
+	𝐢𝐟 𝐧𝐨𝐭 𝐨𝐤𝐊𝐞𝐲 𝐭𝐡𝐞𝐧
+		𝐫𝐞𝐭𝐮𝐫𝐧
+	𝐞𝐧𝐝
+𝐞𝐧𝐝
+𝐥𝐨𝐜𝐚𝐥 𝐠𝐚𝐦𝐞𝐍𝐚𝐦𝐞 = "𝐔𝐧𝐤𝐧𝐨𝐰𝐧 𝐠𝐚𝐦𝐞"
+𝐩𝐜𝐚𝐥𝐥(𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧()
+	𝐠𝐚𝐦𝐞𝐍𝐚𝐦𝐞 = 𝐠𝐚𝐦𝐞:𝐆𝐞𝐭𝐒𝐞𝐫𝐯𝐢𝐜𝐞("𝐌𝐚𝐫𝐤𝐞𝐭𝐩𝐥𝐚𝐜𝐞𝐒𝐞𝐫𝐯𝐢𝐜𝐞"):𝐆𝐞𝐭𝐏𝐫𝐨𝐝𝐮𝐜𝐭𝐈𝐧𝐟𝐨(𝐠𝐚𝐦𝐞.𝐏𝐥𝐚𝐜𝐞𝐈𝐝).𝐍𝐚𝐦𝐞
+𝐞𝐧𝐝)
+
+𝐋𝐨𝐚𝐝 = 𝐔𝐈:𝐋𝐨𝐚𝐝𝐢𝐧𝐠({
+	𝐓𝐢𝐭𝐥𝐞 = "𝐑𝐞𝐛𝐞𝐥𝐰𝐚𝐫",
+	𝐒𝐮𝐛𝐭𝐢𝐭𝐥𝐞 = "𝐦𝐚𝐝𝐞 𝐛𝐲 𝐩𝐫𝐨𝐫𝐢𝐳𝐳𝟏𝟗𝟔",
+	𝐋𝐨𝐠𝐨 = 𝐋𝐎𝐆𝐎, -- 𝐭𝐡𝐞 𝐫𝐨𝐮𝐧𝐝 𝐥𝐨𝐠𝐨 𝐰𝐢𝐭𝐡 𝐭𝐡𝐞 𝐬𝐩𝐢𝐧𝐧𝐢𝐧𝐠 𝐫𝐢𝐧𝐠
+	𝐁𝐚𝐧𝐧𝐞𝐫 = 𝐁𝐀𝐍𝐍𝐄𝐑, -- 𝐭𝐡𝐞 𝐬𝐥𝐨𝐰 𝐳𝐨𝐨𝐦𝐢𝐧𝐠 𝐩𝐢𝐜𝐭𝐮𝐫𝐞 𝐛𝐞𝐡𝐢𝐧𝐝 𝐞𝐯𝐞𝐫𝐲𝐭𝐡𝐢𝐧𝐠
+	𝐅𝐨𝐨𝐭𝐞𝐫 = "𝐝𝐢𝐬𝐜𝐨𝐫𝐝.𝐠𝐠/𝟖𝐬𝟕𝐑𝐑𝟑𝐰𝐙𝟔𝐛  |  𝐑𝐞𝐛𝐞𝐥𝐔𝐈 𝐯" .. 𝐔𝐈.𝐕𝐞𝐫𝐬𝐢𝐨𝐧,
+	𝐓𝐡𝐞𝐦𝐞 = "𝐑𝐞𝐝",
 })
-Load:Badge(gameName) -- the small pill at the top
+𝐋𝐨𝐚𝐝:𝐁𝐚𝐝𝐠𝐞(𝐠𝐚𝐦𝐞𝐍𝐚𝐦𝐞) -- 𝐭𝐡𝐞 𝐬𝐦𝐚𝐥𝐥 𝐩𝐢𝐥𝐥 𝐚𝐭 𝐭𝐡𝐞 𝐭𝐨𝐩
 
--- Boot log + watchdog. Every step is written to RebelUI_boot.txt (in your executor's workspace folder) and shown on
--- the loading screen. If the screen ever stops, the LAST LINE of that file says exactly where. The loading screen also
--- removes itself and opens the panel after 25 seconds no matter what, so it can never lock the screen.
-local T0, ready, bootLog = os.clock(), false, {}
-local function stage(name, progress)
-	table.insert(bootLog, string.format("%5.1fs  %s", os.clock() - T0, name))
-	pcall(function()
-		if writefile then
-			writefile("RebelUI_boot.txt", table.concat(bootLog, "\n"))
-		end
-	end)
-	if Load and not Load.Dead then
-		pcall(Load.Status, Load, name)
-		if progress then
-			pcall(Load.Progress, Load, progress)
-		end
-	end
-	task.wait() -- let the screen draw a frame before the next heavy step
-end
-task.delay(25, function()
-	if not ready then
-		warn("[Rebelwar] startup was still running after 25s. Last step: " .. tostring(bootLog[#bootLog]))
-		pcall(function()
-			if Load then
-				Load:Destroy()
-			end
-			if Win then
-				Win:Toggle(true)
-			end
-		end)
-	end
-end)
-stage("Starting...", 0.05)
+-- 𝐁𝐨𝐨𝐭 𝐥𝐨𝐠 + 𝐰𝐚𝐭𝐜𝐡𝐝𝐨𝐠. 𝐄𝐯𝐞𝐫𝐲 𝐬𝐭𝐞𝐩 𝐢𝐬 𝐰𝐫𝐢𝐭𝐭𝐞𝐧 𝐭𝐨 𝐑𝐞𝐛𝐞𝐥𝐔𝐈_𝐛𝐨𝐨𝐭.𝐭𝐱𝐭 (𝐢𝐧 𝐲𝐨𝐮𝐫 𝐞𝐱𝐞𝐜𝐮𝐭𝐨𝐫'𝐬 𝐰𝐨𝐫𝐤𝐬𝐩𝐚𝐜𝐞 𝐟𝐨𝐥𝐝𝐞𝐫) 𝐚𝐧𝐝 𝐬𝐡𝐨𝐰𝐧 𝐨𝐧
+-- 𝐭𝐡𝐞 𝐥𝐨𝐚𝐝𝐢𝐧𝐠 𝐬𝐜𝐫𝐞𝐞𝐧. 𝐈𝐟 𝐭𝐡𝐞 𝐬𝐜𝐫𝐞𝐞𝐧 𝐞𝐯𝐞𝐫 𝐬𝐭𝐨𝐩𝐬, 𝐭𝐡𝐞 𝐋𝐀𝐒𝐓 𝐋𝐈𝐍𝐄 𝐨𝐟 𝐭𝐡𝐚𝐭 𝐟𝐢𝐥𝐞 𝐬𝐚𝐲𝐬 𝐞𝐱𝐚𝐜𝐭𝐥𝐲 𝐰𝐡𝐞𝐫𝐞. 𝐓𝐡𝐞 𝐥𝐨𝐚𝐝𝐢𝐧𝐠 𝐬𝐜𝐫𝐞𝐞𝐧 𝐚𝐥𝐬𝐨
+-- 𝐫𝐞𝐦𝐨𝐯𝐞𝐬 𝐢𝐭𝐬𝐞𝐥𝐟 𝐚𝐧𝐝 𝐨𝐩𝐞𝐧𝐬 𝐭𝐡𝐞 𝐩𝐚𝐧𝐞𝐥 𝐚𝐟𝐭𝐞𝐫 𝟐𝟓 𝐬𝐞𝐜𝐨𝐧𝐝𝐬 𝐧𝐨 𝐦𝐚𝐭𝐭𝐞𝐫 𝐰𝐡𝐚𝐭, 𝐬𝐨 𝐢𝐭 𝐜𝐚𝐧 𝐧𝐞𝐯𝐞𝐫 𝐥𝐨𝐜𝐤 𝐭𝐡𝐞 𝐬𝐜𝐫𝐞𝐞𝐧.
+𝐥𝐨𝐜𝐚𝐥 𝐓𝟎, 𝐫𝐞𝐚𝐝𝐲, 𝐛𝐨𝐨𝐭𝐋𝐨𝐠 = 𝐨𝐬.𝐜𝐥𝐨𝐜𝐤(), 𝐟𝐚𝐥𝐬𝐞, {}
+𝐥𝐨𝐜𝐚𝐥 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧 𝐬𝐭𝐚𝐠𝐞(𝐧𝐚𝐦𝐞, 𝐩𝐫𝐨𝐠𝐫𝐞𝐬𝐬)
+	𝐭𝐚𝐛𝐥𝐞.𝐢𝐧𝐬𝐞𝐫𝐭(𝐛𝐨𝐨𝐭𝐋𝐨𝐠, 𝐬𝐭𝐫𝐢𝐧𝐠.𝐟𝐨𝐫𝐦𝐚𝐭("%𝟓.𝟏𝐟𝐬  %𝐬", 𝐨𝐬.𝐜𝐥𝐨𝐜𝐤() - 𝐓𝟎, 𝐧𝐚𝐦𝐞))
+	𝐩𝐜𝐚𝐥𝐥(𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧()
+		𝐢𝐟 𝐰𝐫𝐢𝐭𝐞𝐟𝐢𝐥𝐞 𝐭𝐡𝐞𝐧
+			𝐰𝐫𝐢𝐭𝐞𝐟𝐢𝐥𝐞("𝐑𝐞𝐛𝐞𝐥𝐔𝐈_𝐛𝐨𝐨𝐭.𝐭𝐱𝐭", 𝐭𝐚𝐛𝐥𝐞.𝐜𝐨𝐧𝐜𝐚𝐭(𝐛𝐨𝐨𝐭𝐋𝐨𝐠, "\𝐧"))
+		𝐞𝐧𝐝
+	𝐞𝐧𝐝)
+	𝐢𝐟 𝐋𝐨𝐚𝐝 𝐚𝐧𝐝 𝐧𝐨𝐭 𝐋𝐨𝐚𝐝.𝐃𝐞𝐚𝐝 𝐭𝐡𝐞𝐧
+		𝐩𝐜𝐚𝐥𝐥(𝐋𝐨𝐚𝐝.𝐒𝐭𝐚𝐭𝐮𝐬, 𝐋𝐨𝐚𝐝, 𝐧𝐚𝐦𝐞)
+		𝐢𝐟 𝐩𝐫𝐨𝐠𝐫𝐞𝐬𝐬 𝐭𝐡𝐞𝐧
+			𝐩𝐜𝐚𝐥𝐥(𝐋𝐨𝐚𝐝.𝐏𝐫𝐨𝐠𝐫𝐞𝐬𝐬, 𝐋𝐨𝐚𝐝, 𝐩𝐫𝐨𝐠𝐫𝐞𝐬𝐬)
+		𝐞𝐧𝐝
+	𝐞𝐧𝐝
+	𝐭𝐚𝐬𝐤.𝐰𝐚𝐢𝐭() -- 𝐥𝐞𝐭 𝐭𝐡𝐞 𝐬𝐜𝐫𝐞𝐞𝐧 𝐝𝐫𝐚𝐰 𝐚 𝐟𝐫𝐚𝐦𝐞 𝐛𝐞𝐟𝐨𝐫𝐞 𝐭𝐡𝐞 𝐧𝐞𝐱𝐭 𝐡𝐞𝐚𝐯𝐲 𝐬𝐭𝐞𝐩
+𝐞𝐧𝐝
+𝐭𝐚𝐬𝐤.𝐝𝐞𝐥𝐚𝐲(𝟐𝟓, 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧()
+	𝐢𝐟 𝐧𝐨𝐭 𝐫𝐞𝐚𝐝𝐲 𝐭𝐡𝐞𝐧
+		𝐰𝐚𝐫𝐧("[𝐑𝐞𝐛𝐞𝐥𝐰𝐚𝐫] 𝐬𝐭𝐚𝐫𝐭𝐮𝐩 𝐰𝐚𝐬 𝐬𝐭𝐢𝐥𝐥 𝐫𝐮𝐧𝐧𝐢𝐧𝐠 𝐚𝐟𝐭𝐞𝐫 𝟐𝟓𝐬. 𝐋𝐚𝐬𝐭 𝐬𝐭𝐞𝐩: " .. 𝐭𝐨𝐬𝐭𝐫𝐢𝐧𝐠(𝐛𝐨𝐨𝐭𝐋𝐨𝐠[#𝐛𝐨𝐨𝐭𝐋𝐨𝐠]))
+		𝐩𝐜𝐚𝐥𝐥(𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧()
+			𝐢𝐟 𝐋𝐨𝐚𝐝 𝐭𝐡𝐞𝐧
+				𝐋𝐨𝐚𝐝:𝐃𝐞𝐬𝐭𝐫𝐨𝐲()
+			𝐞𝐧𝐝
+			𝐢𝐟 𝐖𝐢𝐧 𝐭𝐡𝐞𝐧
+				𝐖𝐢𝐧:𝐓𝐨𝐠𝐠𝐥𝐞(𝐭𝐫𝐮𝐞)
+			𝐞𝐧𝐝
+		𝐞𝐧𝐝)
+	𝐞𝐧𝐝
+𝐞𝐧𝐝)
+𝐬𝐭𝐚𝐠𝐞("𝐒𝐭𝐚𝐫𝐭𝐢𝐧𝐠...", 𝟎.𝟎𝟓)
 
--- download both videos FIRST (first run only, they are kept after that), then play the logo video
-local logoVid, aiVid
-if VIDEO or (USE_AI and AI_VIDEO) then
-	Load:Status("Downloading the loading videos (first run only)...")
-	Load:Progress(0.08)
-	local pending = 0
-	local function grab(src, set)
-		if not src then
-			return
-		end
-		pending += 1
-		task.spawn(function()
-			local ok, a = pcall(UI.ResolveMedia, src)
-			if ok and a then
-				set(a)
-			end
-			pending -= 1
-		end)
-	end
-	grab(VIDEO, function(a)
-		logoVid = a
-	end)
-	grab(USE_AI and AI_VIDEO or nil, function(a)
-		aiVid = a
-	end)
-	local t0 = os.clock()
-	while pending > 0 and os.clock() - t0 < 25 do
-		task.wait(0.1)
-		pcall(Load.Progress, Load, 0.08 + 0.2 * math.min((os.clock() - t0) / 25, 1)) -- the bar keeps moving
-	end
-	if logoVid then
-		Load:SetVideo(logoVid)
-	end
-end
-stage("Loading images...", 0.3)
-Load:Preload({ LOGO, BANNER, ICON.ESP, ICON.Settings, ICON.Discord }, 0, 0.6)
+-- 𝐝𝐨𝐰𝐧𝐥𝐨𝐚𝐝 𝐛𝐨𝐭𝐡 𝐯𝐢𝐝𝐞𝐨𝐬 𝐅𝐈𝐑𝐒𝐓 (𝐟𝐢𝐫𝐬𝐭 𝐫𝐮𝐧 𝐨𝐧𝐥𝐲, 𝐭𝐡𝐞𝐲 𝐚𝐫𝐞 𝐤𝐞𝐩𝐭 𝐚𝐟𝐭𝐞𝐫 𝐭𝐡𝐚𝐭), 𝐭𝐡𝐞𝐧 𝐩𝐥𝐚𝐲 𝐭𝐡𝐞 𝐥𝐨𝐠𝐨 𝐯𝐢𝐝𝐞𝐨
+𝐥𝐨𝐜𝐚𝐥 𝐥𝐨𝐠𝐨𝐕𝐢𝐝
+𝐢𝐟 𝐕𝐈𝐃𝐄𝐎 𝐭𝐡𝐞𝐧
+	𝐋𝐨𝐚𝐝:𝐒𝐭𝐚𝐭𝐮𝐬(𝐔𝐈.𝐅𝐚𝐧𝐜𝐲("𝐝𝐨𝐰𝐧𝐥𝐨𝐚𝐝𝐢𝐧𝐠 𝐭𝐡𝐞 𝐢𝐧𝐭𝐫𝐨", "𝐁𝐨𝐥𝐝") .. " ...")
+	𝐥𝐨𝐜𝐚𝐥 𝐭𝟎 = 𝐨𝐬.𝐜𝐥𝐨𝐜𝐤()
+	𝐰𝐡𝐢𝐥𝐞 𝐧𝐨𝐭 𝐯𝐢𝐝𝐑𝐞𝐚𝐝𝐲 𝐚𝐧𝐝 𝐨𝐬.𝐜𝐥𝐨𝐜𝐤() - 𝐭𝟎 < 𝟐𝟓 𝐝𝐨
+		𝐭𝐚𝐬𝐤.𝐰𝐚𝐢𝐭(𝟎.𝟏)
+		𝐩𝐜𝐚𝐥𝐥(𝐋𝐨𝐚𝐝.𝐏𝐫𝐨𝐠𝐫𝐞𝐬𝐬, 𝐋𝐨𝐚𝐝, 𝟎.𝟎𝟖 + 𝟎.𝟐 * 𝐦𝐚𝐭𝐡.𝐦𝐢𝐧((𝐨𝐬.𝐜𝐥𝐨𝐜𝐤() - 𝐭𝟎) / 𝟐𝟓, 𝟏)) -- 𝐭𝐡𝐞 𝐛𝐚𝐫 𝐤𝐞𝐞𝐩𝐬 𝐦𝐨𝐯𝐢𝐧𝐠
+	𝐞𝐧𝐝
+	𝐥𝐨𝐠𝐨𝐕𝐢𝐝 = 𝐯𝐢𝐝𝐏𝐚𝐭𝐡
+	𝐢𝐟 𝐥𝐨𝐠𝐨𝐕𝐢𝐝 𝐭𝐡𝐞𝐧
+		𝐋𝐨𝐚𝐝:𝐒𝐞𝐭𝐕𝐢𝐝𝐞𝐨(𝐥𝐨𝐠𝐨𝐕𝐢𝐝) -- 𝐩𝐥𝐚𝐲𝐬 𝐭𝐡𝐞 𝐯𝐢𝐝𝐞𝐨, 𝐭𝐡𝐞𝐧 𝐛𝐨𝐨𝐦 𝐰𝐡𝐞𝐧 𝐭𝐡𝐞 𝐩𝐚𝐧𝐞𝐥 𝐨𝐩𝐞𝐧𝐬
+	𝐞𝐧𝐝
+𝐞𝐧𝐝
+𝐬𝐭𝐚𝐠𝐞("𝐋𝐨𝐚𝐝𝐢𝐧𝐠 𝐢𝐦𝐚𝐠𝐞𝐬...", 𝟎.𝟑)
+𝐋𝐨𝐚𝐝:𝐏𝐫𝐞𝐥𝐨𝐚𝐝({ 𝐋𝐎𝐆𝐎, 𝐁𝐀𝐍𝐍𝐄𝐑, 𝐈𝐂𝐎𝐍.𝐄𝐒𝐏, 𝐈𝐂𝐎𝐍.𝐒𝐞𝐭𝐭𝐢𝐧𝐠𝐬, 𝐈𝐂𝐎𝐍.𝐃𝐢𝐬𝐜𝐨𝐫𝐝 }, 𝟎, 𝟎.𝟔)
 
--- ============================================================ 2. the window and the top bar
-stage("Building the panel...", 0.55)
+-- ============================================================ 𝟐. 𝐭𝐡𝐞 𝐰𝐢𝐧𝐝𝐨𝐰 𝐚𝐧𝐝 𝐭𝐡𝐞 𝐭𝐨𝐩 𝐛𝐚𝐫
+𝐬𝐭𝐚𝐠𝐞("𝐁𝐮𝐢𝐥𝐝𝐢𝐧𝐠 𝐭𝐡𝐞 𝐩𝐚𝐧𝐞𝐥...", 𝟎.𝟓𝟓)
 
-Win = UI:CreateWindow({
-	Title = "Rebelwar",
-	Subtitle = "made by prorizz196",
-	Icon = LOGO, -- logo in the corner
-	Theme = "Red", -- Red, Crimson, Blue, Green, Purple, Orange, Pink, Gold, Cyber, Blood, Ice, Mono
-	Open = false, -- stay closed until the loading screen is done
-	Opacity = 100, -- 100 = solid panel (10 to 100). Players can change it in Settings
-	Setup = SETUP, -- Auto / Mobile / PC. PC gets a wider panel, Mobile a big thumb-sized open button and swipe between tabs
-	Ambient = true, -- two soft glowing circles drift behind the panel
-	Search = true, -- the search box next to the page title
-	Resizable = true, -- drag the corner grip to resize
-	ToggleKey = Enum.KeyCode.RightShift, -- phones use the top bar instead
+𝐖𝐢𝐧 = 𝐔𝐈:𝐂𝐫𝐞𝐚𝐭𝐞𝐖𝐢𝐧𝐝𝐨𝐰({
+	𝐓𝐢𝐭𝐥𝐞 = "𝐑𝐞𝐛𝐞𝐥𝐰𝐚𝐫",
+	𝐒𝐮𝐛𝐭𝐢𝐭𝐥𝐞 = "𝐦𝐚𝐝𝐞 𝐛𝐲 𝐩𝐫𝐨𝐫𝐢𝐳𝐳𝟏𝟗𝟔",
+	𝐈𝐜𝐨𝐧 = 𝐋𝐎𝐆𝐎, -- 𝐥𝐨𝐠𝐨 𝐢𝐧 𝐭𝐡𝐞 𝐜𝐨𝐫𝐧𝐞𝐫
+	𝐓𝐡𝐞𝐦𝐞 = "𝐑𝐞𝐝", -- 𝐑𝐞𝐝, 𝐂𝐫𝐢𝐦𝐬𝐨𝐧, 𝐁𝐥𝐮𝐞, 𝐆𝐫𝐞𝐞𝐧, 𝐏𝐮𝐫𝐩𝐥𝐞, 𝐎𝐫𝐚𝐧𝐠𝐞, 𝐏𝐢𝐧𝐤, 𝐆𝐨𝐥𝐝, 𝐂𝐲𝐛𝐞𝐫, 𝐁𝐥𝐨𝐨𝐝, 𝐈𝐜𝐞, 𝐌𝐨𝐧𝐨
+	𝐎𝐩𝐞𝐧 = 𝐟𝐚𝐥𝐬𝐞, -- 𝐬𝐭𝐚𝐲 𝐜𝐥𝐨𝐬𝐞𝐝 𝐮𝐧𝐭𝐢𝐥 𝐭𝐡𝐞 𝐥𝐨𝐚𝐝𝐢𝐧𝐠 𝐬𝐜𝐫𝐞𝐞𝐧 𝐢𝐬 𝐝𝐨𝐧𝐞
+	𝐎𝐩𝐚𝐜𝐢𝐭𝐲 = 𝟏𝟎𝟎, -- 𝟏𝟎𝟎 = 𝐬𝐨𝐥𝐢𝐝 𝐩𝐚𝐧𝐞𝐥 (𝟏𝟎 𝐭𝐨 𝟏𝟎𝟎). 𝐏𝐥𝐚𝐲𝐞𝐫𝐬 𝐜𝐚𝐧 𝐜𝐡𝐚𝐧𝐠𝐞 𝐢𝐭 𝐢𝐧 𝐒𝐞𝐭𝐭𝐢𝐧𝐠𝐬
+	𝐒𝐞𝐭𝐮𝐩 = 𝐒𝐄𝐓𝐔𝐏, -- 𝐀𝐮𝐭𝐨 / 𝐌𝐨𝐛𝐢𝐥𝐞 / 𝐏𝐂. 𝐏𝐂 𝐠𝐞𝐭𝐬 𝐚 𝐰𝐢𝐝𝐞𝐫 𝐩𝐚𝐧𝐞𝐥, 𝐌𝐨𝐛𝐢𝐥𝐞 𝐚 𝐛𝐢𝐠 𝐭𝐡𝐮𝐦𝐛-𝐬𝐢𝐳𝐞𝐝 𝐨𝐩𝐞𝐧 𝐛𝐮𝐭𝐭𝐨𝐧 𝐚𝐧𝐝 𝐬𝐰𝐢𝐩𝐞 𝐛𝐞𝐭𝐰𝐞𝐞𝐧 𝐭𝐚𝐛𝐬
+	𝐓𝐨𝐠𝐠𝐥𝐞𝐒𝐭𝐲𝐥𝐞 = "𝐒𝐡𝐚𝐫𝐩", -- 𝐒𝐰𝐢𝐭𝐜𝐡, 𝐒𝐡𝐚𝐫𝐩, 𝐂𝐡𝐞𝐜𝐤, 𝐑𝐚𝐝𝐢𝐨, 𝐇𝐞𝐚𝐫𝐭, 𝐒𝐭𝐚𝐫, 𝐂𝐡𝐞𝐜𝐤𝐛𝐨𝐱
+	𝐒𝐥𝐢𝐝𝐞𝐫𝐒𝐭𝐲𝐥𝐞 = "𝐒𝐡𝐚𝐫𝐩",
+	𝐀𝐦𝐛𝐢𝐞𝐧𝐭 = 𝐭𝐫𝐮𝐞, -- 𝐭𝐰𝐨 𝐬𝐨𝐟𝐭 𝐠𝐥𝐨𝐰𝐢𝐧𝐠 𝐜𝐢𝐫𝐜𝐥𝐞𝐬 𝐝𝐫𝐢𝐟𝐭 𝐛𝐞𝐡𝐢𝐧𝐝 𝐭𝐡𝐞 𝐩𝐚𝐧𝐞𝐥
+	𝐒𝐞𝐚𝐫𝐜𝐡 = 𝐭𝐫𝐮𝐞, -- 𝐭𝐡𝐞 𝐬𝐞𝐚𝐫𝐜𝐡 𝐛𝐨𝐱 𝐧𝐞𝐱𝐭 𝐭𝐨 𝐭𝐡𝐞 𝐩𝐚𝐠𝐞 𝐭𝐢𝐭𝐥𝐞
+	𝐑𝐞𝐬𝐢𝐳𝐚𝐛𝐥𝐞 = 𝐭𝐫𝐮𝐞, -- 𝐝𝐫𝐚𝐠 𝐭𝐡𝐞 𝐜𝐨𝐫𝐧𝐞𝐫 𝐠𝐫𝐢𝐩 𝐭𝐨 𝐫𝐞𝐬𝐢𝐳𝐞
+	𝐓𝐨𝐠𝐠𝐥𝐞𝐊𝐞𝐲 = 𝐄𝐧𝐮𝐦.𝐊𝐞𝐲𝐂𝐨𝐝𝐞.𝐑𝐢𝐠𝐡𝐭𝐒𝐡𝐢𝐟𝐭, -- 𝐩𝐡𝐨𝐧𝐞𝐬 𝐮𝐬𝐞 𝐭𝐡𝐞 𝐭𝐨𝐩 𝐛𝐚𝐫 𝐢𝐧𝐬𝐭𝐞𝐚𝐝
 })
 
-stage("Building the top bar...", 0.6)
-Win:CreateWatermark({ Text = "Rebelwar" }) -- small pill in the corner: name, FPS and ping
-Win:SetPalette() -- Ctrl+K: search every tab and command
-Win:SetBackground({ Image = BANNER, Opacity = 0.18 }) -- a picture behind the panel (Win:SetBackground() removes it)
-Win:SetPanicKey(Enum.KeyCode.Delete) -- Delete hides every window and the open button; press again to bring them back
-Win:SetOpenBoom("first") -- an explosion the first time the panel opens ("always" = every time, false = off)
-Win:SetTabHotkeys() -- Ctrl+1 ... Ctrl+9 jump to the tabs
-Win:SetDim(0.35) -- darken the game behind the panel while it is open (0 = off)
-local Bar = Win:CreateBar({
-	Items = { "FPS", "Logo", "Timer" }, -- the Rebelwar classic. Players can change it in Settings.
-	Logo = LOGO,
+𝐬𝐭𝐚𝐠𝐞("𝐁𝐮𝐢𝐥𝐝𝐢𝐧𝐠 𝐭𝐡𝐞 𝐭𝐨𝐩 𝐛𝐚𝐫...", 𝟎.𝟔)
+𝐖𝐢𝐧:𝐂𝐫𝐞𝐚𝐭𝐞𝐖𝐚𝐭𝐞𝐫𝐦𝐚𝐫𝐤({ 𝐓𝐞𝐱𝐭 = "𝐑𝐞𝐛𝐞𝐥𝐰𝐚𝐫" }) -- 𝐬𝐦𝐚𝐥𝐥 𝐩𝐢𝐥𝐥 𝐢𝐧 𝐭𝐡𝐞 𝐜𝐨𝐫𝐧𝐞𝐫: 𝐧𝐚𝐦𝐞, 𝐅𝐏𝐒 𝐚𝐧𝐝 𝐩𝐢𝐧𝐠
+𝐖𝐢𝐧:𝐒𝐞𝐭𝐏𝐚𝐥𝐞𝐭𝐭𝐞() -- 𝐂𝐭𝐫𝐥+𝐊: 𝐬𝐞𝐚𝐫𝐜𝐡 𝐞𝐯𝐞𝐫𝐲 𝐭𝐚𝐛 𝐚𝐧𝐝 𝐜𝐨𝐦𝐦𝐚𝐧𝐝
+𝐖𝐢𝐧:𝐒𝐞𝐭𝐁𝐚𝐜𝐤𝐠𝐫𝐨𝐮𝐧𝐝({ 𝐈𝐦𝐚𝐠𝐞 = 𝐁𝐀𝐍𝐍𝐄𝐑, 𝐎𝐩𝐚𝐜𝐢𝐭𝐲 = 𝟎.𝟏𝟖 }) -- 𝐚 𝐩𝐢𝐜𝐭𝐮𝐫𝐞 𝐛𝐞𝐡𝐢𝐧𝐝 𝐭𝐡𝐞 𝐩𝐚𝐧𝐞𝐥 (𝐖𝐢𝐧:𝐒𝐞𝐭𝐁𝐚𝐜𝐤𝐠𝐫𝐨𝐮𝐧𝐝() 𝐫𝐞𝐦𝐨𝐯𝐞𝐬 𝐢𝐭)
+𝐖𝐢𝐧:𝐒𝐞𝐭𝐏𝐚𝐧𝐢𝐜𝐊𝐞𝐲(𝐄𝐧𝐮𝐦.𝐊𝐞𝐲𝐂𝐨𝐝𝐞.𝐃𝐞𝐥𝐞𝐭𝐞) -- 𝐃𝐞𝐥𝐞𝐭𝐞 𝐡𝐢𝐝𝐞𝐬 𝐞𝐯𝐞𝐫𝐲 𝐰𝐢𝐧𝐝𝐨𝐰 𝐚𝐧𝐝 𝐭𝐡𝐞 𝐨𝐩𝐞𝐧 𝐛𝐮𝐭𝐭𝐨𝐧; 𝐩𝐫𝐞𝐬𝐬 𝐚𝐠𝐚𝐢𝐧 𝐭𝐨 𝐛𝐫𝐢𝐧𝐠 𝐭𝐡𝐞𝐦 𝐛𝐚𝐜𝐤
+𝐖𝐢𝐧:𝐒𝐞𝐭𝐎𝐩𝐞𝐧𝐁𝐨𝐨𝐦("𝐟𝐢𝐫𝐬𝐭") -- 𝐚𝐧 𝐞𝐱𝐩𝐥𝐨𝐬𝐢𝐨𝐧 𝐭𝐡𝐞 𝐟𝐢𝐫𝐬𝐭 𝐭𝐢𝐦𝐞 𝐭𝐡𝐞 𝐩𝐚𝐧𝐞𝐥 𝐨𝐩𝐞𝐧𝐬 ("𝐚𝐥𝐰𝐚𝐲𝐬" = 𝐞𝐯𝐞𝐫𝐲 𝐭𝐢𝐦𝐞, 𝐟𝐚𝐥𝐬𝐞 = 𝐨𝐟𝐟)
+𝐖𝐢𝐧:𝐒𝐞𝐭𝐓𝐚𝐛𝐇𝐨𝐭𝐤𝐞𝐲𝐬() -- 𝐂𝐭𝐫𝐥+𝟏 ... 𝐂𝐭𝐫𝐥+𝟗 𝐣𝐮𝐦𝐩 𝐭𝐨 𝐭𝐡𝐞 𝐭𝐚𝐛𝐬
+𝐖𝐢𝐧:𝐒𝐞𝐭𝐃𝐢𝐦(𝟎.𝟑𝟓) -- 𝐝𝐚𝐫𝐤𝐞𝐧 𝐭𝐡𝐞 𝐠𝐚𝐦𝐞 𝐛𝐞𝐡𝐢𝐧𝐝 𝐭𝐡𝐞 𝐩𝐚𝐧𝐞𝐥 𝐰𝐡𝐢𝐥𝐞 𝐢𝐭 𝐢𝐬 𝐨𝐩𝐞𝐧 (𝟎 = 𝐨𝐟𝐟)
+𝐥𝐨𝐜𝐚𝐥 𝐁𝐚𝐫 = 𝐖𝐢𝐧:𝐂𝐫𝐞𝐚𝐭𝐞𝐁𝐚𝐫({
+	𝐈𝐭𝐞𝐦𝐬 = { "𝐅𝐏𝐒", "𝐋𝐨𝐠𝐨", "𝐓𝐢𝐦𝐞𝐫" }, -- 𝐭𝐡𝐞 𝐑𝐞𝐛𝐞𝐥𝐰𝐚𝐫 𝐜𝐥𝐚𝐬𝐬𝐢𝐜. 𝐏𝐥𝐚𝐲𝐞𝐫𝐬 𝐜𝐚𝐧 𝐜𝐡𝐚𝐧𝐠𝐞 𝐢𝐭 𝐢𝐧 𝐒𝐞𝐭𝐭𝐢𝐧𝐠𝐬.
+	𝐋𝐨𝐠𝐨 = 𝐋𝐎𝐆𝐎,
 })
 
--- ============================================================ 3. tabs
-stage("Building tabs...", 0.65)
--- the Elements page builds itself the first time you open it (so the panel starts fast)
-local function buildElements(Elements)
-	-- ---------------------------------------------------------------- Elements: one of everything
-	Elements:Stats({ { Name = "Kills", Value = 0 }, { Name = "Wins", Value = 0 }, { Name = "Streak", Value = 0 } }) -- number tiles: :Set("Kills", 5)
-	Elements:Section("New: chips, steps, timeline, list, table")
-	Elements:Chips({ "Legit", "Rage", "Closet" }, { Closable = true, Callback = function(name, what) Win:Notify({ Title = what, Text = name }) end })
-	local steps = Elements:Steps({ "Pick", "Tune", "Go" }, 1)
-	Elements:Button({ Name = "Next step", Callback = function() steps:Next() end })
-	-- more animation: a shimmering placeholder while loading, and text that types itself
-	Elements:Typewriter({ Text = "Rows rise in, tap squishes, numbers count up..." })
-	local skel = Elements:Skeleton({ Lines = 2 })
-	task.delay(3, function()
-		skel:Remove()
-	end)
-	-- a live "Summary" feed: finished steps, notes, and a red glowing step while something is still working
-	local feed = Elements:Activity({ Title = "Summary" })
-	Elements:Button({ Name = "Run the Summary demo", Description = "Red glow = still working", Callback = function()
-		feed:Clear()
-		task.spawn(function()
-			feed:Working("Sleuthing")
-			task.wait(1.2)
-			feed:Add({ Kind = "search" })
-			task.wait(1)
-			feed:Add({ Kind = "command", Detail = "cd /workspace && ls" })
-			feed:Note("Adding notification history to the window.")
-			task.wait(1.2)
-			feed:Add({ Kind = "command", Detail = "run all tests" })
-			task.wait(1)
-			feed:Done()
-			feed:Note("All done.")
-		end)
-	end })
-	Elements:Timeline({ { Title = "v1.0.0", Time = "today", Text = "RebelUI released" }, { Title = "Watermark + palette", Time = "today" } })
-	Elements:List({ Items = { "Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta" }, Multi = true, Search = true, Callback = function(v) print("picked", #v) end })
-	Elements:Table({ Columns = { "Player", "Kills", "Deaths" }, Rows = { { "Ava", 12, 3 }, { "Ben", 7, 9 }, { "Cy", 21, 2 }, { "Dee", 4, 4 }, { "Eli", 15, 6 } }, PageSize = 4 })
-	Elements:Section("New: images with effects, boom, hold, undo, mini")
-	Elements:Image({ Image = LOGO, Height = 96, Circle = true, Effect = "Rainbow", Caption = "Effect = Rainbow (also Pulse, Float, Glow, Spin, Shimmer)", OnClick = function() Win:Boom({ Text = "BOOM" }) end })
-	Elements:Image({ Image = BANNER, Height = 90, Crop = true, Effect = "Shimmer" })
-	Elements:Button({ Name = "BOOM!", Description = "The explosion effect: flash, rings and sparks", Callback = function() Win:Boom({ Text = "BOOM" }) end })
-	Elements:HoldButton({ Name = "Hold to confirm (1 second)", Seconds = 1, Callback = function() Win:Notify({ Title = "Confirmed", Type = "success" }) end })
-	Elements:Button({ Name = "Toast with Undo", Callback = function() Win:NotifyUndo({ Title = "Setting changed", Text = "Tap Undo within 5 seconds.", OnUndo = function() Win:Notify({ Title = "Undone", Type = "success" }) end }) end })
-	local miniToggle = Elements:Toggle({ Name = "Mini pill target" })
-	Elements:Button({ Name = "Show the mini pill", Description = "A small draggable pill with that toggle", Callback = function() Win:CreateMini({ Toggles = { miniToggle } }) end })
-	Elements:Section("New: sub-tabs and columns")
-	local sub = Elements:SubTabs({ "Aim", "Visuals", "Misc" }) -- pages inside a tab
-	sub.Aim:Toggle({ Name = "A toggle in Aim" })
-	sub.Visuals:Slider({ Name = "A slider in Visuals", Min = 0, Max = 100, Default = 40 })
-	sub.Misc:Button({ Name = "A button in Misc", Callback = function() Win:Notify({ Title = "Misc button" }) end })
-	local cols = Elements:Columns(2) -- two columns (one column on a narrow panel)
-	cols[1]:Toggle({ Name = "Left" })
-	cols[2]:Toggle({ Name = "Right" })
-	Elements:Slider({ Name = "Panel picture opacity", Min = 0, Max = 100, Default = 18, Suffix = "%", Callback = function(v) Win:SetBackgroundOpacity(v / 100) end })
-	Elements:Section("Danger zone")
-	Elements:Button({
-		Name = "Big red button",
-		Description = "Danger = true: tap twice and the whole screen shakes",
-		Danger = true,
-		DoubleClick = true,
-		Callback = function()
-			Win:Notify({ Title = "Boom", Text = "The screen shook. Win:ScreenShake(power, seconds) does that.", Type = "warn" })
-		end,
+-- ============================================================ 𝟑. 𝐭𝐚𝐛𝐬
+𝐬𝐭𝐚𝐠𝐞("𝐁𝐮𝐢𝐥𝐝𝐢𝐧𝐠 𝐭𝐚𝐛𝐬...", 𝟎.𝟔𝟓)
+-- 𝐭𝐡𝐞 𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬 𝐩𝐚𝐠𝐞 𝐛𝐮𝐢𝐥𝐝𝐬 𝐢𝐭𝐬𝐞𝐥𝐟 𝐭𝐡𝐞 𝐟𝐢𝐫𝐬𝐭 𝐭𝐢𝐦𝐞 𝐲𝐨𝐮 𝐨𝐩𝐞𝐧 𝐢𝐭 (𝐬𝐨 𝐭𝐡𝐞 𝐩𝐚𝐧𝐞𝐥 𝐬𝐭𝐚𝐫𝐭𝐬 𝐟𝐚𝐬𝐭)
+𝐥𝐨𝐜𝐚𝐥 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧 𝐛𝐮𝐢𝐥𝐝𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬(𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬)
+	-- ---------------------------------------------------------------- 𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬: 𝐨𝐧𝐞 𝐨𝐟 𝐞𝐯𝐞𝐫𝐲𝐭𝐡𝐢𝐧𝐠
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐒𝐭𝐚𝐭𝐬({ { 𝐍𝐚𝐦𝐞 = "𝐊𝐢𝐥𝐥𝐬", 𝐕𝐚𝐥𝐮𝐞 = 𝟎 }, { 𝐍𝐚𝐦𝐞 = "𝐖𝐢𝐧𝐬", 𝐕𝐚𝐥𝐮𝐞 = 𝟎 }, { 𝐍𝐚𝐦𝐞 = "𝐒𝐭𝐫𝐞𝐚𝐤", 𝐕𝐚𝐥𝐮𝐞 = 𝟎 } }) -- 𝐧𝐮𝐦𝐛𝐞𝐫 𝐭𝐢𝐥𝐞𝐬: :𝐒𝐞𝐭("𝐊𝐢𝐥𝐥𝐬", 𝟓)
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐒𝐞𝐜𝐭𝐢𝐨𝐧("𝐍𝐞𝐰: 𝐜𝐡𝐢𝐩𝐬, 𝐬𝐭𝐞𝐩𝐬, 𝐭𝐢𝐦𝐞𝐥𝐢𝐧𝐞, 𝐥𝐢𝐬𝐭, 𝐭𝐚𝐛𝐥𝐞")
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐂𝐡𝐢𝐩𝐬({ "𝐋𝐞𝐠𝐢𝐭", "𝐑𝐚𝐠𝐞", "𝐂𝐥𝐨𝐬𝐞𝐭" }, { 𝐂𝐥𝐨𝐬𝐚𝐛𝐥𝐞 = 𝐭𝐫𝐮𝐞, 𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧(𝐧𝐚𝐦𝐞, 𝐰𝐡𝐚𝐭) 𝐖𝐢𝐧:𝐍𝐨𝐭𝐢𝐟𝐲({ 𝐓𝐢𝐭𝐥𝐞 = 𝐰𝐡𝐚𝐭, 𝐓𝐞𝐱𝐭 = 𝐧𝐚𝐦𝐞 }) 𝐞𝐧𝐝 })
+	𝐥𝐨𝐜𝐚𝐥 𝐬𝐭𝐞𝐩𝐬 = 𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐒𝐭𝐞𝐩𝐬({ "𝐏𝐢𝐜𝐤", "𝐓𝐮𝐧𝐞", "𝐆𝐨" }, 𝟏)
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐁𝐮𝐭𝐭𝐨𝐧({ 𝐍𝐚𝐦𝐞 = "𝐍𝐞𝐱𝐭 𝐬𝐭𝐞𝐩", 𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧() 𝐬𝐭𝐞𝐩𝐬:𝐍𝐞𝐱𝐭() 𝐞𝐧𝐝 })
+	-- 𝐦𝐨𝐫𝐞 𝐚𝐧𝐢𝐦𝐚𝐭𝐢𝐨𝐧: 𝐚 𝐬𝐡𝐢𝐦𝐦𝐞𝐫𝐢𝐧𝐠 𝐩𝐥𝐚𝐜𝐞𝐡𝐨𝐥𝐝𝐞𝐫 𝐰𝐡𝐢𝐥𝐞 𝐥𝐨𝐚𝐝𝐢𝐧𝐠, 𝐚𝐧𝐝 𝐭𝐞𝐱𝐭 𝐭𝐡𝐚𝐭 𝐭𝐲𝐩𝐞𝐬 𝐢𝐭𝐬𝐞𝐥𝐟
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐓𝐲𝐩𝐞𝐰𝐫𝐢𝐭𝐞𝐫({ 𝐓𝐞𝐱𝐭 = "𝐑𝐨𝐰𝐬 𝐫𝐢𝐬𝐞 𝐢𝐧, 𝐭𝐚𝐩 𝐬𝐪𝐮𝐢𝐬𝐡𝐞𝐬, 𝐧𝐮𝐦𝐛𝐞𝐫𝐬 𝐜𝐨𝐮𝐧𝐭 𝐮𝐩..." })
+	𝐥𝐨𝐜𝐚𝐥 𝐬𝐤𝐞𝐥 = 𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐒𝐤𝐞𝐥𝐞𝐭𝐨𝐧({ 𝐋𝐢𝐧𝐞𝐬 = 𝟐 })
+	𝐭𝐚𝐬𝐤.𝐝𝐞𝐥𝐚𝐲(𝟑, 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧()
+		𝐬𝐤𝐞𝐥:𝐑𝐞𝐦𝐨𝐯𝐞()
+	𝐞𝐧𝐝)
+	-- 𝐚 𝐥𝐢𝐯𝐞 "𝐒𝐮𝐦𝐦𝐚𝐫𝐲" 𝐟𝐞𝐞𝐝: 𝐟𝐢𝐧𝐢𝐬𝐡𝐞𝐝 𝐬𝐭𝐞𝐩𝐬, 𝐧𝐨𝐭𝐞𝐬, 𝐚𝐧𝐝 𝐚 𝐫𝐞𝐝 𝐠𝐥𝐨𝐰𝐢𝐧𝐠 𝐬𝐭𝐞𝐩 𝐰𝐡𝐢𝐥𝐞 𝐬𝐨𝐦𝐞𝐭𝐡𝐢𝐧𝐠 𝐢𝐬 𝐬𝐭𝐢𝐥𝐥 𝐰𝐨𝐫𝐤𝐢𝐧𝐠
+	𝐥𝐨𝐜𝐚𝐥 𝐟𝐞𝐞𝐝 = 𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐀𝐜𝐭𝐢𝐯𝐢𝐭𝐲({ 𝐓𝐢𝐭𝐥𝐞 = "𝐒𝐮𝐦𝐦𝐚𝐫𝐲" })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐁𝐮𝐭𝐭𝐨𝐧({ 𝐍𝐚𝐦𝐞 = "𝐑𝐮𝐧 𝐭𝐡𝐞 𝐒𝐮𝐦𝐦𝐚𝐫𝐲 𝐝𝐞𝐦𝐨", 𝐃𝐞𝐬𝐜𝐫𝐢𝐩𝐭𝐢𝐨𝐧 = "𝐑𝐞𝐝 𝐠𝐥𝐨𝐰 = 𝐬𝐭𝐢𝐥𝐥 𝐰𝐨𝐫𝐤𝐢𝐧𝐠", 𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧()
+		𝐟𝐞𝐞𝐝:𝐂𝐥𝐞𝐚𝐫()
+		𝐭𝐚𝐬𝐤.𝐬𝐩𝐚𝐰𝐧(𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧()
+			𝐟𝐞𝐞𝐝:𝐖𝐨𝐫𝐤𝐢𝐧𝐠("𝐒𝐥𝐞𝐮𝐭𝐡𝐢𝐧𝐠")
+			𝐭𝐚𝐬𝐤.𝐰𝐚𝐢𝐭(𝟏.𝟐)
+			𝐟𝐞𝐞𝐝:𝐀𝐝𝐝({ 𝐊𝐢𝐧𝐝 = "𝐬𝐞𝐚𝐫𝐜𝐡" })
+			𝐭𝐚𝐬𝐤.𝐰𝐚𝐢𝐭(𝟏)
+			𝐟𝐞𝐞𝐝:𝐀𝐝𝐝({ 𝐊𝐢𝐧𝐝 = "𝐜𝐨𝐦𝐦𝐚𝐧𝐝", 𝐃𝐞𝐭𝐚𝐢𝐥 = "𝐜𝐝 /𝐰𝐨𝐫𝐤𝐬𝐩𝐚𝐜𝐞 && 𝐥𝐬" })
+			𝐟𝐞𝐞𝐝:𝐍𝐨𝐭𝐞("𝐀𝐝𝐝𝐢𝐧𝐠 𝐧𝐨𝐭𝐢𝐟𝐢𝐜𝐚𝐭𝐢𝐨𝐧 𝐡𝐢𝐬𝐭𝐨𝐫𝐲 𝐭𝐨 𝐭𝐡𝐞 𝐰𝐢𝐧𝐝𝐨𝐰.")
+			𝐭𝐚𝐬𝐤.𝐰𝐚𝐢𝐭(𝟏.𝟐)
+			𝐟𝐞𝐞𝐝:𝐀𝐝𝐝({ 𝐊𝐢𝐧𝐝 = "𝐜𝐨𝐦𝐦𝐚𝐧𝐝", 𝐃𝐞𝐭𝐚𝐢𝐥 = "𝐫𝐮𝐧 𝐚𝐥𝐥 𝐭𝐞𝐬𝐭𝐬" })
+			𝐭𝐚𝐬𝐤.𝐰𝐚𝐢𝐭(𝟏)
+			𝐟𝐞𝐞𝐝:𝐃𝐨𝐧𝐞()
+			𝐟𝐞𝐞𝐝:𝐍𝐨𝐭𝐞("𝐀𝐥𝐥 𝐝𝐨𝐧𝐞.")
+		𝐞𝐧𝐝)
+	𝐞𝐧𝐝 })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐓𝐢𝐦𝐞𝐥𝐢𝐧𝐞({ { 𝐓𝐢𝐭𝐥𝐞 = "𝐯𝟏.𝟎.𝟎", 𝐓𝐢𝐦𝐞 = "𝐭𝐨𝐝𝐚𝐲", 𝐓𝐞𝐱𝐭 = "𝐑𝐞𝐛𝐞𝐥𝐔𝐈 𝐫𝐞𝐥𝐞𝐚𝐬𝐞𝐝" }, { 𝐓𝐢𝐭𝐥𝐞 = "𝐖𝐚𝐭𝐞𝐫𝐦𝐚𝐫𝐤 + 𝐩𝐚𝐥𝐞𝐭𝐭𝐞", 𝐓𝐢𝐦𝐞 = "𝐭𝐨𝐝𝐚𝐲" } })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐋𝐢𝐬𝐭({ 𝐈𝐭𝐞𝐦𝐬 = { "𝐀𝐥𝐩𝐡𝐚", "𝐁𝐞𝐭𝐚", "𝐆𝐚𝐦𝐦𝐚", "𝐃𝐞𝐥𝐭𝐚", "𝐄𝐩𝐬𝐢𝐥𝐨𝐧", "𝐙𝐞𝐭𝐚", "𝐄𝐭𝐚" }, 𝐌𝐮𝐥𝐭𝐢 = 𝐭𝐫𝐮𝐞, 𝐒𝐞𝐚𝐫𝐜𝐡 = 𝐭𝐫𝐮𝐞, 𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧(𝐯) 𝐩𝐫𝐢𝐧𝐭("𝐩𝐢𝐜𝐤𝐞𝐝", #𝐯) 𝐞𝐧𝐝 })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐓𝐚𝐛𝐥𝐞({ 𝐂𝐨𝐥𝐮𝐦𝐧𝐬 = { "𝐏𝐥𝐚𝐲𝐞𝐫", "𝐊𝐢𝐥𝐥𝐬", "𝐃𝐞𝐚𝐭𝐡𝐬" }, 𝐑𝐨𝐰𝐬 = { { "𝐀𝐯𝐚", 𝟏𝟐, 𝟑 }, { "𝐁𝐞𝐧", 𝟕, 𝟗 }, { "𝐂𝐲", 𝟐𝟏, 𝟐 }, { "𝐃𝐞𝐞", 𝟒, 𝟒 }, { "𝐄𝐥𝐢", 𝟏𝟓, 𝟔 } }, 𝐏𝐚𝐠𝐞𝐒𝐢𝐳𝐞 = 𝟒 })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐒𝐞𝐜𝐭𝐢𝐨𝐧("𝐍𝐞𝐰: 𝐢𝐦𝐚𝐠𝐞𝐬 𝐰𝐢𝐭𝐡 𝐞𝐟𝐟𝐞𝐜𝐭𝐬, 𝐛𝐨𝐨𝐦, 𝐡𝐨𝐥𝐝, 𝐮𝐧𝐝𝐨, 𝐦𝐢𝐧𝐢")
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐈𝐦𝐚𝐠𝐞({ 𝐈𝐦𝐚𝐠𝐞 = 𝐋𝐎𝐆𝐎, 𝐇𝐞𝐢𝐠𝐡𝐭 = 𝟗𝟔, 𝐂𝐢𝐫𝐜𝐥𝐞 = 𝐭𝐫𝐮𝐞, 𝐄𝐟𝐟𝐞𝐜𝐭 = "𝐑𝐚𝐢𝐧𝐛𝐨𝐰", 𝐂𝐚𝐩𝐭𝐢𝐨𝐧 = "𝐄𝐟𝐟𝐞𝐜𝐭 = 𝐑𝐚𝐢𝐧𝐛𝐨𝐰 (𝐚𝐥𝐬𝐨 𝐏𝐮𝐥𝐬𝐞, 𝐅𝐥𝐨𝐚𝐭, 𝐆𝐥𝐨𝐰, 𝐒𝐩𝐢𝐧, 𝐒𝐡𝐢𝐦𝐦𝐞𝐫)", 𝐎𝐧𝐂𝐥𝐢𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧() 𝐖𝐢𝐧:𝐁𝐨𝐨𝐦({ 𝐓𝐞𝐱𝐭 = "𝐁𝐎𝐎𝐌" }) 𝐞𝐧𝐝 })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐈𝐦𝐚𝐠𝐞({ 𝐈𝐦𝐚𝐠𝐞 = 𝐁𝐀𝐍𝐍𝐄𝐑, 𝐇𝐞𝐢𝐠𝐡𝐭 = 𝟗𝟎, 𝐂𝐫𝐨𝐩 = 𝐭𝐫𝐮𝐞, 𝐄𝐟𝐟𝐞𝐜𝐭 = "𝐒𝐡𝐢𝐦𝐦𝐞𝐫" })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐁𝐮𝐭𝐭𝐨𝐧({ 𝐍𝐚𝐦𝐞 = "𝐁𝐎𝐎𝐌!", 𝐃𝐞𝐬𝐜𝐫𝐢𝐩𝐭𝐢𝐨𝐧 = "𝐓𝐡𝐞 𝐞𝐱𝐩𝐥𝐨𝐬𝐢𝐨𝐧 𝐞𝐟𝐟𝐞𝐜𝐭: 𝐟𝐥𝐚𝐬𝐡, 𝐫𝐢𝐧𝐠𝐬 𝐚𝐧𝐝 𝐬𝐩𝐚𝐫𝐤𝐬", 𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧() 𝐖𝐢𝐧:𝐁𝐨𝐨𝐦({ 𝐓𝐞𝐱𝐭 = "𝐁𝐎𝐎𝐌" }) 𝐞𝐧𝐝 })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐇𝐨𝐥𝐝𝐁𝐮𝐭𝐭𝐨𝐧({ 𝐍𝐚𝐦𝐞 = "𝐇𝐨𝐥𝐝 𝐭𝐨 𝐜𝐨𝐧𝐟𝐢𝐫𝐦 (𝟏 𝐬𝐞𝐜𝐨𝐧𝐝)", 𝐒𝐞𝐜𝐨𝐧𝐝𝐬 = 𝟏, 𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧() 𝐖𝐢𝐧:𝐍𝐨𝐭𝐢𝐟𝐲({ 𝐓𝐢𝐭𝐥𝐞 = "𝐂𝐨𝐧𝐟𝐢𝐫𝐦𝐞𝐝", 𝐓𝐲𝐩𝐞 = "𝐬𝐮𝐜𝐜𝐞𝐬𝐬" }) 𝐞𝐧𝐝 })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐁𝐮𝐭𝐭𝐨𝐧({ 𝐍𝐚𝐦𝐞 = "𝐓𝐨𝐚𝐬𝐭 𝐰𝐢𝐭𝐡 𝐔𝐧𝐝𝐨", 𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧() 𝐖𝐢𝐧:𝐍𝐨𝐭𝐢𝐟𝐲𝐔𝐧𝐝𝐨({ 𝐓𝐢𝐭𝐥𝐞 = "𝐒𝐞𝐭𝐭𝐢𝐧𝐠 𝐜𝐡𝐚𝐧𝐠𝐞𝐝", 𝐓𝐞𝐱𝐭 = "𝐓𝐚𝐩 𝐔𝐧𝐝𝐨 𝐰𝐢𝐭𝐡𝐢𝐧 𝟓 𝐬𝐞𝐜𝐨𝐧𝐝𝐬.", 𝐎𝐧𝐔𝐧𝐝𝐨 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧() 𝐖𝐢𝐧:𝐍𝐨𝐭𝐢𝐟𝐲({ 𝐓𝐢𝐭𝐥𝐞 = "𝐔𝐧𝐝𝐨𝐧𝐞", 𝐓𝐲𝐩𝐞 = "𝐬𝐮𝐜𝐜𝐞𝐬𝐬" }) 𝐞𝐧𝐝 }) 𝐞𝐧𝐝 })
+	𝐥𝐨𝐜𝐚𝐥 𝐦𝐢𝐧𝐢𝐓𝐨𝐠𝐠𝐥𝐞 = 𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐓𝐨𝐠𝐠𝐥𝐞({ 𝐍𝐚𝐦𝐞 = "𝐌𝐢𝐧𝐢 𝐩𝐢𝐥𝐥 𝐭𝐚𝐫𝐠𝐞𝐭" })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐁𝐮𝐭𝐭𝐨𝐧({ 𝐍𝐚𝐦𝐞 = "𝐒𝐡𝐨𝐰 𝐭𝐡𝐞 𝐦𝐢𝐧𝐢 𝐩𝐢𝐥𝐥", 𝐃𝐞𝐬𝐜𝐫𝐢𝐩𝐭𝐢𝐨𝐧 = "𝐀 𝐬𝐦𝐚𝐥𝐥 𝐝𝐫𝐚𝐠𝐠𝐚𝐛𝐥𝐞 𝐩𝐢𝐥𝐥 𝐰𝐢𝐭𝐡 𝐭𝐡𝐚𝐭 𝐭𝐨𝐠𝐠𝐥𝐞", 𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧() 𝐖𝐢𝐧:𝐂𝐫𝐞𝐚𝐭𝐞𝐌𝐢𝐧𝐢({ 𝐓𝐨𝐠𝐠𝐥𝐞𝐬 = { 𝐦𝐢𝐧𝐢𝐓𝐨𝐠𝐠𝐥𝐞 } }) 𝐞𝐧𝐝 })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐒𝐞𝐜𝐭𝐢𝐨𝐧("𝐍𝐞𝐰: 𝐬𝐮𝐛-𝐭𝐚𝐛𝐬 𝐚𝐧𝐝 𝐜𝐨𝐥𝐮𝐦𝐧𝐬")
+	𝐥𝐨𝐜𝐚𝐥 𝐬𝐮𝐛 = 𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐒𝐮𝐛𝐓𝐚𝐛𝐬({ "𝐀𝐢𝐦", "𝐕𝐢𝐬𝐮𝐚𝐥𝐬", "𝐌𝐢𝐬𝐜" }) -- 𝐩𝐚𝐠𝐞𝐬 𝐢𝐧𝐬𝐢𝐝𝐞 𝐚 𝐭𝐚𝐛
+	𝐬𝐮𝐛.𝐀𝐢𝐦:𝐓𝐨𝐠𝐠𝐥𝐞({ 𝐍𝐚𝐦𝐞 = "𝐀 𝐭𝐨𝐠𝐠𝐥𝐞 𝐢𝐧 𝐀𝐢𝐦" })
+	𝐬𝐮𝐛.𝐕𝐢𝐬𝐮𝐚𝐥𝐬:𝐒𝐥𝐢𝐝𝐞𝐫({ 𝐍𝐚𝐦𝐞 = "𝐀 𝐬𝐥𝐢𝐝𝐞𝐫 𝐢𝐧 𝐕𝐢𝐬𝐮𝐚𝐥𝐬", 𝐌𝐢𝐧 = 𝟎, 𝐌𝐚𝐱 = 𝟏𝟎𝟎, 𝐃𝐞𝐟𝐚𝐮𝐥𝐭 = 𝟒𝟎 })
+	𝐬𝐮𝐛.𝐌𝐢𝐬𝐜:𝐁𝐮𝐭𝐭𝐨𝐧({ 𝐍𝐚𝐦𝐞 = "𝐀 𝐛𝐮𝐭𝐭𝐨𝐧 𝐢𝐧 𝐌𝐢𝐬𝐜", 𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧() 𝐖𝐢𝐧:𝐍𝐨𝐭𝐢𝐟𝐲({ 𝐓𝐢𝐭𝐥𝐞 = "𝐌𝐢𝐬𝐜 𝐛𝐮𝐭𝐭𝐨𝐧" }) 𝐞𝐧𝐝 })
+	𝐥𝐨𝐜𝐚𝐥 𝐜𝐨𝐥𝐬 = 𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐂𝐨𝐥𝐮𝐦𝐧𝐬(𝟐) -- 𝐭𝐰𝐨 𝐜𝐨𝐥𝐮𝐦𝐧𝐬 (𝐨𝐧𝐞 𝐜𝐨𝐥𝐮𝐦𝐧 𝐨𝐧 𝐚 𝐧𝐚𝐫𝐫𝐨𝐰 𝐩𝐚𝐧𝐞𝐥)
+	𝐜𝐨𝐥𝐬[𝟏]:𝐓𝐨𝐠𝐠𝐥𝐞({ 𝐍𝐚𝐦𝐞 = "𝐋𝐞𝐟𝐭" })
+	𝐜𝐨𝐥𝐬[𝟐]:𝐓𝐨𝐠𝐠𝐥𝐞({ 𝐍𝐚𝐦𝐞 = "𝐑𝐢𝐠𝐡𝐭" })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐒𝐥𝐢𝐝𝐞𝐫({ 𝐍𝐚𝐦𝐞 = "𝐏𝐚𝐧𝐞𝐥 𝐩𝐢𝐜𝐭𝐮𝐫𝐞 𝐨𝐩𝐚𝐜𝐢𝐭𝐲", 𝐌𝐢𝐧 = 𝟎, 𝐌𝐚𝐱 = 𝟏𝟎𝟎, 𝐃𝐞𝐟𝐚𝐮𝐥𝐭 = 𝟏𝟖, 𝐒𝐮𝐟𝐟𝐢𝐱 = "%", 𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧(𝐯) 𝐖𝐢𝐧:𝐒𝐞𝐭𝐁𝐚𝐜𝐤𝐠𝐫𝐨𝐮𝐧𝐝𝐎𝐩𝐚𝐜𝐢𝐭𝐲(𝐯 / 𝟏𝟎𝟎) 𝐞𝐧𝐝 })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐒𝐞𝐜𝐭𝐢𝐨𝐧("𝐃𝐚𝐧𝐠𝐞𝐫 𝐳𝐨𝐧𝐞")
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐁𝐮𝐭𝐭𝐨𝐧({
+		𝐍𝐚𝐦𝐞 = "𝐁𝐢𝐠 𝐫𝐞𝐝 𝐛𝐮𝐭𝐭𝐨𝐧",
+		𝐃𝐞𝐬𝐜𝐫𝐢𝐩𝐭𝐢𝐨𝐧 = "𝐃𝐚𝐧𝐠𝐞𝐫 = 𝐭𝐫𝐮𝐞: 𝐭𝐚𝐩 𝐭𝐰𝐢𝐜𝐞 𝐚𝐧𝐝 𝐭𝐡𝐞 𝐰𝐡𝐨𝐥𝐞 𝐬𝐜𝐫𝐞𝐞𝐧 𝐬𝐡𝐚𝐤𝐞𝐬",
+		𝐃𝐚𝐧𝐠𝐞𝐫 = 𝐭𝐫𝐮𝐞,
+		𝐃𝐨𝐮𝐛𝐥𝐞𝐂𝐥𝐢𝐜𝐤 = 𝐭𝐫𝐮𝐞,
+		𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧()
+			𝐖𝐢𝐧:𝐍𝐨𝐭𝐢𝐟𝐲({ 𝐓𝐢𝐭𝐥𝐞 = "𝐁𝐨𝐨𝐦", 𝐓𝐞𝐱𝐭 = "𝐓𝐡𝐞 𝐬𝐜𝐫𝐞𝐞𝐧 𝐬𝐡𝐨𝐨𝐤. 𝐖𝐢𝐧:𝐒𝐜𝐫𝐞𝐞𝐧𝐒𝐡𝐚𝐤𝐞(𝐩𝐨𝐰𝐞𝐫, 𝐬𝐞𝐜𝐨𝐧𝐝𝐬) 𝐝𝐨𝐞𝐬 𝐭𝐡𝐚𝐭.", 𝐓𝐲𝐩𝐞 = "𝐰𝐚𝐫𝐧" })
+		𝐞𝐧𝐝,
 	})
-	Elements:Section("1. Toggles")
-	Elements:Toggle({ Name = "Plain switch" })
-	Elements:Toggle({ Name = "Name + description", Description = "A second line of small text under the name", Default = true })
-	Elements:Toggle({ Name = "With an icon", Description = "A Roblox image on the left", Icon = ICON.ESP })
-	Elements:Toggle({ Name = "Checkbox style", Description = "Style = \"Checkbox\"", Style = "Checkbox", Default = true })
-	Elements:Toggle({ Name = "Green when on", Description = "Color = Color3.fromRGB(...)", Color = Color3.fromRGB(60, 210, 90), Default = true })
-	Elements:Toggle({ Name = "Blue when on", Color = Color3.fromRGB(64, 140, 255), Default = true })
-	Elements:Toggle({ Name = "Toggle with a key", Description = "Press Z on a keyboard to flip it", Key = Enum.KeyCode.Z })
-	local locked = Elements:Toggle({ Name = "Locked toggle", Description = "Tap it: it tells you it is locked", Locked = true })
-	Elements:Button({
-		Name = "Unlock / lock the toggle above",
-		Callback = function()
-			locked:Lock(not locked.Locked)
-		end,
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐒𝐞𝐜𝐭𝐢𝐨𝐧("𝟏. 𝐓𝐨𝐠𝐠𝐥𝐞𝐬")
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐓𝐨𝐠𝐠𝐥𝐞({ 𝐍𝐚𝐦𝐞 = "𝐏𝐥𝐚𝐢𝐧 𝐬𝐰𝐢𝐭𝐜𝐡" })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐓𝐨𝐠𝐠𝐥𝐞({ 𝐍𝐚𝐦𝐞 = "𝐍𝐚𝐦𝐞 + 𝐝𝐞𝐬𝐜𝐫𝐢𝐩𝐭𝐢𝐨𝐧", 𝐃𝐞𝐬𝐜𝐫𝐢𝐩𝐭𝐢𝐨𝐧 = "𝐀 𝐬𝐞𝐜𝐨𝐧𝐝 𝐥𝐢𝐧𝐞 𝐨𝐟 𝐬𝐦𝐚𝐥𝐥 𝐭𝐞𝐱𝐭 𝐮𝐧𝐝𝐞𝐫 𝐭𝐡𝐞 𝐧𝐚𝐦𝐞", 𝐃𝐞𝐟𝐚𝐮𝐥𝐭 = 𝐭𝐫𝐮𝐞 })
+	-- 𝐫𝐢𝐜𝐡 𝐭𝐞𝐱𝐭 + 𝐲𝐨𝐮𝐫 𝐢𝐜𝐨𝐧 𝐩𝐚𝐜𝐤: 𝐔𝐈.𝐅𝐚𝐧𝐜𝐲(𝐭𝐞𝐱𝐭, 𝐬𝐭𝐲𝐥𝐞) 𝐚𝐧𝐝 𝐔𝐈.𝐈𝐜𝐨𝐧𝐬.𝐤𝐞𝐲 / 𝐩𝐚𝐝𝐥𝐨𝐜𝐤 / 𝐧𝐨𝐭𝐢𝐟𝐢𝐜𝐚𝐭𝐢𝐨𝐧 / 𝐰𝐫𝐞𝐧𝐜𝐡 / 𝐬𝐭𝐚𝐫 ...
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐋𝐚𝐛𝐞𝐥(𝐔𝐈.𝐅𝐚𝐧𝐜𝐲("𝐥𝐞𝐭𝐬 𝐠𝐨!", "𝐁𝐨𝐥𝐝") .. "   " .. 𝐔𝐈.𝐅𝐚𝐧𝐜𝐲("𝐥𝐞𝐭𝐬 𝐠𝐨!", "𝐁𝐨𝐥𝐝𝐈𝐭𝐚𝐥𝐢𝐜") .. "   " .. 𝐔𝐈.𝐅𝐚𝐧𝐜𝐲("𝐥𝐞𝐭𝐬 𝐠𝐨!", "𝐌𝐨𝐧𝐨"))
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐓𝐨𝐠𝐠𝐥𝐞({ 𝐍𝐚𝐦𝐞 = "𝐓𝐨𝐠𝐠𝐥𝐞 𝐰𝐢𝐭𝐡 𝐭𝐡𝐞 𝐤𝐞𝐲 𝐢𝐜𝐨𝐧", 𝐈𝐜𝐨𝐧 = 𝐔𝐈.𝐈𝐜𝐨𝐧𝐬.𝐤𝐞𝐲 })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐓𝐨𝐠𝐠𝐥𝐞({ 𝐍𝐚𝐦𝐞 = "𝐂𝐡𝐞𝐜𝐤 𝐬𝐭𝐲𝐥𝐞", 𝐒𝐭𝐲𝐥𝐞 = "𝐂𝐡𝐞𝐜𝐤" })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐓𝐨𝐠𝐠𝐥𝐞({ 𝐍𝐚𝐦𝐞 = "𝐇𝐞𝐚𝐫𝐭 𝐬𝐭𝐲𝐥𝐞", 𝐒𝐭𝐲𝐥𝐞 = "𝐇𝐞𝐚𝐫𝐭" })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐓𝐨𝐠𝐠𝐥𝐞({ 𝐍𝐚𝐦𝐞 = "𝐖𝐢𝐭𝐡 𝐚𝐧 𝐢𝐜𝐨𝐧", 𝐃𝐞𝐬𝐜𝐫𝐢𝐩𝐭𝐢𝐨𝐧 = "𝐀 𝐑𝐨𝐛𝐥𝐨𝐱 𝐢𝐦𝐚𝐠𝐞 𝐨𝐧 𝐭𝐡𝐞 𝐥𝐞𝐟𝐭", 𝐈𝐜𝐨𝐧 = 𝐈𝐂𝐎𝐍.𝐄𝐒𝐏 })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐓𝐨𝐠𝐠𝐥𝐞({ 𝐍𝐚𝐦𝐞 = "𝐂𝐡𝐞𝐜𝐤𝐛𝐨𝐱 𝐬𝐭𝐲𝐥𝐞", 𝐃𝐞𝐬𝐜𝐫𝐢𝐩𝐭𝐢𝐨𝐧 = "𝐒𝐭𝐲𝐥𝐞 = \"𝐂𝐡𝐞𝐜𝐤𝐛𝐨𝐱\"", 𝐒𝐭𝐲𝐥𝐞 = "𝐂𝐡𝐞𝐜𝐤𝐛𝐨𝐱", 𝐃𝐞𝐟𝐚𝐮𝐥𝐭 = 𝐭𝐫𝐮𝐞 })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐓𝐨𝐠𝐠𝐥𝐞({ 𝐍𝐚𝐦𝐞 = "𝐆𝐫𝐞𝐞𝐧 𝐰𝐡𝐞𝐧 𝐨𝐧", 𝐃𝐞𝐬𝐜𝐫𝐢𝐩𝐭𝐢𝐨𝐧 = "𝐂𝐨𝐥𝐨𝐫 = 𝐂𝐨𝐥𝐨𝐫𝟑.𝐟𝐫𝐨𝐦𝐑𝐆𝐁(...)", 𝐂𝐨𝐥𝐨𝐫 = 𝐂𝐨𝐥𝐨𝐫𝟑.𝐟𝐫𝐨𝐦𝐑𝐆𝐁(𝟔𝟎, 𝟐𝟏𝟎, 𝟗𝟎), 𝐃𝐞𝐟𝐚𝐮𝐥𝐭 = 𝐭𝐫𝐮𝐞 })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐓𝐨𝐠𝐠𝐥𝐞({ 𝐍𝐚𝐦𝐞 = "𝐁𝐥𝐮𝐞 𝐰𝐡𝐞𝐧 𝐨𝐧", 𝐂𝐨𝐥𝐨𝐫 = 𝐂𝐨𝐥𝐨𝐫𝟑.𝐟𝐫𝐨𝐦𝐑𝐆𝐁(𝟔𝟒, 𝟏𝟒𝟎, 𝟐𝟓𝟓), 𝐃𝐞𝐟𝐚𝐮𝐥𝐭 = 𝐭𝐫𝐮𝐞 })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐓𝐨𝐠𝐠𝐥𝐞({ 𝐍𝐚𝐦𝐞 = "𝐓𝐨𝐠𝐠𝐥𝐞 𝐰𝐢𝐭𝐡 𝐚 𝐤𝐞𝐲", 𝐃𝐞𝐬𝐜𝐫𝐢𝐩𝐭𝐢𝐨𝐧 = "𝐏𝐫𝐞𝐬𝐬 𝐙 𝐨𝐧 𝐚 𝐤𝐞𝐲𝐛𝐨𝐚𝐫𝐝 𝐭𝐨 𝐟𝐥𝐢𝐩 𝐢𝐭", 𝐊𝐞𝐲 = 𝐄𝐧𝐮𝐦.𝐊𝐞𝐲𝐂𝐨𝐝𝐞.𝐙 })
+	𝐥𝐨𝐜𝐚𝐥 𝐥𝐨𝐜𝐤𝐞𝐝 = 𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐓𝐨𝐠𝐠𝐥𝐞({ 𝐍𝐚𝐦𝐞 = "𝐋𝐨𝐜𝐤𝐞𝐝 𝐭𝐨𝐠𝐠𝐥𝐞", 𝐃𝐞𝐬𝐜𝐫𝐢𝐩𝐭𝐢𝐨𝐧 = "𝐓𝐚𝐩 𝐢𝐭: 𝐢𝐭 𝐭𝐞𝐥𝐥𝐬 𝐲𝐨𝐮 𝐢𝐭 𝐢𝐬 𝐥𝐨𝐜𝐤𝐞𝐝", 𝐋𝐨𝐜𝐤𝐞𝐝 = 𝐭𝐫𝐮𝐞 })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐁𝐮𝐭𝐭𝐨𝐧({
+		𝐍𝐚𝐦𝐞 = "𝐔𝐧𝐥𝐨𝐜𝐤 / 𝐥𝐨𝐜𝐤 𝐭𝐡𝐞 𝐭𝐨𝐠𝐠𝐥𝐞 𝐚𝐛𝐨𝐯𝐞",
+		𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧()
+			𝐥𝐨𝐜𝐤𝐞𝐝:𝐋𝐨𝐜𝐤(𝐧𝐨𝐭 𝐥𝐨𝐜𝐤𝐞𝐝.𝐋𝐨𝐜𝐤𝐞𝐝)
+		𝐞𝐧𝐝,
 	})
 
-	Elements:Section("2. Sliders and choices")
-	Elements:Slider({ Name = "Slider with a suffix", Min = 0, Max = 100, Default = 30, Suffix = "%" })
-	Elements:Choice({ Name = "Choice bar", Options = { "Easy", "Normal", "Hard" }, Default = "Normal" })
-	Elements:Cycle({ Name = "Cycle picker", Description = "Tap the arrows", Options = { "One", "Two", "Three", "Four" } })
-	Elements:Dropdown({ Name = "Dropdown", Options = { "Speed", "Jump", "Fly", "Fog" }, Default = "Speed" })
-	Elements:Dropdown({ Name = "Dropdown (many)", Options = { "Speed", "Jump", "Fly", "Fog" }, Multi = true, Default = { "Jump" } })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐒𝐞𝐜𝐭𝐢𝐨𝐧("𝟐. 𝐒𝐥𝐢𝐝𝐞𝐫𝐬 𝐚𝐧𝐝 𝐜𝐡𝐨𝐢𝐜𝐞𝐬")
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐒𝐥𝐢𝐝𝐞𝐫({ 𝐍𝐚𝐦𝐞 = "𝐒𝐥𝐢𝐝𝐞𝐫 𝐰𝐢𝐭𝐡 𝐚 𝐬𝐮𝐟𝐟𝐢𝐱", 𝐌𝐢𝐧 = 𝟎, 𝐌𝐚𝐱 = 𝟏𝟎𝟎, 𝐃𝐞𝐟𝐚𝐮𝐥𝐭 = 𝟑𝟎, 𝐒𝐮𝐟𝐟𝐢𝐱 = "%" })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐂𝐡𝐨𝐢𝐜𝐞({ 𝐍𝐚𝐦𝐞 = "𝐂𝐡𝐨𝐢𝐜𝐞 𝐛𝐚𝐫", 𝐎𝐩𝐭𝐢𝐨𝐧𝐬 = { "𝐄𝐚𝐬𝐲", "𝐍𝐨𝐫𝐦𝐚𝐥", "𝐇𝐚𝐫𝐝" }, 𝐃𝐞𝐟𝐚𝐮𝐥𝐭 = "𝐍𝐨𝐫𝐦𝐚𝐥" })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐂𝐲𝐜𝐥𝐞({ 𝐍𝐚𝐦𝐞 = "𝐂𝐲𝐜𝐥𝐞 𝐩𝐢𝐜𝐤𝐞𝐫", 𝐃𝐞𝐬𝐜𝐫𝐢𝐩𝐭𝐢𝐨𝐧 = "𝐓𝐚𝐩 𝐭𝐡𝐞 𝐚𝐫𝐫𝐨𝐰𝐬", 𝐎𝐩𝐭𝐢𝐨𝐧𝐬 = { "𝐎𝐧𝐞", "𝐓𝐰𝐨", "𝐓𝐡𝐫𝐞𝐞", "𝐅𝐨𝐮𝐫" } })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐃𝐫𝐨𝐩𝐝𝐨𝐰𝐧({ 𝐍𝐚𝐦𝐞 = "𝐃𝐫𝐨𝐩𝐝𝐨𝐰𝐧", 𝐎𝐩𝐭𝐢𝐨𝐧𝐬 = { "𝐒𝐩𝐞𝐞𝐝", "𝐉𝐮𝐦𝐩", "𝐅𝐥𝐲", "𝐅𝐨𝐠" }, 𝐃𝐞𝐟𝐚𝐮𝐥𝐭 = "𝐒𝐩𝐞𝐞𝐝" })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐃𝐫𝐨𝐩𝐝𝐨𝐰𝐧({ 𝐍𝐚𝐦𝐞 = "𝐃𝐫𝐨𝐩𝐝𝐨𝐰𝐧 (𝐦𝐚𝐧𝐲)", 𝐎𝐩𝐭𝐢𝐨𝐧𝐬 = { "𝐒𝐩𝐞𝐞𝐝", "𝐉𝐮𝐦𝐩", "𝐅𝐥𝐲", "𝐅𝐨𝐠" }, 𝐌𝐮𝐥𝐭𝐢 = 𝐭𝐫𝐮𝐞, 𝐃𝐞𝐟𝐚𝐮𝐥𝐭 = { "𝐉𝐮𝐦𝐩" } })
 
-	Elements:Section("3. Typing, keys and colors")
-	Elements:Input({
-		Name = "Text box",
-		Placeholder = "name here",
-		Callback = function(text)
-			Win:Notify({ Title = "You typed", Text = text })
-		end,
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐒𝐞𝐜𝐭𝐢𝐨𝐧("𝟑. 𝐓𝐲𝐩𝐢𝐧𝐠, 𝐤𝐞𝐲𝐬 𝐚𝐧𝐝 𝐜𝐨𝐥𝐨𝐫𝐬")
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐈𝐧𝐩𝐮𝐭({
+		𝐍𝐚𝐦𝐞 = "𝐓𝐞𝐱𝐭 𝐛𝐨𝐱",
+		𝐏𝐥𝐚𝐜𝐞𝐡𝐨𝐥𝐝𝐞𝐫 = "𝐧𝐚𝐦𝐞 𝐡𝐞𝐫𝐞",
+		𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧(𝐭𝐞𝐱𝐭)
+			𝐖𝐢𝐧:𝐍𝐨𝐭𝐢𝐟𝐲({ 𝐓𝐢𝐭𝐥𝐞 = "𝐘𝐨𝐮 𝐭𝐲𝐩𝐞𝐝", 𝐓𝐞𝐱𝐭 = 𝐭𝐞𝐱𝐭 })
+		𝐞𝐧𝐝,
 	})
-	Elements:Keybind({ Name = "Keybind", Default = Enum.KeyCode.F })
-	Elements:Color({ Name = "Color picker", Default = Color3.fromRGB(235, 40, 50) })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐊𝐞𝐲𝐛𝐢𝐧𝐝({ 𝐍𝐚𝐦𝐞 = "𝐊𝐞𝐲𝐛𝐢𝐧𝐝", 𝐃𝐞𝐟𝐚𝐮𝐥𝐭 = 𝐄𝐧𝐮𝐦.𝐊𝐞𝐲𝐂𝐨𝐝𝐞.𝐅 })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐂𝐨𝐥𝐨𝐫({ 𝐍𝐚𝐦𝐞 = "𝐂𝐨𝐥𝐨𝐫 𝐩𝐢𝐜𝐤𝐞𝐫", 𝐃𝐞𝐟𝐚𝐮𝐥𝐭 = 𝐂𝐨𝐥𝐨𝐫𝟑.𝐟𝐫𝐨𝐦𝐑𝐆𝐁(𝟐𝟑𝟓, 𝟒𝟎, 𝟓𝟎) })
 
-	Elements:Section("4. Text and images")
-	Elements:Image({ Image = BANNER, Height = 100, Caption = "A Roblox asset image", Crop = true })
-	Elements:Header({ Title = "Header card", Text = "A banner with its own title, text and icon.", Icon = LOGO })
-	Elements:Paragraph({ Title = "Paragraph", Text = "A titled block of text. It grows to fit as long as you like." })
-	Elements:Label("A label is plain small text.")
-	Elements:Divider()
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐒𝐞𝐜𝐭𝐢𝐨𝐧("𝟒. 𝐓𝐞𝐱𝐭 𝐚𝐧𝐝 𝐢𝐦𝐚𝐠𝐞𝐬")
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐈𝐦𝐚𝐠𝐞({ 𝐈𝐦𝐚𝐠𝐞 = 𝐁𝐀𝐍𝐍𝐄𝐑, 𝐇𝐞𝐢𝐠𝐡𝐭 = 𝟏𝟎𝟎, 𝐂𝐚𝐩𝐭𝐢𝐨𝐧 = "𝐀 𝐑𝐨𝐛𝐥𝐨𝐱 𝐚𝐬𝐬𝐞𝐭 𝐢𝐦𝐚𝐠𝐞", 𝐂𝐫𝐨𝐩 = 𝐭𝐫𝐮𝐞 })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐇𝐞𝐚𝐝𝐞𝐫({ 𝐓𝐢𝐭𝐥𝐞 = "𝐇𝐞𝐚𝐝𝐞𝐫 𝐜𝐚𝐫𝐝", 𝐓𝐞𝐱𝐭 = "𝐀 𝐛𝐚𝐧𝐧𝐞𝐫 𝐰𝐢𝐭𝐡 𝐢𝐭𝐬 𝐨𝐰𝐧 𝐭𝐢𝐭𝐥𝐞, 𝐭𝐞𝐱𝐭 𝐚𝐧𝐝 𝐢𝐜𝐨𝐧.", 𝐈𝐜𝐨𝐧 = 𝐋𝐎𝐆𝐎 })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐏𝐚𝐫𝐚𝐠𝐫𝐚𝐩𝐡({ 𝐓𝐢𝐭𝐥𝐞 = "𝐏𝐚𝐫𝐚𝐠𝐫𝐚𝐩𝐡", 𝐓𝐞𝐱𝐭 = "𝐀 𝐭𝐢𝐭𝐥𝐞𝐝 𝐛𝐥𝐨𝐜𝐤 𝐨𝐟 𝐭𝐞𝐱𝐭. 𝐈𝐭 𝐠𝐫𝐨𝐰𝐬 𝐭𝐨 𝐟𝐢𝐭 𝐚𝐬 𝐥𝐨𝐧𝐠 𝐚𝐬 𝐲𝐨𝐮 𝐥𝐢𝐤𝐞." })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐋𝐚𝐛𝐞𝐥("𝐀 𝐥𝐚𝐛𝐞𝐥 𝐢𝐬 𝐩𝐥𝐚𝐢𝐧 𝐬𝐦𝐚𝐥𝐥 𝐭𝐞𝐱𝐭.")
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐃𝐢𝐯𝐢𝐝𝐞𝐫()
 
-	Elements:Section("5. Notifications")
-	Elements:Button({
-		Name = "Show every notification type",
-		Callback = function()
-			Win:Notify({ Title = "Info", Text = "A normal card." })
-			Win:Notify({ Title = "Success", Text = "A green card.", Type = "success" })
-			Win:Notify({ Title = "Warning", Text = "A yellow card.", Type = "warn" })
-			Win:Notify({ Title = "Error", Text = "A red card.", Type = "error" })
-		end,
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐒𝐞𝐜𝐭𝐢𝐨𝐧("𝟓. 𝐍𝐨𝐭𝐢𝐟𝐢𝐜𝐚𝐭𝐢𝐨𝐧𝐬")
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐁𝐮𝐭𝐭𝐨𝐧({
+		𝐍𝐚𝐦𝐞 = "𝐒𝐡𝐨𝐰 𝐞𝐯𝐞𝐫𝐲 𝐧𝐨𝐭𝐢𝐟𝐢𝐜𝐚𝐭𝐢𝐨𝐧 𝐭𝐲𝐩𝐞",
+		𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧()
+			𝐖𝐢𝐧:𝐍𝐨𝐭𝐢𝐟𝐲({ 𝐓𝐢𝐭𝐥𝐞 = "𝐈𝐧𝐟𝐨", 𝐓𝐞𝐱𝐭 = "𝐀 𝐧𝐨𝐫𝐦𝐚𝐥 𝐜𝐚𝐫𝐝." })
+			𝐖𝐢𝐧:𝐍𝐨𝐭𝐢𝐟𝐲({ 𝐓𝐢𝐭𝐥𝐞 = "𝐒𝐮𝐜𝐜𝐞𝐬𝐬", 𝐓𝐞𝐱𝐭 = "𝐀 𝐠𝐫𝐞𝐞𝐧 𝐜𝐚𝐫𝐝.", 𝐓𝐲𝐩𝐞 = "𝐬𝐮𝐜𝐜𝐞𝐬𝐬" })
+			𝐖𝐢𝐧:𝐍𝐨𝐭𝐢𝐟𝐲({ 𝐓𝐢𝐭𝐥𝐞 = "𝐖𝐚𝐫𝐧𝐢𝐧𝐠", 𝐓𝐞𝐱𝐭 = "𝐀 𝐲𝐞𝐥𝐥𝐨𝐰 𝐜𝐚𝐫𝐝.", 𝐓𝐲𝐩𝐞 = "𝐰𝐚𝐫𝐧" })
+			𝐖𝐢𝐧:𝐍𝐨𝐭𝐢𝐟𝐲({ 𝐓𝐢𝐭𝐥𝐞 = "𝐄𝐫𝐫𝐨𝐫", 𝐓𝐞𝐱𝐭 = "𝐀 𝐫𝐞𝐝 𝐜𝐚𝐫𝐝.", 𝐓𝐲𝐩𝐞 = "𝐞𝐫𝐫𝐨𝐫" })
+		𝐞𝐧𝐝,
 	})
-	Elements:Button({
-		Name = "Notification with buttons",
-		Description = "Cards can have up to 3 buttons",
-		Callback = function()
-			Win:Notify({
-				Title = "Update ready",
-				Icon = LOGO, -- a small picture on the card
-				Text = "A new version is out. Reload now?",
-				Duration = 8,
-				Actions = {
-					{ Name = "Reload", Callback = function() Win:Notify({ Title = "Reloading...", Type = "success" }) end },
-					{ Name = "Later" },
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐁𝐮𝐭𝐭𝐨𝐧({
+		𝐍𝐚𝐦𝐞 = "𝐍𝐨𝐭𝐢𝐟𝐢𝐜𝐚𝐭𝐢𝐨𝐧 𝐰𝐢𝐭𝐡 𝐛𝐮𝐭𝐭𝐨𝐧𝐬",
+		𝐃𝐞𝐬𝐜𝐫𝐢𝐩𝐭𝐢𝐨𝐧 = "𝐂𝐚𝐫𝐝𝐬 𝐜𝐚𝐧 𝐡𝐚𝐯𝐞 𝐮𝐩 𝐭𝐨 𝟑 𝐛𝐮𝐭𝐭𝐨𝐧𝐬",
+		𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧()
+			𝐖𝐢𝐧:𝐍𝐨𝐭𝐢𝐟𝐲({
+				𝐓𝐢𝐭𝐥𝐞 = "𝐔𝐩𝐝𝐚𝐭𝐞 𝐫𝐞𝐚𝐝𝐲",
+				𝐈𝐜𝐨𝐧 = 𝐋𝐎𝐆𝐎, -- 𝐚 𝐬𝐦𝐚𝐥𝐥 𝐩𝐢𝐜𝐭𝐮𝐫𝐞 𝐨𝐧 𝐭𝐡𝐞 𝐜𝐚𝐫𝐝
+				𝐓𝐞𝐱𝐭 = "𝐀 𝐧𝐞𝐰 𝐯𝐞𝐫𝐬𝐢𝐨𝐧 𝐢𝐬 𝐨𝐮𝐭. 𝐑𝐞𝐥𝐨𝐚𝐝 𝐧𝐨𝐰?",
+				𝐃𝐮𝐫𝐚𝐭𝐢𝐨𝐧 = 𝟖,
+				𝐀𝐜𝐭𝐢𝐨𝐧𝐬 = {
+					{ 𝐍𝐚𝐦𝐞 = "𝐑𝐞𝐥𝐨𝐚𝐝", 𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧() 𝐖𝐢𝐧:𝐍𝐨𝐭𝐢𝐟𝐲({ 𝐓𝐢𝐭𝐥𝐞 = "𝐑𝐞𝐥𝐨𝐚𝐝𝐢𝐧𝐠...", 𝐓𝐲𝐩𝐞 = "𝐬𝐮𝐜𝐜𝐞𝐬𝐬" }) 𝐞𝐧𝐝 },
+					{ 𝐍𝐚𝐦𝐞 = "𝐋𝐚𝐭𝐞𝐫" },
 				},
 			})
-		end,
+		𝐞𝐧𝐝,
 	})
 
-	Elements:Section("6. Key gate")
-	Elements:Button({
-		Name = "Try the key gate",
-		Description = "Image, note, Get key link and a boom. Demo key: REBEL-DEMO",
-		Callback = function()
-			local ok = UI:KeyGate(keyGateOptions(false)) -- the full screen: image, note, colored buttons, boom
-			Win:Notify({ Title = ok and "Key accepted" or "Closed", Type = ok and "success" or "warn" })
-		end,
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐒𝐞𝐜𝐭𝐢𝐨𝐧("𝟔. 𝐊𝐞𝐲 𝐠𝐚𝐭𝐞")
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐁𝐮𝐭𝐭𝐨𝐧({
+		𝐍𝐚𝐦𝐞 = "𝐓𝐫𝐲 𝐭𝐡𝐞 𝐤𝐞𝐲 𝐠𝐚𝐭𝐞",
+		𝐃𝐞𝐬𝐜𝐫𝐢𝐩𝐭𝐢𝐨𝐧 = "𝐈𝐦𝐚𝐠𝐞, 𝐧𝐨𝐭𝐞, 𝐆𝐞𝐭 𝐤𝐞𝐲 𝐥𝐢𝐧𝐤 𝐚𝐧𝐝 𝐚 𝐛𝐨𝐨𝐦. 𝐃𝐞𝐦𝐨 𝐤𝐞𝐲: 𝐑𝐄𝐁𝐄𝐋-𝐃𝐄𝐌𝐎",
+		𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧()
+			𝐥𝐨𝐜𝐚𝐥 𝐨𝐤 = 𝐔𝐈:𝐊𝐞𝐲𝐆𝐚𝐭𝐞(𝐤𝐞𝐲𝐆𝐚𝐭𝐞𝐎𝐩𝐭𝐢𝐨𝐧𝐬(𝐟𝐚𝐥𝐬𝐞)) -- 𝐭𝐡𝐞 𝐟𝐮𝐥𝐥 𝐬𝐜𝐫𝐞𝐞𝐧: 𝐢𝐦𝐚𝐠𝐞, 𝐧𝐨𝐭𝐞, 𝐜𝐨𝐥𝐨𝐫𝐞𝐝 𝐛𝐮𝐭𝐭𝐨𝐧𝐬, 𝐛𝐨𝐨𝐦
+			𝐖𝐢𝐧:𝐍𝐨𝐭𝐢𝐟𝐲({ 𝐓𝐢𝐭𝐥𝐞 = 𝐨𝐤 𝐚𝐧𝐝 "𝐊𝐞𝐲 𝐚𝐜𝐜𝐞𝐩𝐭𝐞𝐝" 𝐨𝐫 "𝐂𝐥𝐨𝐬𝐞𝐝", 𝐓𝐲𝐩𝐞 = 𝐨𝐤 𝐚𝐧𝐝 "𝐬𝐮𝐜𝐜𝐞𝐬𝐬" 𝐨𝐫 "𝐰𝐚𝐫𝐧" })
+		𝐞𝐧𝐝,
 	})
 
-	Elements:Section("7. More tools")
-	Elements:Keybind({
-		Name = "Keybind: toggle mode",
-		Default = Enum.KeyCode.G,
-		Mode = "Toggle", -- Press (default), Toggle or Hold
-		Callback = function(state)
-			Win:Notify({ Title = "Toggle key", Text = state and "ON" or "OFF" })
-		end,
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐒𝐞𝐜𝐭𝐢𝐨𝐧("𝟕. 𝐌𝐨𝐫𝐞 𝐭𝐨𝐨𝐥𝐬")
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐊𝐞𝐲𝐛𝐢𝐧𝐝({
+		𝐍𝐚𝐦𝐞 = "𝐊𝐞𝐲𝐛𝐢𝐧𝐝: 𝐭𝐨𝐠𝐠𝐥𝐞 𝐦𝐨𝐝𝐞",
+		𝐃𝐞𝐟𝐚𝐮𝐥𝐭 = 𝐄𝐧𝐮𝐦.𝐊𝐞𝐲𝐂𝐨𝐝𝐞.𝐆,
+		𝐌𝐨𝐝𝐞 = "𝐓𝐨𝐠𝐠𝐥𝐞", -- 𝐏𝐫𝐞𝐬𝐬 (𝐝𝐞𝐟𝐚𝐮𝐥𝐭), 𝐓𝐨𝐠𝐠𝐥𝐞 𝐨𝐫 𝐇𝐨𝐥𝐝
+		𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧(𝐬𝐭𝐚𝐭𝐞)
+			𝐖𝐢𝐧:𝐍𝐨𝐭𝐢𝐟𝐲({ 𝐓𝐢𝐭𝐥𝐞 = "𝐓𝐨𝐠𝐠𝐥𝐞 𝐤𝐞𝐲", 𝐓𝐞𝐱𝐭 = 𝐬𝐭𝐚𝐭𝐞 𝐚𝐧𝐝 "𝐎𝐍" 𝐨𝐫 "𝐎𝐅𝐅" })
+		𝐞𝐧𝐝,
 	})
-	Elements:Keybind({
-		Name = "Keybind: hold mode",
-		Default = Enum.KeyCode.J, -- (not H: H opens the game assistant)
-		Mode = "Hold", -- Callback(true) while held, Callback(false) when let go
-		Callback = function(held)
-			print("held:", held)
-		end,
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐊𝐞𝐲𝐛𝐢𝐧𝐝({
+		𝐍𝐚𝐦𝐞 = "𝐊𝐞𝐲𝐛𝐢𝐧𝐝: 𝐡𝐨𝐥𝐝 𝐦𝐨𝐝𝐞",
+		𝐃𝐞𝐟𝐚𝐮𝐥𝐭 = 𝐄𝐧𝐮𝐦.𝐊𝐞𝐲𝐂𝐨𝐝𝐞.𝐉, -- (𝐧𝐨𝐭 𝐇: 𝐇 𝐨𝐩𝐞𝐧𝐬 𝐭𝐡𝐞 𝐠𝐚𝐦𝐞 𝐚𝐬𝐬𝐢𝐬𝐭𝐚𝐧𝐭)
+		𝐌𝐨𝐝𝐞 = "𝐇𝐨𝐥𝐝", -- 𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤(𝐭𝐫𝐮𝐞) 𝐰𝐡𝐢𝐥𝐞 𝐡𝐞𝐥𝐝, 𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤(𝐟𝐚𝐥𝐬𝐞) 𝐰𝐡𝐞𝐧 𝐥𝐞𝐭 𝐠𝐨
+		𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧(𝐡𝐞𝐥𝐝)
+			𝐩𝐫𝐢𝐧𝐭("𝐡𝐞𝐥𝐝:", 𝐡𝐞𝐥𝐝)
+		𝐞𝐧𝐝,
 	})
-	Elements:Input({
-		Name = "Number box",
-		Numeric = true, -- only numbers
-		Min = 0,
-		Max = 500,
-		Default = "100",
-		Callback = function(n)
-			Win:Notify({ Title = "Number", Text = "You set " .. n })
-		end,
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐈𝐧𝐩𝐮𝐭({
+		𝐍𝐚𝐦𝐞 = "𝐍𝐮𝐦𝐛𝐞𝐫 𝐛𝐨𝐱",
+		𝐍𝐮𝐦𝐞𝐫𝐢𝐜 = 𝐭𝐫𝐮𝐞, -- 𝐨𝐧𝐥𝐲 𝐧𝐮𝐦𝐛𝐞𝐫𝐬
+		𝐌𝐢𝐧 = 𝟎,
+		𝐌𝐚𝐱 = 𝟓𝟎𝟎,
+		𝐃𝐞𝐟𝐚𝐮𝐥𝐭 = "𝟏𝟎𝟎",
+		𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧(𝐧)
+			𝐖𝐢𝐧:𝐍𝐨𝐭𝐢𝐟𝐲({ 𝐓𝐢𝐭𝐥𝐞 = "𝐍𝐮𝐦𝐛𝐞𝐫", 𝐓𝐞𝐱𝐭 = "𝐘𝐨𝐮 𝐬𝐞𝐭 " .. 𝐧 })
+		𝐞𝐧𝐝,
 	})
-	Elements:Button({
-		Name = "Pop-up question",
-		Description = "Win:Dialog with buttons",
-		Callback = function()
-			Win:Dialog({
-				Title = "Are you sure?",
-				Text = "A dialog asks something and runs a function for the button you tap.",
-				Buttons = {
-					{ Name = "Yes", Callback = function() Win:Notify({ Title = "You said yes", Type = "success" }) end },
-					{ Name = "No" },
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐁𝐮𝐭𝐭𝐨𝐧({
+		𝐍𝐚𝐦𝐞 = "𝐏𝐨𝐩-𝐮𝐩 𝐪𝐮𝐞𝐬𝐭𝐢𝐨𝐧",
+		𝐃𝐞𝐬𝐜𝐫𝐢𝐩𝐭𝐢𝐨𝐧 = "𝐖𝐢𝐧:𝐃𝐢𝐚𝐥𝐨𝐠 𝐰𝐢𝐭𝐡 𝐛𝐮𝐭𝐭𝐨𝐧𝐬",
+		𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧()
+			𝐖𝐢𝐧:𝐃𝐢𝐚𝐥𝐨𝐠({
+				𝐓𝐢𝐭𝐥𝐞 = "𝐀𝐫𝐞 𝐲𝐨𝐮 𝐬𝐮𝐫𝐞?",
+				𝐓𝐞𝐱𝐭 = "𝐀 𝐝𝐢𝐚𝐥𝐨𝐠 𝐚𝐬𝐤𝐬 𝐬𝐨𝐦𝐞𝐭𝐡𝐢𝐧𝐠 𝐚𝐧𝐝 𝐫𝐮𝐧𝐬 𝐚 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧 𝐟𝐨𝐫 𝐭𝐡𝐞 𝐛𝐮𝐭𝐭𝐨𝐧 𝐲𝐨𝐮 𝐭𝐚𝐩.",
+				𝐁𝐮𝐭𝐭𝐨𝐧𝐬 = {
+					{ 𝐍𝐚𝐦𝐞 = "𝐘𝐞𝐬", 𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧() 𝐖𝐢𝐧:𝐍𝐨𝐭𝐢𝐟𝐲({ 𝐓𝐢𝐭𝐥𝐞 = "𝐘𝐨𝐮 𝐬𝐚𝐢𝐝 𝐲𝐞𝐬", 𝐓𝐲𝐩𝐞 = "𝐬𝐮𝐜𝐜𝐞𝐬𝐬" }) 𝐞𝐧𝐝 },
+					{ 𝐍𝐚𝐦𝐞 = "𝐍𝐨" },
 				},
 			})
-		end,
+		𝐞𝐧𝐝,
 	})
-	Elements:Section({ Name = "8. A collapsible section (tap me)", Collapsible = true })
-	Elements:Label("Tap the line above to hide or show these rows.")
-	local hideMe = Elements:Toggle({ Name = "Toggle inside the section" })
-	Elements:Button({
-		Name = "Hide the toggle above",
-		Description = "Every element has :SetVisible(false) and :Destroy()",
-		Callback = function()
-			hideMe:SetVisible(false)
-			task.delay(1.5, function()
-				hideMe:SetVisible(true)
-			end)
-		end,
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐒𝐞𝐜𝐭𝐢𝐨𝐧({ 𝐍𝐚𝐦𝐞 = "𝟖. 𝐀 𝐜𝐨𝐥𝐥𝐚𝐩𝐬𝐢𝐛𝐥𝐞 𝐬𝐞𝐜𝐭𝐢𝐨𝐧 (𝐭𝐚𝐩 𝐦𝐞)", 𝐂𝐨𝐥𝐥𝐚𝐩𝐬𝐢𝐛𝐥𝐞 = 𝐭𝐫𝐮𝐞 })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐋𝐚𝐛𝐞𝐥("𝐓𝐚𝐩 𝐭𝐡𝐞 𝐥𝐢𝐧𝐞 𝐚𝐛𝐨𝐯𝐞 𝐭𝐨 𝐡𝐢𝐝𝐞 𝐨𝐫 𝐬𝐡𝐨𝐰 𝐭𝐡𝐞𝐬𝐞 𝐫𝐨𝐰𝐬.")
+	𝐥𝐨𝐜𝐚𝐥 𝐡𝐢𝐝𝐞𝐌𝐞 = 𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐓𝐨𝐠𝐠𝐥𝐞({ 𝐍𝐚𝐦𝐞 = "𝐓𝐨𝐠𝐠𝐥𝐞 𝐢𝐧𝐬𝐢𝐝𝐞 𝐭𝐡𝐞 𝐬𝐞𝐜𝐭𝐢𝐨𝐧" })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐁𝐮𝐭𝐭𝐨𝐧({
+		𝐍𝐚𝐦𝐞 = "𝐇𝐢𝐝𝐞 𝐭𝐡𝐞 𝐭𝐨𝐠𝐠𝐥𝐞 𝐚𝐛𝐨𝐯𝐞",
+		𝐃𝐞𝐬𝐜𝐫𝐢𝐩𝐭𝐢𝐨𝐧 = "𝐄𝐯𝐞𝐫𝐲 𝐞𝐥𝐞𝐦𝐞𝐧𝐭 𝐡𝐚𝐬 :𝐒𝐞𝐭𝐕𝐢𝐬𝐢𝐛𝐥𝐞(𝐟𝐚𝐥𝐬𝐞) 𝐚𝐧𝐝 :𝐃𝐞𝐬𝐭𝐫𝐨𝐲()",
+		𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧()
+			𝐡𝐢𝐝𝐞𝐌𝐞:𝐒𝐞𝐭𝐕𝐢𝐬𝐢𝐛𝐥𝐞(𝐟𝐚𝐥𝐬𝐞)
+			𝐭𝐚𝐬𝐤.𝐝𝐞𝐥𝐚𝐲(𝟏.𝟓, 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧()
+				𝐡𝐢𝐝𝐞𝐌𝐞:𝐒𝐞𝐭𝐕𝐢𝐬𝐢𝐛𝐥𝐞(𝐭𝐫𝐮𝐞)
+			𝐞𝐧𝐝)
+		𝐞𝐧𝐝,
 	})
 
-	Elements:Section("9. Even more")
-	Elements:Notice({ Type = "warn", Title = "Heads up", Text = "A Notice is a colored box for warnings and tips. Types: warn, error, success." })
-	Elements:Button({ Name = "Risky button", Description = "Red, and asks you to tap twice", Risky = true, DoubleClick = true, Callback = function()
-		Win:Notify({ Title = "Done", Text = "You confirmed it.", Type = "success" })
-	end })
-	Elements:Button({ Name = "Disabled button", Disabled = true })
-	Elements:Toggle({ Name = "Tooltip toggle", Description = "Hold your finger here (or hover)", Tooltip = "A tooltip is a small help card. Add Tooltip = \"text\" to any element." })
-	local master = Elements:Toggle({ Name = "Show the hidden slider" })
-	Elements:Slider({ Name = "Hidden slider", Min = 0, Max = 10, Default = 5, Prefix = "x" }):DependsOn(master) -- only shows while the toggle is on
-	local many = {}
-	for i = 1, 12 do
-		many[i] = "Option " .. i
-	end
-	Elements:Dropdown({ Name = "Searchable dropdown", Options = many, Tooltip = "Lists with more than 7 options get a search box." })
-	Elements:Dropdown({ Name = "Players in the server", Options = "Players" })
-	Elements:Input({ Name = "Max 5 letters", MaxLength = 5 })
-	local kl = Win:CreateKeybindList({ Visible = false }) -- the keys that are set, on screen
-	Elements:Toggle({ Name = "Show keybind list", Description = "On-screen list of your keys", Callback = function(on)
-		kl:Show(on)
-	end })
-	Elements:Button({ Name = "Notification you can update", Callback = function()
-		local n = Win:Notify({ Title = "Working...", Text = "0%", Duration = 0 }) -- Duration = 0 stays until Close()
-		task.spawn(function()
-			for i = 1, 10 do
-				task.wait(0.3)
-				n:SetText(i * 10 .. "%")
-				n:Progress(i / 10)
-			end
-			n:SetTitle("Done!")
-			task.wait(1)
-			n:Close()
-		end)
-	end })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐒𝐞𝐜𝐭𝐢𝐨𝐧("𝟗. 𝐄𝐯𝐞𝐧 𝐦𝐨𝐫𝐞")
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐍𝐨𝐭𝐢𝐜𝐞({ 𝐓𝐲𝐩𝐞 = "𝐰𝐚𝐫𝐧", 𝐓𝐢𝐭𝐥𝐞 = "𝐇𝐞𝐚𝐝𝐬 𝐮𝐩", 𝐓𝐞𝐱𝐭 = "𝐀 𝐍𝐨𝐭𝐢𝐜𝐞 𝐢𝐬 𝐚 𝐜𝐨𝐥𝐨𝐫𝐞𝐝 𝐛𝐨𝐱 𝐟𝐨𝐫 𝐰𝐚𝐫𝐧𝐢𝐧𝐠𝐬 𝐚𝐧𝐝 𝐭𝐢𝐩𝐬. 𝐓𝐲𝐩𝐞𝐬: 𝐰𝐚𝐫𝐧, 𝐞𝐫𝐫𝐨𝐫, 𝐬𝐮𝐜𝐜𝐞𝐬𝐬." })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐁𝐮𝐭𝐭𝐨𝐧({ 𝐍𝐚𝐦𝐞 = "𝐑𝐢𝐬𝐤𝐲 𝐛𝐮𝐭𝐭𝐨𝐧", 𝐃𝐞𝐬𝐜𝐫𝐢𝐩𝐭𝐢𝐨𝐧 = "𝐑𝐞𝐝, 𝐚𝐧𝐝 𝐚𝐬𝐤𝐬 𝐲𝐨𝐮 𝐭𝐨 𝐭𝐚𝐩 𝐭𝐰𝐢𝐜𝐞", 𝐑𝐢𝐬𝐤𝐲 = 𝐭𝐫𝐮𝐞, 𝐃𝐨𝐮𝐛𝐥𝐞𝐂𝐥𝐢𝐜𝐤 = 𝐭𝐫𝐮𝐞, 𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧()
+		𝐖𝐢𝐧:𝐍𝐨𝐭𝐢𝐟𝐲({ 𝐓𝐢𝐭𝐥𝐞 = "𝐃𝐨𝐧𝐞", 𝐓𝐞𝐱𝐭 = "𝐘𝐨𝐮 𝐜𝐨𝐧𝐟𝐢𝐫𝐦𝐞𝐝 𝐢𝐭.", 𝐓𝐲𝐩𝐞 = "𝐬𝐮𝐜𝐜𝐞𝐬𝐬" })
+	𝐞𝐧𝐝 })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐁𝐮𝐭𝐭𝐨𝐧({ 𝐍𝐚𝐦𝐞 = "𝐃𝐢𝐬𝐚𝐛𝐥𝐞𝐝 𝐛𝐮𝐭𝐭𝐨𝐧", 𝐃𝐢𝐬𝐚𝐛𝐥𝐞𝐝 = 𝐭𝐫𝐮𝐞 })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐓𝐨𝐠𝐠𝐥𝐞({ 𝐍𝐚𝐦𝐞 = "𝐓𝐨𝐨𝐥𝐭𝐢𝐩 𝐭𝐨𝐠𝐠𝐥𝐞", 𝐃𝐞𝐬𝐜𝐫𝐢𝐩𝐭𝐢𝐨𝐧 = "𝐇𝐨𝐥𝐝 𝐲𝐨𝐮𝐫 𝐟𝐢𝐧𝐠𝐞𝐫 𝐡𝐞𝐫𝐞 (𝐨𝐫 𝐡𝐨𝐯𝐞𝐫)", 𝐓𝐨𝐨𝐥𝐭𝐢𝐩 = "𝐀 𝐭𝐨𝐨𝐥𝐭𝐢𝐩 𝐢𝐬 𝐚 𝐬𝐦𝐚𝐥𝐥 𝐡𝐞𝐥𝐩 𝐜𝐚𝐫𝐝. 𝐀𝐝𝐝 𝐓𝐨𝐨𝐥𝐭𝐢𝐩 = \"𝐭𝐞𝐱𝐭\" 𝐭𝐨 𝐚𝐧𝐲 𝐞𝐥𝐞𝐦𝐞𝐧𝐭." })
+	𝐥𝐨𝐜𝐚𝐥 𝐦𝐚𝐬𝐭𝐞𝐫 = 𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐓𝐨𝐠𝐠𝐥𝐞({ 𝐍𝐚𝐦𝐞 = "𝐒𝐡𝐨𝐰 𝐭𝐡𝐞 𝐡𝐢𝐝𝐝𝐞𝐧 𝐬𝐥𝐢𝐝𝐞𝐫" })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐒𝐥𝐢𝐝𝐞𝐫({ 𝐍𝐚𝐦𝐞 = "𝐇𝐢𝐝𝐝𝐞𝐧 𝐬𝐥𝐢𝐝𝐞𝐫", 𝐌𝐢𝐧 = 𝟎, 𝐌𝐚𝐱 = 𝟏𝟎, 𝐃𝐞𝐟𝐚𝐮𝐥𝐭 = 𝟓, 𝐏𝐫𝐞𝐟𝐢𝐱 = "𝐱" }):𝐃𝐞𝐩𝐞𝐧𝐝𝐬𝐎𝐧(𝐦𝐚𝐬𝐭𝐞𝐫) -- 𝐨𝐧𝐥𝐲 𝐬𝐡𝐨𝐰𝐬 𝐰𝐡𝐢𝐥𝐞 𝐭𝐡𝐞 𝐭𝐨𝐠𝐠𝐥𝐞 𝐢𝐬 𝐨𝐧
+	𝐥𝐨𝐜𝐚𝐥 𝐦𝐚𝐧𝐲 = {}
+	𝐟𝐨𝐫 𝐢 = 𝟏, 𝟏𝟐 𝐝𝐨
+		𝐦𝐚𝐧𝐲[𝐢] = "𝐎𝐩𝐭𝐢𝐨𝐧 " .. 𝐢
+	𝐞𝐧𝐝
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐃𝐫𝐨𝐩𝐝𝐨𝐰𝐧({ 𝐍𝐚𝐦𝐞 = "𝐒𝐞𝐚𝐫𝐜𝐡𝐚𝐛𝐥𝐞 𝐝𝐫𝐨𝐩𝐝𝐨𝐰𝐧", 𝐎𝐩𝐭𝐢𝐨𝐧𝐬 = 𝐦𝐚𝐧𝐲, 𝐓𝐨𝐨𝐥𝐭𝐢𝐩 = "𝐋𝐢𝐬𝐭𝐬 𝐰𝐢𝐭𝐡 𝐦𝐨𝐫𝐞 𝐭𝐡𝐚𝐧 𝟕 𝐨𝐩𝐭𝐢𝐨𝐧𝐬 𝐠𝐞𝐭 𝐚 𝐬𝐞𝐚𝐫𝐜𝐡 𝐛𝐨𝐱." })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐃𝐫𝐨𝐩𝐝𝐨𝐰𝐧({ 𝐍𝐚𝐦𝐞 = "𝐏𝐥𝐚𝐲𝐞𝐫𝐬 𝐢𝐧 𝐭𝐡𝐞 𝐬𝐞𝐫𝐯𝐞𝐫", 𝐎𝐩𝐭𝐢𝐨𝐧𝐬 = "𝐏𝐥𝐚𝐲𝐞𝐫𝐬" })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐈𝐧𝐩𝐮𝐭({ 𝐍𝐚𝐦𝐞 = "𝐌𝐚𝐱 𝟓 𝐥𝐞𝐭𝐭𝐞𝐫𝐬", 𝐌𝐚𝐱𝐋𝐞𝐧𝐠𝐭𝐡 = 𝟓 })
+	𝐥𝐨𝐜𝐚𝐥 𝐤𝐥 = 𝐖𝐢𝐧:𝐂𝐫𝐞𝐚𝐭𝐞𝐊𝐞𝐲𝐛𝐢𝐧𝐝𝐋𝐢𝐬𝐭({ 𝐕𝐢𝐬𝐢𝐛𝐥𝐞 = 𝐟𝐚𝐥𝐬𝐞 }) -- 𝐭𝐡𝐞 𝐤𝐞𝐲𝐬 𝐭𝐡𝐚𝐭 𝐚𝐫𝐞 𝐬𝐞𝐭, 𝐨𝐧 𝐬𝐜𝐫𝐞𝐞𝐧
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐓𝐨𝐠𝐠𝐥𝐞({ 𝐍𝐚𝐦𝐞 = "𝐒𝐡𝐨𝐰 𝐤𝐞𝐲𝐛𝐢𝐧𝐝 𝐥𝐢𝐬𝐭", 𝐃𝐞𝐬𝐜𝐫𝐢𝐩𝐭𝐢𝐨𝐧 = "𝐎𝐧-𝐬𝐜𝐫𝐞𝐞𝐧 𝐥𝐢𝐬𝐭 𝐨𝐟 𝐲𝐨𝐮𝐫 𝐤𝐞𝐲𝐬", 𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧(𝐨𝐧)
+		𝐤𝐥:𝐒𝐡𝐨𝐰(𝐨𝐧)
+	𝐞𝐧𝐝 })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐁𝐮𝐭𝐭𝐨𝐧({ 𝐍𝐚𝐦𝐞 = "𝐍𝐨𝐭𝐢𝐟𝐢𝐜𝐚𝐭𝐢𝐨𝐧 𝐲𝐨𝐮 𝐜𝐚𝐧 𝐮𝐩𝐝𝐚𝐭𝐞", 𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧()
+		𝐥𝐨𝐜𝐚𝐥 𝐧 = 𝐖𝐢𝐧:𝐍𝐨𝐭𝐢𝐟𝐲({ 𝐓𝐢𝐭𝐥𝐞 = "𝐖𝐨𝐫𝐤𝐢𝐧𝐠...", 𝐓𝐞𝐱𝐭 = "𝟎%", 𝐃𝐮𝐫𝐚𝐭𝐢𝐨𝐧 = 𝟎 }) -- 𝐃𝐮𝐫𝐚𝐭𝐢𝐨𝐧 = 𝟎 𝐬𝐭𝐚𝐲𝐬 𝐮𝐧𝐭𝐢𝐥 𝐂𝐥𝐨𝐬𝐞()
+		𝐭𝐚𝐬𝐤.𝐬𝐩𝐚𝐰𝐧(𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧()
+			𝐟𝐨𝐫 𝐢 = 𝟏, 𝟏𝟎 𝐝𝐨
+				𝐭𝐚𝐬𝐤.𝐰𝐚𝐢𝐭(𝟎.𝟑)
+				𝐧:𝐒𝐞𝐭𝐓𝐞𝐱𝐭(𝐢 * 𝟏𝟎 .. "%")
+				𝐧:𝐏𝐫𝐨𝐠𝐫𝐞𝐬𝐬(𝐢 / 𝟏𝟎)
+			𝐞𝐧𝐝
+			𝐧:𝐒𝐞𝐭𝐓𝐢𝐭𝐥𝐞("𝐃𝐨𝐧𝐞!")
+			𝐭𝐚𝐬𝐤.𝐰𝐚𝐢𝐭(𝟏)
+			𝐧:𝐂𝐥𝐨𝐬𝐞()
+		𝐞𝐧𝐝)
+	𝐞𝐧𝐝 })
 
-	Elements:Section("10. Power tools")
-	Elements:RangeSlider({ Name = "Range slider", Min = 0, Max = 100, Default = { 20, 80 }, Suffix = "%", Flag = "demo_range", Callback = function(lo, hi)
-		print("range", lo, hi)
-	end })
-	Elements:Pad({ Name = "2D pad", Flag = "demo_pad", Callback = function(x, y)
-		print("pad", x, y)
-	end })
-	Elements:Slider({ Name = "Slider with arrows + log scale", Min = 1, Max = 1000, Default = 10, Log = true, Arrows = true })
-	Elements:Input({ Name = "Math box", Math = true, Default = "16*4", Tooltip = "Type 16*4 or (2+3)^2 and tap done." })
-	Elements:Keybind({ Name = "Combo key (Shift + X)", Default = Enum.KeyCode.X, Modifier = Enum.KeyCode.LeftShift, Callback = function()
-		Win:Notify({ Title = "Combo", Text = "Shift + X pressed" })
-	end })
-	Elements:Graph({ Name = "FPS", Source = "FPS" })
-	Elements:Graph({ Name = "Ping", Source = "Ping" })
-	Elements:Graph({ Name = "Memory", Source = "Memory" })
-	local Log = Elements:Console({ Name = "Console", Height = 100 })
-	Log:Log("Console ready. Win:Log(text, kind) writes here.")
-	Elements:Button({ Name = "Write to the console", Callback = function()
-		Win:Log("An info line")
-		Win:Log("A warning", "warn")
-		Win:Log("An error", "error")
-		Win:Log("A success", "success")
-	end })
-	Elements:CodeBox({ Name = "Code box", Default = 'print("hello from the code box")', Height = 70 })
-	local score = UI.State(0) -- a value that updates anything bound to it
-	local scoreLabel = Elements:Label("")
-	score:Bind(scoreLabel, "Score: %d")
-	Elements:Button({ Name = "Add 1 to the score", Callback = function()
-		score:Set(score:Get() + 1)
-	end })
-	Elements:Feed({ Title = "News from GitHub", Url = "https://raw.githubusercontent.com/rizqadeeb38-dev/Rebelwar_UI/main/README.md", Text = "Could not load the news.", MaxChars = 300 })
-end
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐒𝐞𝐜𝐭𝐢𝐨𝐧("𝟏𝟎. 𝐏𝐨𝐰𝐞𝐫 𝐭𝐨𝐨𝐥𝐬")
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐑𝐚𝐧𝐠𝐞𝐒𝐥𝐢𝐝𝐞𝐫({ 𝐍𝐚𝐦𝐞 = "𝐑𝐚𝐧𝐠𝐞 𝐬𝐥𝐢𝐝𝐞𝐫", 𝐌𝐢𝐧 = 𝟎, 𝐌𝐚𝐱 = 𝟏𝟎𝟎, 𝐃𝐞𝐟𝐚𝐮𝐥𝐭 = { 𝟐𝟎, 𝟖𝟎 }, 𝐒𝐮𝐟𝐟𝐢𝐱 = "%", 𝐅𝐥𝐚𝐠 = "𝐝𝐞𝐦𝐨_𝐫𝐚𝐧𝐠𝐞", 𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧(𝐥𝐨, 𝐡𝐢)
+		𝐩𝐫𝐢𝐧𝐭("𝐫𝐚𝐧𝐠𝐞", 𝐥𝐨, 𝐡𝐢)
+	𝐞𝐧𝐝 })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐏𝐚𝐝({ 𝐍𝐚𝐦𝐞 = "𝟐𝐃 𝐩𝐚𝐝", 𝐅𝐥𝐚𝐠 = "𝐝𝐞𝐦𝐨_𝐩𝐚𝐝", 𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧(𝐱, 𝐲)
+		𝐩𝐫𝐢𝐧𝐭("𝐩𝐚𝐝", 𝐱, 𝐲)
+	𝐞𝐧𝐝 })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐒𝐥𝐢𝐝𝐞𝐫({ 𝐍𝐚𝐦𝐞 = "𝐒𝐥𝐢𝐝𝐞𝐫 𝐰𝐢𝐭𝐡 𝐚𝐫𝐫𝐨𝐰𝐬 + 𝐥𝐨𝐠 𝐬𝐜𝐚𝐥𝐞", 𝐌𝐢𝐧 = 𝟏, 𝐌𝐚𝐱 = 𝟏𝟎𝟎𝟎, 𝐃𝐞𝐟𝐚𝐮𝐥𝐭 = 𝟏𝟎, 𝐋𝐨𝐠 = 𝐭𝐫𝐮𝐞, 𝐀𝐫𝐫𝐨𝐰𝐬 = 𝐭𝐫𝐮𝐞 })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐈𝐧𝐩𝐮𝐭({ 𝐍𝐚𝐦𝐞 = "𝐌𝐚𝐭𝐡 𝐛𝐨𝐱", 𝐌𝐚𝐭𝐡 = 𝐭𝐫𝐮𝐞, 𝐃𝐞𝐟𝐚𝐮𝐥𝐭 = "𝟏𝟔*𝟒", 𝐓𝐨𝐨𝐥𝐭𝐢𝐩 = "𝐓𝐲𝐩𝐞 𝟏𝟔*𝟒 𝐨𝐫 (𝟐+𝟑)^𝟐 𝐚𝐧𝐝 𝐭𝐚𝐩 𝐝𝐨𝐧𝐞." })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐊𝐞𝐲𝐛𝐢𝐧𝐝({ 𝐍𝐚𝐦𝐞 = "𝐂𝐨𝐦𝐛𝐨 𝐤𝐞𝐲 (𝐒𝐡𝐢𝐟𝐭 + 𝐗)", 𝐃𝐞𝐟𝐚𝐮𝐥𝐭 = 𝐄𝐧𝐮𝐦.𝐊𝐞𝐲𝐂𝐨𝐝𝐞.𝐗, 𝐌𝐨𝐝𝐢𝐟𝐢𝐞𝐫 = 𝐄𝐧𝐮𝐦.𝐊𝐞𝐲𝐂𝐨𝐝𝐞.𝐋𝐞𝐟𝐭𝐒𝐡𝐢𝐟𝐭, 𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧()
+		𝐖𝐢𝐧:𝐍𝐨𝐭𝐢𝐟𝐲({ 𝐓𝐢𝐭𝐥𝐞 = "𝐂𝐨𝐦𝐛𝐨", 𝐓𝐞𝐱𝐭 = "𝐒𝐡𝐢𝐟𝐭 + 𝐗 𝐩𝐫𝐞𝐬𝐬𝐞𝐝" })
+	𝐞𝐧𝐝 })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐆𝐫𝐚𝐩𝐡({ 𝐍𝐚𝐦𝐞 = "𝐅𝐏𝐒", 𝐒𝐨𝐮𝐫𝐜𝐞 = "𝐅𝐏𝐒" })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐆𝐫𝐚𝐩𝐡({ 𝐍𝐚𝐦𝐞 = "𝐏𝐢𝐧𝐠", 𝐒𝐨𝐮𝐫𝐜𝐞 = "𝐏𝐢𝐧𝐠" })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐆𝐫𝐚𝐩𝐡({ 𝐍𝐚𝐦𝐞 = "𝐌𝐞𝐦𝐨𝐫𝐲", 𝐒𝐨𝐮𝐫𝐜𝐞 = "𝐌𝐞𝐦𝐨𝐫𝐲" })
+	𝐥𝐨𝐜𝐚𝐥 𝐋𝐨𝐠 = 𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐂𝐨𝐧𝐬𝐨𝐥𝐞({ 𝐍𝐚𝐦𝐞 = "𝐂𝐨𝐧𝐬𝐨𝐥𝐞", 𝐇𝐞𝐢𝐠𝐡𝐭 = 𝟏𝟎𝟎 })
+	𝐋𝐨𝐠:𝐋𝐨𝐠("𝐂𝐨𝐧𝐬𝐨𝐥𝐞 𝐫𝐞𝐚𝐝𝐲. 𝐖𝐢𝐧:𝐋𝐨𝐠(𝐭𝐞𝐱𝐭, 𝐤𝐢𝐧𝐝) 𝐰𝐫𝐢𝐭𝐞𝐬 𝐡𝐞𝐫𝐞.")
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐁𝐮𝐭𝐭𝐨𝐧({ 𝐍𝐚𝐦𝐞 = "𝐖𝐫𝐢𝐭𝐞 𝐭𝐨 𝐭𝐡𝐞 𝐜𝐨𝐧𝐬𝐨𝐥𝐞", 𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧()
+		𝐖𝐢𝐧:𝐋𝐨𝐠("𝐀𝐧 𝐢𝐧𝐟𝐨 𝐥𝐢𝐧𝐞")
+		𝐖𝐢𝐧:𝐋𝐨𝐠("𝐀 𝐰𝐚𝐫𝐧𝐢𝐧𝐠", "𝐰𝐚𝐫𝐧")
+		𝐖𝐢𝐧:𝐋𝐨𝐠("𝐀𝐧 𝐞𝐫𝐫𝐨𝐫", "𝐞𝐫𝐫𝐨𝐫")
+		𝐖𝐢𝐧:𝐋𝐨𝐠("𝐀 𝐬𝐮𝐜𝐜𝐞𝐬𝐬", "𝐬𝐮𝐜𝐜𝐞𝐬𝐬")
+	𝐞𝐧𝐝 })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐂𝐨𝐝𝐞𝐁𝐨𝐱({ 𝐍𝐚𝐦𝐞 = "𝐂𝐨𝐝𝐞 𝐛𝐨𝐱", 𝐃𝐞𝐟𝐚𝐮𝐥𝐭 = '𝐩𝐫𝐢𝐧𝐭("𝐡𝐞𝐥𝐥𝐨 𝐟𝐫𝐨𝐦 𝐭𝐡𝐞 𝐜𝐨𝐝𝐞 𝐛𝐨𝐱")', 𝐇𝐞𝐢𝐠𝐡𝐭 = 𝟕𝟎 })
+	𝐥𝐨𝐜𝐚𝐥 𝐬𝐜𝐨𝐫𝐞 = 𝐔𝐈.𝐒𝐭𝐚𝐭𝐞(𝟎) -- 𝐚 𝐯𝐚𝐥𝐮𝐞 𝐭𝐡𝐚𝐭 𝐮𝐩𝐝𝐚𝐭𝐞𝐬 𝐚𝐧𝐲𝐭𝐡𝐢𝐧𝐠 𝐛𝐨𝐮𝐧𝐝 𝐭𝐨 𝐢𝐭
+	𝐥𝐨𝐜𝐚𝐥 𝐬𝐜𝐨𝐫𝐞𝐋𝐚𝐛𝐞𝐥 = 𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐋𝐚𝐛𝐞𝐥("")
+	𝐬𝐜𝐨𝐫𝐞:𝐁𝐢𝐧𝐝(𝐬𝐜𝐨𝐫𝐞𝐋𝐚𝐛𝐞𝐥, "𝐒𝐜𝐨𝐫𝐞: %𝐝")
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐁𝐮𝐭𝐭𝐨𝐧({ 𝐍𝐚𝐦𝐞 = "𝐀𝐝𝐝 𝟏 𝐭𝐨 𝐭𝐡𝐞 𝐬𝐜𝐨𝐫𝐞", 𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧()
+		𝐬𝐜𝐨𝐫𝐞:𝐒𝐞𝐭(𝐬𝐜𝐨𝐫𝐞:𝐆𝐞𝐭() + 𝟏)
+	𝐞𝐧𝐝 })
+	𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬:𝐅𝐞𝐞𝐝({ 𝐓𝐢𝐭𝐥𝐞 = "𝐍𝐞𝐰𝐬 𝐟𝐫𝐨𝐦 𝐆𝐢𝐭𝐇𝐮𝐛", 𝐔𝐫𝐥 = "𝐡𝐭𝐭𝐩𝐬://𝐫𝐚𝐰.𝐠𝐢𝐭𝐡𝐮𝐛𝐮𝐬𝐞𝐫𝐜𝐨𝐧𝐭𝐞𝐧𝐭.𝐜𝐨𝐦/𝐫𝐢𝐳𝐪𝐚𝐝𝐞𝐞𝐛𝟑𝟖-𝐝𝐞𝐯/𝐑𝐞𝐛𝐞𝐥𝐰𝐚𝐫_𝐔𝐈/𝐦𝐚𝐢𝐧/𝐑𝐄𝐀𝐃𝐌𝐄.𝐦𝐝", 𝐓𝐞𝐱𝐭 = "𝐂𝐨𝐮𝐥𝐝 𝐧𝐨𝐭 𝐥𝐨𝐚𝐝 𝐭𝐡𝐞 𝐧𝐞𝐰𝐬.", 𝐌𝐚𝐱𝐂𝐡𝐚𝐫𝐬 = 𝟑𝟎𝟎 })
+𝐞𝐧𝐝
 
-Win:CreateTab({ Name = "Elements", Icon = LOGO, Title = "🧩 ALL ELEMENTS", Description = "One of every element and every toggle style.", Build = buildElements })
-local Discord = Win:CreateTab({ Name = "Discord", Icon = ICON.Discord, Title = "💬 DISCORD", Description = "Updates, support and suggestions." })
-Discord:SetBadge("NEW") -- a small bubble on the tab button (nil removes it)
-local ai -- the AI tab's tools (filled in below)
-Win:SetAssistant({ -- the full-screen HUD is built only when it is first opened
-	Logo = LOGO,
-	Title = "ELITE GAME ASSISTANT",
-	Color = "Rainbow",
-	Key = Enum.KeyCode.H, -- press H on a keyboard to open or close it
-	OnSummary = function(hud, done)
-		if ai and ai.Brief then
-			ai.Brief(hud, done)
-		else
-			done(hud:GetSummary())
-		end
-	end,
+𝐖𝐢𝐧:𝐂𝐫𝐞𝐚𝐭𝐞𝐓𝐚𝐛({ 𝐍𝐚𝐦𝐞 = "𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬", 𝐈𝐜𝐨𝐧 = 𝐔𝐈.𝐈𝐜𝐨𝐧𝐬.𝐞𝐥𝐞𝐦𝐞𝐧𝐭𝐬, 𝐓𝐢𝐭𝐥𝐞 = "🧩 𝐀𝐋𝐋 𝐄𝐋𝐄𝐌𝐄𝐍𝐓𝐒", 𝐃𝐞𝐬𝐜𝐫𝐢𝐩𝐭𝐢𝐨𝐧 = "𝐎𝐧𝐞 𝐨𝐟 𝐞𝐯𝐞𝐫𝐲 𝐞𝐥𝐞𝐦𝐞𝐧𝐭 𝐚𝐧𝐝 𝐞𝐯𝐞𝐫𝐲 𝐭𝐨𝐠𝐠𝐥𝐞 𝐬𝐭𝐲𝐥𝐞.", 𝐁𝐮𝐢𝐥𝐝 = 𝐛𝐮𝐢𝐥𝐝𝐄𝐥𝐞𝐦𝐞𝐧𝐭𝐬 })
+𝐥𝐨𝐜𝐚𝐥 𝐃𝐢𝐬𝐜𝐨𝐫𝐝 = 𝐖𝐢𝐧:𝐂𝐫𝐞𝐚𝐭𝐞𝐓𝐚𝐛({ 𝐍𝐚𝐦𝐞 = "𝐃𝐢𝐬𝐜𝐨𝐫𝐝", 𝐈𝐜𝐨𝐧 = 𝐈𝐂𝐎𝐍.𝐃𝐢𝐬𝐜𝐨𝐫𝐝, 𝐓𝐢𝐭𝐥𝐞 = "💬 𝐃𝐈𝐒𝐂𝐎𝐑𝐃", 𝐃𝐞𝐬𝐜𝐫𝐢𝐩𝐭𝐢𝐨𝐧 = "𝐔𝐩𝐝𝐚𝐭𝐞𝐬, 𝐬𝐮𝐩𝐩𝐨𝐫𝐭 𝐚𝐧𝐝 𝐬𝐮𝐠𝐠𝐞𝐬𝐭𝐢𝐨𝐧𝐬." })
+𝐃𝐢𝐬𝐜𝐨𝐫𝐝:𝐒𝐞𝐭𝐁𝐚𝐝𝐠𝐞("𝐍𝐄𝐖") -- 𝐚 𝐬𝐦𝐚𝐥𝐥 𝐛𝐮𝐛𝐛𝐥𝐞 𝐨𝐧 𝐭𝐡𝐞 𝐭𝐚𝐛 𝐛𝐮𝐭𝐭𝐨𝐧 (𝐧𝐢𝐥 𝐫𝐞𝐦𝐨𝐯𝐞𝐬 𝐢𝐭)
+𝐖𝐢𝐧:𝐒𝐞𝐭𝐀𝐬𝐬𝐢𝐬𝐭𝐚𝐧𝐭({ -- 𝐭𝐡𝐞 𝐟𝐮𝐥𝐥-𝐬𝐜𝐫𝐞𝐞𝐧 𝐇𝐔𝐃 𝐢𝐬 𝐛𝐮𝐢𝐥𝐭 𝐨𝐧𝐥𝐲 𝐰𝐡𝐞𝐧 𝐢𝐭 𝐢𝐬 𝐟𝐢𝐫𝐬𝐭 𝐨𝐩𝐞𝐧𝐞𝐝
+	𝐋𝐨𝐠𝐨 = 𝐋𝐎𝐆𝐎,
+	𝐓𝐢𝐭𝐥𝐞 = "𝐄𝐋𝐈𝐓𝐄 𝐆𝐀𝐌𝐄 𝐀𝐒𝐒𝐈𝐒𝐓𝐀𝐍𝐓",
+	𝐂𝐨𝐥𝐨𝐫 = "𝐑𝐚𝐢𝐧𝐛𝐨𝐰",
+	𝐊𝐞𝐲 = 𝐄𝐧𝐮𝐦.𝐊𝐞𝐲𝐂𝐨𝐝𝐞.𝐇, -- 𝐩𝐫𝐞𝐬𝐬 𝐇 𝐨𝐧 𝐚 𝐤𝐞𝐲𝐛𝐨𝐚𝐫𝐝 𝐭𝐨 𝐨𝐩𝐞𝐧 𝐨𝐫 𝐜𝐥𝐨𝐬𝐞 𝐢𝐭
+	𝐎𝐧𝐒𝐮𝐦𝐦𝐚𝐫𝐲 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧(𝐡𝐮𝐝, 𝐝𝐨𝐧𝐞)
+		𝐝𝐨𝐧𝐞(𝐡𝐮𝐝:𝐆𝐞𝐭𝐒𝐮𝐦𝐦𝐚𝐫𝐲())
+	𝐞𝐧𝐝,
 })
--- AI or no AI: set USE_AI to false (at the top) and the tab is simply not made.
-if USE_AI then
-	stage("Building the AI tab...", 0.75)
-	local aiTab -- (the tab itself; we only need the tools)
-	aiTab, ai = Win:CreateAITab({
-		Name = "AI",
-		Icon = LOGO,
-		Title = "🤖 REBEL AI",
-		-- No secret is in this file (it is public). Pick ONE:
-		Proxy = AI_PROXY, -- your own small server that holds the keys (see ai_proxy_worker.js), or
-		-- ON HOLD: the old keys are not used any more (not in this file, and their old key file is no longer read).
-		-- When you have new keys, put them one per line in this NEW file inside your executor's workspace folder:
-		KeyFile = "RebelAI_newkeys.txt",
-	})
-end
-stage("Building the tools tab...", 0.85)
-local Tools = Win:CreateToolsTab({ Icon = LOGO, Features = { "More themes", "More crosshairs", "Macro recorder", "Cloud sync", "Sound packs" } })
-Win:CreateNotificationsTab({ Icon = LOGO }) -- every toast you saw, with an unread number on the tab
-Win:CreateFavoritesTab({ Icon = LOGO }) -- pick toggles and buttons from other tabs and use them in one place
-Win:CreateThemeEditor({ Icon = LOGO }) -- a color picker for every theme color, with copy / paste of the theme
-stage("Building settings...", 0.92)
-local Settings = Win:CreateSettingsTab({
-	Icon = ICON.Settings,
-	Bar = Bar,
-	Credits = { Name = "Rebelwar", Text = "Made by prorizz196. Thank you for playing!", Discord = DISCORD },
-}) -- the ready-made Settings tab
+𝐬𝐭𝐚𝐠𝐞("𝐁𝐮𝐢𝐥𝐝𝐢𝐧𝐠 𝐭𝐡𝐞 𝐭𝐨𝐨𝐥𝐬 𝐭𝐚𝐛...", 𝟎.𝟖𝟓)
+𝐥𝐨𝐜𝐚𝐥 𝐓𝐨𝐨𝐥𝐬 = 𝐖𝐢𝐧:𝐂𝐫𝐞𝐚𝐭𝐞𝐓𝐨𝐨𝐥𝐬𝐓𝐚𝐛({ 𝐈𝐜𝐨𝐧 = 𝐔𝐈.𝐈𝐜𝐨𝐧𝐬.𝐰𝐫𝐞𝐧𝐜𝐡, 𝐅𝐞𝐚𝐭𝐮𝐫𝐞𝐬 = { "𝐌𝐨𝐫𝐞 𝐭𝐡𝐞𝐦𝐞𝐬", "𝐌𝐨𝐫𝐞 𝐜𝐫𝐨𝐬𝐬𝐡𝐚𝐢𝐫𝐬", "𝐌𝐚𝐜𝐫𝐨 𝐫𝐞𝐜𝐨𝐫𝐝𝐞𝐫", "𝐂𝐥𝐨𝐮𝐝 𝐬𝐲𝐧𝐜", "𝐒𝐨𝐮𝐧𝐝 𝐩𝐚𝐜𝐤𝐬" } })
+𝐖𝐢𝐧:𝐂𝐫𝐞𝐚𝐭𝐞𝐍𝐨𝐭𝐢𝐟𝐢𝐜𝐚𝐭𝐢𝐨𝐧𝐬𝐓𝐚𝐛({ 𝐈𝐜𝐨𝐧 = 𝐔𝐈.𝐈𝐜𝐨𝐧𝐬.𝐧𝐨𝐭𝐢𝐟𝐢𝐜𝐚𝐭𝐢𝐨𝐧 }) -- 𝐞𝐯𝐞𝐫𝐲 𝐭𝐨𝐚𝐬𝐭 𝐲𝐨𝐮 𝐬𝐚𝐰, 𝐰𝐢𝐭𝐡 𝐚𝐧 𝐮𝐧𝐫𝐞𝐚𝐝 𝐧𝐮𝐦𝐛𝐞𝐫 𝐨𝐧 𝐭𝐡𝐞 𝐭𝐚𝐛
+𝐖𝐢𝐧:𝐂𝐫𝐞𝐚𝐭𝐞𝐅𝐚𝐯𝐨𝐫𝐢𝐭𝐞𝐬𝐓𝐚𝐛({ 𝐈𝐜𝐨𝐧 = 𝐔𝐈.𝐈𝐜𝐨𝐧𝐬.𝐬𝐭𝐚𝐫 }) -- 𝐩𝐢𝐜𝐤 𝐭𝐨𝐠𝐠𝐥𝐞𝐬 𝐚𝐧𝐝 𝐛𝐮𝐭𝐭𝐨𝐧𝐬 𝐟𝐫𝐨𝐦 𝐨𝐭𝐡𝐞𝐫 𝐭𝐚𝐛𝐬 𝐚𝐧𝐝 𝐮𝐬𝐞 𝐭𝐡𝐞𝐦 𝐢𝐧 𝐨𝐧𝐞 𝐩𝐥𝐚𝐜𝐞
+𝐖𝐢𝐧:𝐂𝐫𝐞𝐚𝐭𝐞𝐓𝐡𝐞𝐦𝐞𝐄𝐝𝐢𝐭𝐨𝐫({ 𝐈𝐜𝐨𝐧 = 𝐋𝐎𝐆𝐎 }) -- 𝐚 𝐜𝐨𝐥𝐨𝐫 𝐩𝐢𝐜𝐤𝐞𝐫 𝐟𝐨𝐫 𝐞𝐯𝐞𝐫𝐲 𝐭𝐡𝐞𝐦𝐞 𝐜𝐨𝐥𝐨𝐫, 𝐰𝐢𝐭𝐡 𝐜𝐨𝐩𝐲 / 𝐩𝐚𝐬𝐭𝐞 𝐨𝐟 𝐭𝐡𝐞 𝐭𝐡𝐞𝐦𝐞
+𝐬𝐭𝐚𝐠𝐞("𝐁𝐮𝐢𝐥𝐝𝐢𝐧𝐠 𝐬𝐞𝐭𝐭𝐢𝐧𝐠𝐬...", 𝟎.𝟗𝟐)
+𝐥𝐨𝐜𝐚𝐥 𝐒𝐞𝐭𝐭𝐢𝐧𝐠𝐬 = 𝐖𝐢𝐧:𝐂𝐫𝐞𝐚𝐭𝐞𝐒𝐞𝐭𝐭𝐢𝐧𝐠𝐬𝐓𝐚𝐛({
+	𝐈𝐜𝐨𝐧 = 𝐈𝐂𝐎𝐍.𝐒𝐞𝐭𝐭𝐢𝐧𝐠𝐬,
+	𝐁𝐚𝐫 = 𝐁𝐚𝐫,
+	𝐂𝐫𝐞𝐝𝐢𝐭𝐬 = { 𝐍𝐚𝐦𝐞 = "𝐑𝐞𝐛𝐞𝐥𝐰𝐚𝐫", 𝐓𝐞𝐱𝐭 = "𝐌𝐚𝐝𝐞 𝐛𝐲 𝐩𝐫𝐨𝐫𝐢𝐳𝐳𝟏𝟗𝟔. 𝐓𝐡𝐚𝐧𝐤 𝐲𝐨𝐮 𝐟𝐨𝐫 𝐩𝐥𝐚𝐲𝐢𝐧𝐠!", 𝐃𝐢𝐬𝐜𝐨𝐫𝐝 = 𝐃𝐈𝐒𝐂𝐎𝐑𝐃 },
+}) -- 𝐭𝐡𝐞 𝐫𝐞𝐚𝐝𝐲-𝐦𝐚𝐝𝐞 𝐒𝐞𝐭𝐭𝐢𝐧𝐠𝐬 𝐭𝐚𝐛
 
--- ---------------------------------------------------------------- Discord
-Discord:Image({ Image = BANNER, Height = 110, Crop = true, Effect = "Shimmer" })
-Discord:Paragraph({ Title = "🔥 REBELWAR — KEYLESS • SIMPLE • POWERFUL 🔥", Text = "✅ No keys needed. Open it, tap the bar, and go." })
-Discord:Paragraph({
-	Title = "⚡ THIS PANEL SHOWS",
-	Text = "A loading screen\nA search box, a resize grip, panel opacity, dialogs, tooltips, a keybind list and collapsible sections\nNamed profiles in Settings (save Legit, Rage, ...)\nA top bar you can fill with FPS, Timer, Logo and more\nTabs with their own pictures and headers\nEvery kind of toggle, slider, color picker and menu\n14 themes that change live",
+-- ---------------------------------------------------------------- 𝐃𝐢𝐬𝐜𝐨𝐫𝐝
+𝐃𝐢𝐬𝐜𝐨𝐫𝐝:𝐈𝐦𝐚𝐠𝐞({ 𝐈𝐦𝐚𝐠𝐞 = 𝐁𝐀𝐍𝐍𝐄𝐑, 𝐇𝐞𝐢𝐠𝐡𝐭 = 𝟏𝟏𝟎, 𝐂𝐫𝐨𝐩 = 𝐭𝐫𝐮𝐞, 𝐄𝐟𝐟𝐞𝐜𝐭 = "𝐒𝐡𝐢𝐦𝐦𝐞𝐫" })
+𝐃𝐢𝐬𝐜𝐨𝐫𝐝:𝐏𝐚𝐫𝐚𝐠𝐫𝐚𝐩𝐡({ 𝐓𝐢𝐭𝐥𝐞 = "🔥 𝐑𝐄𝐁𝐄𝐋𝐖𝐀𝐑 — 𝐊𝐄𝐘𝐋𝐄𝐒𝐒 • 𝐒𝐈𝐌𝐏𝐋𝐄 • 𝐏𝐎𝐖𝐄𝐑𝐅𝐔𝐋 🔥", 𝐓𝐞𝐱𝐭 = "✅ 𝐍𝐨 𝐤𝐞𝐲𝐬 𝐧𝐞𝐞𝐝𝐞𝐝. 𝐎𝐩𝐞𝐧 𝐢𝐭, 𝐭𝐚𝐩 𝐭𝐡𝐞 𝐛𝐚𝐫, 𝐚𝐧𝐝 𝐠𝐨." })
+𝐃𝐢𝐬𝐜𝐨𝐫𝐝:𝐏𝐚𝐫𝐚𝐠𝐫𝐚𝐩𝐡({
+	𝐓𝐢𝐭𝐥𝐞 = "⚡ 𝐓𝐇𝐈𝐒 𝐏𝐀𝐍𝐄𝐋 𝐒𝐇𝐎𝐖𝐒",
+	𝐓𝐞𝐱𝐭 = "𝐀 𝐥𝐨𝐚𝐝𝐢𝐧𝐠 𝐬𝐜𝐫𝐞𝐞𝐧\𝐧𝐀 𝐬𝐞𝐚𝐫𝐜𝐡 𝐛𝐨𝐱, 𝐚 𝐫𝐞𝐬𝐢𝐳𝐞 𝐠𝐫𝐢𝐩, 𝐩𝐚𝐧𝐞𝐥 𝐨𝐩𝐚𝐜𝐢𝐭𝐲, 𝐝𝐢𝐚𝐥𝐨𝐠𝐬, 𝐭𝐨𝐨𝐥𝐭𝐢𝐩𝐬, 𝐚 𝐤𝐞𝐲𝐛𝐢𝐧𝐝 𝐥𝐢𝐬𝐭 𝐚𝐧𝐝 𝐜𝐨𝐥𝐥𝐚𝐩𝐬𝐢𝐛𝐥𝐞 𝐬𝐞𝐜𝐭𝐢𝐨𝐧𝐬\𝐧𝐍𝐚𝐦𝐞𝐝 𝐩𝐫𝐨𝐟𝐢𝐥𝐞𝐬 𝐢𝐧 𝐒𝐞𝐭𝐭𝐢𝐧𝐠𝐬 (𝐬𝐚𝐯𝐞 𝐋𝐞𝐠𝐢𝐭, 𝐑𝐚𝐠𝐞, ...)\𝐧𝐀 𝐭𝐨𝐩 𝐛𝐚𝐫 𝐲𝐨𝐮 𝐜𝐚𝐧 𝐟𝐢𝐥𝐥 𝐰𝐢𝐭𝐡 𝐅𝐏𝐒, 𝐓𝐢𝐦𝐞𝐫, 𝐋𝐨𝐠𝐨 𝐚𝐧𝐝 𝐦𝐨𝐫𝐞\𝐧𝐓𝐚𝐛𝐬 𝐰𝐢𝐭𝐡 𝐭𝐡𝐞𝐢𝐫 𝐨𝐰𝐧 𝐩𝐢𝐜𝐭𝐮𝐫𝐞𝐬 𝐚𝐧𝐝 𝐡𝐞𝐚𝐝𝐞𝐫𝐬\𝐧𝐄𝐯𝐞𝐫𝐲 𝐤𝐢𝐧𝐝 𝐨𝐟 𝐭𝐨𝐠𝐠𝐥𝐞, 𝐬𝐥𝐢𝐝𝐞𝐫, 𝐜𝐨𝐥𝐨𝐫 𝐩𝐢𝐜𝐤𝐞𝐫 𝐚𝐧𝐝 𝐦𝐞𝐧𝐮\𝐧𝟏𝟒 𝐭𝐡𝐞𝐦𝐞𝐬 𝐭𝐡𝐚𝐭 𝐜𝐡𝐚𝐧𝐠𝐞 𝐥𝐢𝐯𝐞",
 })
-Discord:Paragraph({
-	Title = "📚 REBELUI & RESOURCES",
-	Text = "#examples: the tutorial source.lua (copy it and change it)\n#documentation: every document we have\nAsk questions, share your scripts, get help.",
+𝐃𝐢𝐬𝐜𝐨𝐫𝐝:𝐏𝐚𝐫𝐚𝐠𝐫𝐚𝐩𝐡({
+	𝐓𝐢𝐭𝐥𝐞 = "📚 𝐑𝐄𝐁𝐄𝐋𝐔𝐈 & 𝐑𝐄𝐒𝐎𝐔𝐑𝐂𝐄𝐒",
+	𝐓𝐞𝐱𝐭 = "#𝐞𝐱𝐚𝐦𝐩𝐥𝐞𝐬: 𝐭𝐡𝐞 𝐭𝐮𝐭𝐨𝐫𝐢𝐚𝐥 𝐬𝐨𝐮𝐫𝐜𝐞.𝐥𝐮𝐚 (𝐜𝐨𝐩𝐲 𝐢𝐭 𝐚𝐧𝐝 𝐜𝐡𝐚𝐧𝐠𝐞 𝐢𝐭)\𝐧#𝐝𝐨𝐜𝐮𝐦𝐞𝐧𝐭𝐚𝐭𝐢𝐨𝐧: 𝐞𝐯𝐞𝐫𝐲 𝐝𝐨𝐜𝐮𝐦𝐞𝐧𝐭 𝐰𝐞 𝐡𝐚𝐯𝐞\𝐧𝐀𝐬𝐤 𝐪𝐮𝐞𝐬𝐭𝐢𝐨𝐧𝐬, 𝐬𝐡𝐚𝐫𝐞 𝐲𝐨𝐮𝐫 𝐬𝐜𝐫𝐢𝐩𝐭𝐬, 𝐠𝐞𝐭 𝐡𝐞𝐥𝐩.",
 })
-Discord:Button({
-	Name = "Copy the official Discord invite",
-	Description = "Tutorials, documentation, updates and help",
-	Callback = function()
-		local ok = pcall(function()
-			setclipboard(DISCORD)
-		end)
-		Win:Notify({
-			Title = ok and "Copied!" or "Your executor can't copy",
-			Text = ok and "Paste it in your browser to join." or DISCORD,
-			Type = ok and "success" or "warn",
+𝐃𝐢𝐬𝐜𝐨𝐫𝐝:𝐁𝐮𝐭𝐭𝐨𝐧({
+	𝐍𝐚𝐦𝐞 = "𝐂𝐨𝐩𝐲 𝐭𝐡𝐞 𝐨𝐟𝐟𝐢𝐜𝐢𝐚𝐥 𝐃𝐢𝐬𝐜𝐨𝐫𝐝 𝐢𝐧𝐯𝐢𝐭𝐞",
+	𝐃𝐞𝐬𝐜𝐫𝐢𝐩𝐭𝐢𝐨𝐧 = "𝐓𝐮𝐭𝐨𝐫𝐢𝐚𝐥𝐬, 𝐝𝐨𝐜𝐮𝐦𝐞𝐧𝐭𝐚𝐭𝐢𝐨𝐧, 𝐮𝐩𝐝𝐚𝐭𝐞𝐬 𝐚𝐧𝐝 𝐡𝐞𝐥𝐩",
+	𝐂𝐚𝐥𝐥𝐛𝐚𝐜𝐤 = 𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧()
+		𝐥𝐨𝐜𝐚𝐥 𝐨𝐤 = 𝐩𝐜𝐚𝐥𝐥(𝐟𝐮𝐧𝐜𝐭𝐢𝐨𝐧()
+			𝐬𝐞𝐭𝐜𝐥𝐢𝐩𝐛𝐨𝐚𝐫𝐝(𝐃𝐈𝐒𝐂𝐎𝐑𝐃)
+		𝐞𝐧𝐝)
+		𝐖𝐢𝐧:𝐍𝐨𝐭𝐢𝐟𝐲({
+			𝐓𝐢𝐭𝐥𝐞 = 𝐨𝐤 𝐚𝐧𝐝 "𝐂𝐨𝐩𝐢𝐞𝐝!" 𝐨𝐫 "𝐘𝐨𝐮𝐫 𝐞𝐱𝐞𝐜𝐮𝐭𝐨𝐫 𝐜𝐚𝐧'𝐭 𝐜𝐨𝐩𝐲",
+			𝐓𝐞𝐱𝐭 = 𝐨𝐤 𝐚𝐧𝐝 "𝐏𝐚𝐬𝐭𝐞 𝐢𝐭 𝐢𝐧 𝐲𝐨𝐮𝐫 𝐛𝐫𝐨𝐰𝐬𝐞𝐫 𝐭𝐨 𝐣𝐨𝐢𝐧." 𝐨𝐫 𝐃𝐈𝐒𝐂𝐎𝐑𝐃,
+			𝐓𝐲𝐩𝐞 = 𝐨𝐤 𝐚𝐧𝐝 "𝐬𝐮𝐜𝐜𝐞𝐬𝐬" 𝐨𝐫 "𝐰𝐚𝐫𝐧",
 		})
-	end,
+	𝐞𝐧𝐝,
 })
 
--- ============================================================ 4. finish: close the loading screen, open the panel
-stage("Ready!", 1)
-ready = true
-Load:Finish() -- fades the loading screen out
-Win:Toggle(true) -- the panel pops open
-if ai and ai.Boot then
-	ai.Boot(aiVid) -- the AI loading video
-end
-Win:Notify({ Title = "Welcome, " .. lp.DisplayName, Text = "Tap the top bar (or press RightShift) to hide or show the panel.", Duration = 5 })
-end
+-- ============================================================ 𝟒. 𝐟𝐢𝐧𝐢𝐬𝐡: 𝐜𝐥𝐨𝐬𝐞 𝐭𝐡𝐞 𝐥𝐨𝐚𝐝𝐢𝐧𝐠 𝐬𝐜𝐫𝐞𝐞𝐧, 𝐨𝐩𝐞𝐧 𝐭𝐡𝐞 𝐩𝐚𝐧𝐞𝐥
+𝐬𝐭𝐚𝐠𝐞("𝐑𝐞𝐚𝐝𝐲!", 𝟏)
+𝐫𝐞𝐚𝐝𝐲 = 𝐭𝐫𝐮𝐞
+𝐋𝐨𝐚𝐝:𝐅𝐢𝐧𝐢𝐬𝐡() -- 𝐟𝐚𝐝𝐞𝐬 𝐭𝐡𝐞 𝐥𝐨𝐚𝐝𝐢𝐧𝐠 𝐬𝐜𝐫𝐞𝐞𝐧 𝐨𝐮𝐭
+𝐢𝐟 𝐔𝐒𝐄_𝐀𝐂𝐓𝐈𝐕𝐀𝐓𝐄 𝐭𝐡𝐞𝐧
+	-- 𝐛𝐢𝐠 𝐠𝐥𝐨𝐰𝐢𝐧𝐠 𝐀𝐜𝐭𝐢𝐯𝐚𝐭𝐞 𝐛𝐮𝐭𝐭𝐨𝐧 𝐨𝐯𝐞𝐫 𝐭𝐡𝐞 𝐯𝐢𝐝𝐞𝐨 (𝐩𝐚𝐝𝐥𝐨𝐜𝐤 𝐨𝐩𝐞𝐧𝐬, 𝐛𝐨𝐨𝐦). 𝐟𝐚𝐥𝐬𝐞 = 𝐭𝐡𝐞 𝐬𝐰𝐢𝐭𝐜𝐡 𝐢𝐬 𝐨𝐟𝐟.
+	𝐥𝐨𝐜𝐚𝐥 𝐨𝐤𝐀𝐜𝐭 = 𝐔𝐈:𝐀𝐜𝐭𝐢𝐯𝐚𝐭𝐞({ 𝐌𝐨𝐝𝐞 = 𝐀𝐂𝐓𝐈𝐕𝐀𝐓𝐄_𝐌𝐎𝐃𝐄, 𝐕𝐢𝐝𝐞𝐨 = 𝐥𝐨𝐠𝐨𝐕𝐢𝐝, 𝐋𝐨𝐠𝐨 = 𝐋𝐎𝐆𝐎, 𝐓𝐢𝐭𝐥𝐞 = "𝐑𝐞𝐛𝐞𝐥𝐰𝐚𝐫", 𝐓𝐡𝐞𝐦𝐞 = "𝐑𝐞𝐝", 𝐁𝐨𝐨𝐦𝐓𝐞𝐱𝐭 = 𝐔𝐈.𝐅𝐚𝐧𝐜𝐲("𝐋𝐄𝐓𝐒 𝐆𝐎!", "𝐁𝐨𝐥𝐝") })
+	𝐢𝐟 𝐧𝐨𝐭 𝐨𝐤𝐀𝐜𝐭 𝐭𝐡𝐞𝐧
+		𝐫𝐞𝐭𝐮𝐫𝐧
+	𝐞𝐧𝐝
+𝐞𝐧𝐝
+𝐖𝐢𝐧:𝐓𝐨𝐠𝐠𝐥𝐞(𝐭𝐫𝐮𝐞) -- 𝐭𝐡𝐞 𝐩𝐚𝐧𝐞𝐥 𝐩𝐨𝐩𝐬 𝐨𝐩𝐞𝐧
+𝐖𝐢𝐧:𝐁𝐨𝐨𝐦({ 𝐓𝐞𝐱𝐭 = 𝐔𝐈.𝐅𝐚𝐧𝐜𝐲("𝐥𝐞𝐭𝐬 𝐠𝐨!", "𝐁𝐨𝐥𝐝") })
+𝐖𝐢𝐧:𝐍𝐨𝐭𝐢𝐟𝐲({ 𝐓𝐢𝐭𝐥𝐞 = 𝐔𝐈.𝐅𝐚𝐧𝐜𝐲("𝐰𝐞𝐥𝐜𝐨𝐦𝐞", "𝐁𝐨𝐥𝐝") .. ", " .. 𝐥𝐩.𝐃𝐢𝐬𝐩𝐥𝐚𝐲𝐍𝐚𝐦𝐞, 𝐓𝐞𝐱𝐭 = "𝐓𝐚𝐩 𝐭𝐡𝐞 𝐭𝐨𝐩 𝐛𝐚𝐫 (𝐨𝐫 𝐩𝐫𝐞𝐬𝐬 𝐑𝐢𝐠𝐡𝐭𝐒𝐡𝐢𝐟𝐭) 𝐭𝐨 𝐡𝐢𝐝𝐞 𝐨𝐫 𝐬𝐡𝐨𝐰 𝐭𝐡𝐞 𝐩𝐚𝐧𝐞𝐥.", 𝐃𝐮𝐫𝐚𝐭𝐢𝐨𝐧 = 𝟓 })
+𝐞𝐧𝐝
 
--- 2. run it. If anything goes wrong, the loading screen shows the problem and closes (it can never get stuck)
-local okMain, errMain = pcall(main)
-if not okMain then
-	problem("Demo failed: " .. tostring(errMain))
-	if Load then
-		Load:Fail("Something went wrong. Check the console.")
-		task.wait(4)
-		Load:Destroy()
-	end
-	if Win then
-		Win:Destroy()
-	end
-end
+-- 𝟐. 𝐫𝐮𝐧 𝐢𝐭. 𝐈𝐟 𝐚𝐧𝐲𝐭𝐡𝐢𝐧𝐠 𝐠𝐨𝐞𝐬 𝐰𝐫𝐨𝐧𝐠, 𝐭𝐡𝐞 𝐥𝐨𝐚𝐝𝐢𝐧𝐠 𝐬𝐜𝐫𝐞𝐞𝐧 𝐬𝐡𝐨𝐰𝐬 𝐭𝐡𝐞 𝐩𝐫𝐨𝐛𝐥𝐞𝐦 𝐚𝐧𝐝 𝐜𝐥𝐨𝐬𝐞𝐬 (𝐢𝐭 𝐜𝐚𝐧 𝐧𝐞𝐯𝐞𝐫 𝐠𝐞𝐭 𝐬𝐭𝐮𝐜𝐤)
+𝐥𝐨𝐜𝐚𝐥 𝐨𝐤𝐌𝐚𝐢𝐧, 𝐞𝐫𝐫𝐌𝐚𝐢𝐧 = 𝐩𝐜𝐚𝐥𝐥(𝐦𝐚𝐢𝐧)
+𝐢𝐟 𝐧𝐨𝐭 𝐨𝐤𝐌𝐚𝐢𝐧 𝐭𝐡𝐞𝐧
+	𝐩𝐫𝐨𝐛𝐥𝐞𝐦("𝐃𝐞𝐦𝐨 𝐟𝐚𝐢𝐥𝐞𝐝: " .. 𝐭𝐨𝐬𝐭𝐫𝐢𝐧𝐠(𝐞𝐫𝐫𝐌𝐚𝐢𝐧))
+	𝐢𝐟 𝐋𝐨𝐚𝐝 𝐭𝐡𝐞𝐧
+		𝐋𝐨𝐚𝐝:𝐅𝐚𝐢𝐥("𝐒𝐨𝐦𝐞𝐭𝐡𝐢𝐧𝐠 𝐰𝐞𝐧𝐭 𝐰𝐫𝐨𝐧𝐠. 𝐂𝐡𝐞𝐜𝐤 𝐭𝐡𝐞 𝐜𝐨𝐧𝐬𝐨𝐥𝐞.")
+		𝐭𝐚𝐬𝐤.𝐰𝐚𝐢𝐭(𝟒)
+		𝐋𝐨𝐚𝐝:𝐃𝐞𝐬𝐭𝐫𝐨𝐲()
+	𝐞𝐧𝐝
+	𝐢𝐟 𝐖𝐢𝐧 𝐭𝐡𝐞𝐧
+		𝐖𝐢𝐧:𝐃𝐞𝐬𝐭𝐫𝐨𝐲()
+	𝐞𝐧𝐝
+𝐞𝐧𝐝
