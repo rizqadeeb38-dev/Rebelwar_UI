@@ -2092,7 +2092,7 @@ MIT. Use it, change it, make your own panel. Credit is appreciated. See `LICENSE
 
 ## Chat window (`Tab:Chat`)
 
-A chat box inside a tab: message bubbles, typing text, tap-to-copy buttons, quick-reply chips and an input box. `Example.lua` uses it for the AI tab.
+A chat box inside a tab: message bubbles, typing text, tap-to-copy buttons, quick-reply chips and an input box.
 
 ```lua
 local chat = Tab:Chat({
@@ -2114,13 +2114,6 @@ local chat = Tab:Chat({
 chat:Add("bot", "Hello!", { Instant = true }) -- Instant skips the typing effect
 -- chat:Submit(text), chat:Clear(), chat:GetMessages(), chat:Focus()
 ```
-
-## The AI tab in Example.lua
-
-The example is now four tabs: **Elements**, **AI**, **Discord** and **Settings**. The AI tab talks to a Gemini-powered bot ("Rebel AI"): it picks loading words that match what you asked (code, ideas, jokes, math...), remembers durable facts about you in `RebelAI_memory.txt`, has a **Bizarre idea** button, `/clear`, `/bizarre`, `/stop` and `/help` commands, four styles, and an optional voice that reads answers out loud (needs `request`, `writefile` and `getcustomasset`). Voice *input* is not possible in Roblox executors.
-
-The AI tab also has: **Think deeper**, **Live web** (Google search), **Double-check answers** (the bot reviews and fixes its own reply), **Show its steps**, seven styles, mood-aware tone, and commands `/plan`, `/explain`, `/forecast`, `/summarize`, `/translate`, `/teach`, `/parallel a | b | c` (runs jobs at the same time), `/bizarre`, `/clear`, `/stop`.
-
 
 ## Open button: logo or bar (`Win:SetTrigger`)
 
@@ -2153,13 +2146,13 @@ local HUD = Win:GameAssistant({
 	Color = "Rainbow", -- Rainbow, Theme, Red, Cyan, Lime, Gold, Pink, Violet
 	Crosshair = "Cross", -- Cross, Dot, Circle, Chevron, Diamond, X
 	Key = Enum.KeyCode.H,
-	OnSummary = function(hud, done) done(hud:GetSummary()) end, -- the AI BRIEF button (give it your own AI)
+	OnSummary = function(hud, done) done(hud:GetSummary()) end, -- the BRIEF button (give it your own summary)
 })
 HUD:Open() HUD:Close() HUD:Toggle()
 HUD:SetColor("Gold") HUD:SetCrosshair("Dot") HUD:CrosshairInGame(true)
 HUD:Show("players", false) -- players, stats, health, profile, crosshair, banner, all
 HUD:Target("nearest") HUD:Spectate("name") HUD:Spectate(nil)
-HUD:Command("color gold") -- the same things as text, so an AI can control the HUD
+HUD:Command("color gold") -- the same things as text, so you can control the HUD
 print(HUD:GetSummary()) -- a short text about you and the players around you
 ```
 
@@ -2184,28 +2177,6 @@ local Load = UI:Loading({
 
 `Video` can also be a file name already in your workspace folder, or a Roblox video asset id (`Video = 123456789`, only if you uploaded it yourself).
 
-
-## AI or no AI (`Win:CreateAITab`)
-
-The library has no AI in it unless you ask for it:
-
-```lua
-local AITab, ai = Win:CreateAITab({
-	Name = "AI",
-	Icon = 114659273298746,
-	Proxy = "https://your-worker.workers.dev", -- BEST: your own small server holds the keys (ai_proxy_worker.js)
-	-- KeyFile = "RebelAI_keys.txt",           -- or a file in YOUR executor's workspace folder, one key per line
-	-- Keys = { "key1", "key2" },              -- or written in the script (anyone who can read the script can read them)
-})
--- ai.Ask(contents), ai.Brief(hud, done) for the HUD's AI BRIEF button, ai.Boot(video) for an AI loading video, ai.Chat
-```
-
-**Never put keys in a public file.** A reversed or scrambled key is still readable, and Google disables keys it finds on GitHub, which would silently turn the AI off. Use one of these instead:
-
-1. **Proxy (best).** Deploy `ai_proxy_worker.js` as a free Cloudflare Worker, add your keys as the secret `GEMINI_KEYS` (separated by commas), and set `Proxy` to the worker address. The keys never leave the server and players need nothing.
-2. **Key file.** Put `RebelAI_keys.txt` (one key per line) in your executor's workspace folder. It is read on your device only, so the AI works for you and stays off for everyone else.
-
-Without any of these the tab shows "AI is off". To have no AI at all, do not call it (in `Example.lua`, set `USE_AI = false`).
 
 ## Animations and effects
 
@@ -2251,10 +2222,6 @@ HUD:Command("crosshair size 120")  -- the same things as text
 ```
 
 New on screen: a **damage flash** with floating numbers when you lose health, **status tags** above your health (state, LOW HP, HIGH PING, LOW FPS) and a **compare card** (you vs your target: health, speed, distance). The first time it opens it loads this game's saved setup, or picks a template.
-
-## The AI tab, more
-
-The **Code lab** takes code and can **explain, fix, review, refactor, comment, speed up, convert, write tests for or security-scan** it. Offline buttons work without the AI: **check syntax** (shows the broken line), **format code** and **security scan**. A one-click example list fills the box with ready scripts. Chat commands: `/gen`, `/fix`, `/review`, `/refactor`, `/debug`, `/secure`, `/comment`, `/docs` (uses live web), `/tutor`, `/design`, `/tips`, `/ideas`, plus the earlier `/plan`, `/explain`, `/forecast`, `/summary`, `/translate`, `/parallel`, `/teach`. There are 10 styles (including Tutor, Designer, Debugger) and a reply-language menu (14 languages).
 
 ## Watermark, command palette and stat tiles
 
@@ -2345,22 +2312,12 @@ Win:CreateThemeEditor({ Icon = 123456 })   -- a color picker for every theme col
 
 Elements inside sub-tabs and columns save with `Flag` like any other element.
 
-## A picture behind the panel, faster AI, boy and bot voices
+## A picture behind the panel
 
 ```lua
 Win:SetBackground({ Image = 125144167121839, Opacity = 0.18 }) -- a picture behind the whole panel (0 to 1). Win:SetBackground() removes it.
 Win:SetBackgroundOpacity(0.3)
 ```
-
-**Faster AI.** The bot used to try one connection after another with no time limit, so one dead key could cost minutes.
-Now up to three connections run at once, the first good answer wins, a key Google rejects is skipped for 10 minutes, the pair
-that worked last time goes first, and a connection that is still silent after 7 seconds no longer holds a place. The chat shows the
-seconds while it works. Greetings and "what is your name" are answered on the spot. The Cloudflare Worker (`Proxy`) is still the best setup.
-
-**Voices.** In the AI tab, open Voice: pick Handsome Boy, Smooth Boy, Hype Boy, Chill Boy, Deep Hero, Narrator, Robot Bot, Retro Bot or Offline Boy.
-They use Google text-to-speech through the same connection as the chat (male voice names, plus a style line). Pitch, Robot level and Echo are
-the voice changer: they add Roblox sound effects on top. If Google's voice is not available the bot falls back to a plain voice that is lowered so it
-still sounds like a boy or a bot. A phone has to download and decode the audio, so the first words take a few seconds; the next sentence is fetched while the first plays.
 
 ## Mobile and PC setups, the developer switch and the get-key buttons
 
@@ -2374,7 +2331,6 @@ still sounds like a boy or a bot. A phone has to download and decode the audio, 
 | Open button | big, thumb-sized (54) | 44 |
 | Key panel | wide, 2 provider buttons per row | wider, 4 provider buttons in one row |
 | Tabs | swipe left / right to change tab | click or Ctrl+1 ... 9 |
-| AI answers | short, tap-friendly | a little more detail |
 
 ```lua
 print(UI.Device(), UI.GetSetup("Auto"))
@@ -2456,6 +2412,38 @@ t:Say("Something new")
 
 Together with the open animations, click ripples, boom, confetti, shake, shimmer, pulse, float, spin, rainbow, the sliding key-panel rows and the red-glow Summary feed, that is every animation style people use most. `Win:SetReduceMotion(true)` turns the extras off for weak phones.
 
+## Your icon pack, rich text, Activate cover and toggle styles
+
+**Icons.** `UI.Icons` holds your uploaded Roblox images: `silent save file copy downloads refresh link info printer share notification ringing padlock openpadlock loading calendar key elements expand minimize wrench right up left star`.
+The icons are black, so the library draws them on a light rounded tile and they stay visible on the dark panel.
+
+```lua
+Win:CreateTab({ Name = "Tools", Icon = UI.Icons.wrench })
+Tab:Toggle({ Name = "Locked thing", Locked = true }) -- gets the padlock icon by itself
+Tab:Toggle({ Name = "Key", Icon = UI.Icons.key })
+```
+
+**Rich text.** `UI.Fancy(text, style)` turns plain text into styled letters: `UI.Fancy("lets go!", "Bold")` gives 𝐥𝐞𝐭𝐬 𝐠𝐨!
+Styles: Bold, Italic, BoldItalic, BoldScript, BoldFraktur, Mono, Sans, SansBold, SansItalic, SansBoldItalic, Fullwidth, Circled.
+Use it in titles, notifications, buttons and boom text. Some phones draw a few of these letters as boxes; Bold, Mono and Sans are the safest.
+
+**Activate cover.** A big glowing button, the padlock opens, boom, then the call returns `true` (`false` if the developer switch is off or `Timeout` runs out).
+
+```lua
+local ok = UI:Activate({
+	Mode = "Cover", -- "Cover" fills the screen (video behind it) or "Logo" shows only the logo and the button
+	Video = "https://raw.githubusercontent.com/rizqadeeb38-dev/Rebelwar_UI/assets/Logo-loading.png.mp4", -- optional
+	Logo = 114659273298746, Title = "Rebelwar", Theme = "Red",
+	BoomText = UI.Fancy("lets go!", "Bold"),
+})
+if not ok then return end
+```
+
+**Toggle and slider styles.** `UI:CreateWindow({ ToggleStyle = "Sharp", SliderStyle = "Sharp" })` for every toggle, or `Style = "..."` on one toggle:
+Switch (default), Sharp (square corners), Check (tick mark), Radio, Heart, Star, Checkbox. Slider `Style = "Sharp"` has a diamond knob.
+
+**Alerts tab.** `Win:CreateNotificationsTab({ Icon = UI.Icons.notification })` is a Summary: stat tiles, a feed of every toast, a red glow while something is still working.
+
 ## What is not in here (and why)
 
 Real background blur, book-flip animations, a drag-and-drop builder, a split-view editor, a macro recorder, cloud sync, sound packs, a public gallery with likes, light mode, image / video / voice cloning and "watching video or listening to audio" are not possible or not safe to fake inside a Roblox executor, so they are not included. Votes, badges and notes are saved on your own device only.
@@ -2465,9 +2453,9 @@ Real background blur, book-flip animations, a drag-and-drop builder, a split-vie
 
 `Example.lua` is built so a phone never has to do everything at once:
 
-- The loading screen is shown first, and every step is printed on it ("Building the AI tab...").
-- Big pages (Elements, AI, Tools) are built only when you open them, and the full-screen HUD is built the first time you open it. In your own script: `Build = function(tab) ... end` on `CreateTab`, and `Win:SetAssistant({ ... })` instead of `Win:GameAssistant({ ... })`.
-- Videos are off. Set `USE_VIDEOS = true` at the top of `Example.lua` only after the panel opens fine without them.
+- The loading screen is shown first, and every step is printed on it ("Building tabs...").
+- Big pages (Elements, Tools) are built only when you open them, and the full-screen HUD is built the first time you open it. In your own script: `Build = function(tab) ... end` on `CreateTab`, and `Win:SetAssistant({ ... })` instead of `Win:GameAssistant({ ... })`.
+- The loading video starts downloading the moment the script runs (first run only, kept after that). Set `USE_VIDEOS = false` at the top of `Example.lua` to turn it off.
 - A watchdog closes the loading screen and opens the panel after 25 seconds no matter what, and tapping the loading screen skips it after 2.5 seconds.
 - Every step is written to `RebelUI_boot.txt` in your executor's workspace folder. **If anything ever stops, the last line of that file tells you exactly where.**
 
