@@ -2406,6 +2406,7 @@ When it is OFF, `CreateWindow` and `KeyGate` also do nothing, so even a script t
 local ok = UI:KeyGate({
 	Name = "My Hub", Title = "MY HUB", Keys = { "ABC-123" },
 	Providers = {
+		{ "LootLabs", "https://lootlabs.gg/your-link" }, -- picture: https://i.imgur.com/fu6ONgE.png
 		{ "Linkvertise", "https://linkvertise.com/your-link" },
 		{ "Platoboost", "https://auth.platoboost.com/your-link" },
 		{ "Rekonise", "https://rekonise.com/your-link" },
@@ -2417,6 +2418,8 @@ local ok = UI:KeyGate({
 })
 if not ok then return end
 ```
+
+**Rows with their own Copy button, and a video on the left.** Each provider is one line: its picture plus a **Copy** button in the provider's own color. Add `ProviderStyle = "Grid"` for compact tiles instead. `Video = "https://.../clip.mp4"` plays a silent looping video at the top-left of the card (it falls back to the picture if the executor can't play it). The card also has a blinking LIVE chip with the setup and executor, a scan line down the left side and a shimmering title.
 
 The key panel opens with a boom, the form slides in row by row, a line draws under the title, a shine sweeps over Continue, the ring pulses and a wrong key shakes the card. `ReduceMotion = true` turns it all off.
 
@@ -2436,6 +2439,22 @@ act:Done()                                              -- the glow stops
 ```
 
 The line on top counts the steps for you ("Searched the web, read 2 pages, ran 3 commands"). `act:Clear()` empties it, `act:IsWorking()` tells you if the glow is on.
+
+## More animation: rows rise in, hover lift, count-up, skeleton, typewriter
+
+The most-loved effects from other libraries are on by default (Settings has a switch for each, or use `Win:SetFx`):
+
+```lua
+Win:SetFx({ Stagger = true, Hover = true }) -- rows rise in when a tab opens; rows lift under the cursor and squish when tapped
+local stats = Tab:Stats({ { Name = "Kills", Value = 0 } })
+stats:Set("Kills", 120) -- the number counts up instead of jumping
+local loading = Tab:Skeleton({ Lines = 3 }) -- shimmering grey bars while you wait for data
+loading:Remove()                          -- call this when the data is ready
+local t = Tab:Typewriter({ Text = "Welcome back." }) -- text that types itself
+t:Say("Something new")
+```
+
+Together with the open animations, click ripples, boom, confetti, shake, shimmer, pulse, float, spin, rainbow, the sliding key-panel rows and the red-glow Summary feed, that is every animation style people use most. `Win:SetReduceMotion(true)` turns the extras off for weak phones.
 
 ## What is not in here (and why)
 
