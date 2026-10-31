@@ -2417,6 +2417,9 @@ function Window:CreateTab(name, icon)
 		page.Position = UDim2.fromOffset(0, 40)
 		page.Visible = true
 		tween(page, 0.22, { Position = UDim2.fromOffset(0, 32) })
+		if win._stagger then
+			win:_stagger(page)
+		end
 		tab._set(true)
 		win:_scramble(win._pageTitle, tab.Name)
 		win.CurrentTab = tab
@@ -2483,6 +2486,35 @@ function Tab:_row(h)
 	}, self.Page)
 	corner(f, 8)
 	self.Win:_bind(f, "BackgroundColor3", "Item")
+	-- hover lift and press squish on every row (Win:SetFx({ Hover = false }) turns it off)
+	local win = self.Win
+	local sc
+	local function scale()
+		if not sc then
+			sc = f:FindFirstChild("RebelStag") or new("UIScale", { Name = "RebelStag", Scale = 1 }, f)
+		end
+		return sc
+	end
+	f.MouseEnter:Connect(function()
+		if win.Fx and win.Fx.Hover and not win.ReduceMotion then
+			tween(scale(), 0.14, { Scale = 1.012 }, Enum.EasingStyle.Quad)
+		end
+	end)
+	f.MouseLeave:Connect(function()
+		if sc and win.Fx and win.Fx.Hover then
+			tween(sc, 0.18, { Scale = 1 }, Enum.EasingStyle.Quad)
+		end
+	end)
+	f.InputBegan:Connect(function(i)
+		if win.Fx and win.Fx.Hover and not win.ReduceMotion and isPress(i) then
+			tween(scale(), 0.08, { Scale = 0.975 }, Enum.EasingStyle.Quad)
+		end
+	end)
+	f.InputEnded:Connect(function(i)
+		if sc and win.Fx and win.Fx.Hover and isPress(i) then
+			tween(sc, 0.22, { Scale = 1 }, Enum.EasingStyle.Back)
+		end
+	end)
 	return f
 end
 
@@ -6114,6 +6146,12 @@ function Window:CreateSettingsTab(o)
 	tab:Toggle({ Name = "Click ripples", Description = "A glow ring where you tap", Default = true, Flag = "__fxripple", Callback = function(on)
 		win:SetFx({ Ripple = on })
 	end })
+	tab:Toggle({ Name = "Rows pop in", Description = "Each row rises in when you open a tab", Default = true, Flag = "__fxstagger", Callback = function(on)
+		win:SetFx({ Stagger = on })
+	end })
+	tab:Toggle({ Name = "Hover lift and press squish", Description = "Rows grow a little under your finger and squish when tapped", Default = true, Flag = "__fxhover", Callback = function(on)
+		win:SetFx({ Hover = on })
+	end })
 	tab:Toggle({ Name = "Finger glow", Description = "A soft light follows your finger or mouse", Default = false, Flag = "__fxglow", Callback = function(on)
 		win:SetFx({ Glow = on })
 	end })
@@ -6451,9 +6489,10 @@ end
 -- The four get-key buttons (pictures live in the repo Assets folder). Use them as Providers = { {"Linkvertise", url}, ... }
 local ASSET_BASE = "https://raw.githubusercontent.com/rizqadeeb38-dev/Rebelwar_UI/main/Assets/"
 RebelUI.Providers = {
-	linkvertise = { Label = "Linkvertise", Color = Color3.fromRGB(255, 106, 0), Image = ASSET_BASE .. "Linkvertise_Getkey.png" },
+	linkvertise = { Label = "Linkvertise", Color = Color3.fromRGB(255, 106, 0), Image = "https://i.imgur.com/tcH99PV.png" },
 	platoboost = { Label = "Platoboost", Color = Color3.fromRGB(104, 78, 235), Image = ASSET_BASE .. "Platoboast_Getkey.png" },
 	rekonise = { Label = "Rekonise", Color = Color3.fromRGB(28, 186, 166), Image = ASSET_BASE .. "Rekonise_Getkey.png" },
+	lootlabs = { Label = "LootLabs", Color = Color3.fromRGB(245, 166, 35), Image = "https://i.imgur.com/fu6ONgE.png" },
 	workink = { Label = "Work.ink", Color = Color3.fromRGB(47, 128, 237), Image = ASSET_BASE .. "Work.ink_Getkey.png" },
 }
 local function providerInfo(name)
@@ -6531,7 +6570,7 @@ function RebelUI:KeyGate(o)
 	}, gui)
 	-- ---------- a wide card: picture on the left, the form on the right (one column when there is no picture)
 	local vp = (workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize) or Vector2.new(800, 450)
-	local LW = (o.Image or o.Logo) and (o.SideWidth or (pcSetup and 250 or 210)) or 0
+	local LW = (o.Image or o.Logo or o.Video) and (o.SideWidth or (pcSetup and 250 or 210)) or 0
 	local FW = o.FormWidth or (pcSetup and 430 or 340)
 	local CARD_W = LW + FW
 	local card = new("Frame", {
@@ -6605,6 +6644,62 @@ function RebelUI:KeyGate(o)
 			new("UIStroke", { Color = theme.Glow, Thickness = 2 }, lg)
 			RebelUI._imageEffect(lg, o.LogoEffect or "Pulse", theme)
 		end
+		-- a looping video at the top-left of the card (Video = link or file; silent; falls back to the picture if it can't play)
+		if o.Video then
+			task.spawn(function()
+				local okV, src = pcall(RebelUI.ResolveMedia, o.Video, o.VideoFile)
+				if okV and src and side.Parent then
+					local vf = new("VideoFrame", { Position = UDim2.fromOffset(0, 0), Size = UDim2.new(1, 0, 0.62, 0), BackgroundTransparency = 1, Looped = true, Volume = 0, Video = src, ZIndex = 2 }, side)
+					vf.Playing = true
+					pcall(function()
+						vf:Play()
+					end)
+					task.delay(8, function()
+						pcall(function()
+							if vf.Parent and not vf.IsLoaded then
+								vf:Destroy()
+							end
+						end)
+					end)
+				end
+			end)
+		end
+		if not o.ReduceMotion then
+			-- a scan line sweeps down the left side
+			local scan = new("Frame", { Size = UDim2.new(1, 0, 0, 2), Position = UDim2.fromScale(0, 0), BackgroundColor3 = theme.Glow, BackgroundTransparency = 0.55, BorderSizePixel = 0, ZIndex = 4 }, side)
+			task.spawn(function()
+				while scan.Parent do
+					scan.Position = UDim2.fromScale(0, 0)
+					tween(scan, 2.6, { Position = UDim2.new(0, 0, 1, -2) }, Enum.EasingStyle.Sine)
+					task.wait(3.4)
+				end
+			end)
+		end
+		-- top-left chip: a blinking LIVE dot, the setup and the executor
+		do
+			local exec = "Executor"
+			pcall(function()
+				exec = tostring(identifyexecutor())
+			end)
+			local chip = new("Frame", { Position = UDim2.fromOffset(8, 8), Size = UDim2.fromOffset(LW - 16, 20), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.4, BorderSizePixel = 0, ZIndex = 6 }, side)
+			corner(chip, 10)
+			local dot = new("Frame", { Position = UDim2.fromOffset(8, 7), Size = UDim2.fromOffset(6, 6), BackgroundColor3 = Color3.fromRGB(235, 60, 55), BorderSizePixel = 0, ZIndex = 7 }, chip)
+			corner(dot, 3)
+			local ct = label(chip, "LIVE  " .. setup .. "  " .. exec, 9, C.Text, true)
+			ct.Position = UDim2.fromOffset(20, 0)
+			ct.Size = UDim2.new(1, -24, 1, 0)
+			ct.ZIndex = 7
+			if not o.ReduceMotion then
+				task.spawn(function()
+					while dot.Parent do
+						tween(dot, 0.6, { BackgroundTransparency = 0.7 }, Enum.EasingStyle.Sine)
+						task.wait(0.6)
+						tween(dot, 0.6, { BackgroundTransparency = 0 }, Enum.EasingStyle.Sine)
+						task.wait(0.6)
+					end
+				end)
+			end
+		end
 		local tag = label(side, o.Tagline or "", 9, C.Text, false)
 		tag.Position = UDim2.new(0, 8, 1, -34)
 		tag.Size = UDim2.new(1, -16, 0, 28)
@@ -6622,6 +6717,17 @@ function RebelUI:KeyGate(o)
 	title.Size = UDim2.fromOffset(fw - 26, 24)
 	title.Font = Enum.Font.GothamBlack
 	title.ZIndex = 6
+	if not o.ReduceMotion then
+		title.TextColor3 = Color3.new(1, 1, 1)
+		local tg = new("UIGradient", { Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, theme.Glow), ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)), ColorSequenceKeypoint.new(1, theme.Glow) }) }, title)
+		task.spawn(function()
+			while title.Parent do
+				tg.Offset = Vector2.new(-1, 0)
+				tween(tg, 2.2, { Offset = Vector2.new(1, 0) }, Enum.EasingStyle.Sine)
+				task.wait(3.2)
+			end
+		end)
+	end
 	local sub = label(card, o.Subtitle or "Paste the key and tap Continue.", 10, C.Dim, false)
 	sub.Position = UDim2.fromOffset(fx, y + 25)
 	sub.Size = UDim2.fromOffset(fw, 14)
@@ -6774,12 +6880,13 @@ function RebelUI:KeyGate(o)
 		cap.Size = UDim2.fromOffset(fw, 14)
 		cap.ZIndex = 6
 		y = y + 17
-		local per = o.ProvidersPerRow or ((pcSetup and #provs >= 4) and 4 or 2)
-		local ph = pcSetup and 44 or 40
+		local rowMode = (o.ProviderStyle or "Row") == "Row"
+		local per = rowMode and 1 or (o.ProvidersPerRow or ((pcSetup and #provs >= 4) and math.min(#provs, 5) or 2))
+		local ph = rowMode and 34 or (pcSetup and 44 or 40)
 		local pi = 1
 		while pi <= #provs do
 			local n = math.min(per, #provs - pi + 1)
-			local bw = math.floor((fw - (n - 1) * 6) / n)
+			local bw = rowMode and (fw - 64) or math.floor((fw - (n - 1) * 6) / n)
 			for k = 0, n - 1 do
 				local def = provs[pi + k]
 				local px, py = fx + k * (bw + 6), y
@@ -6824,7 +6931,7 @@ function RebelUI:KeyGate(o)
 				pb.MouseButton1Up:Connect(function()
 					tween(pb, 0.12, { Position = UDim2.fromOffset(px, py), Size = UDim2.fromOffset(bw, ph) }, Enum.EasingStyle.Back)
 				end)
-				pb.MouseButton1Click:Connect(function()
+				local function doCopy()
 					if def.Callback then
 						task.spawn(def.Callback)
 					end
@@ -6836,7 +6943,30 @@ function RebelUI:KeyGate(o)
 						status.TextColor3 = C.Bad
 						status.Text = def.Name .. " has no link yet."
 					end
-				end)
+				end
+				pb.MouseButton1Click:Connect(doCopy)
+				if rowMode then
+					-- a Copy button in this provider's own color, next to its picture
+					local cb = new("TextButton", { Position = UDim2.fromOffset(px + bw + 6, py), Size = UDim2.fromOffset(58, ph), BackgroundColor3 = def.Color, BorderSizePixel = 0, Text = "Copy", TextColor3 = Color3.new(1, 1, 1), TextSize = 11, Font = Enum.Font.GothamBlack, AutoButtonColor = false, ZIndex = 6 }, card)
+					corner(cb, 9)
+					new("UIStroke", { Color = def.Color:Lerp(Color3.new(1, 1, 1), 0.4), Thickness = 1.2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, cb)
+					new("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(170, 170, 170)) }, cb)
+					cb.MouseButton1Click:Connect(function()
+						doCopy()
+						cb.Text = "Copied"
+						task.delay(1.2, function()
+							pcall(function()
+								cb.Text = "Copy"
+							end)
+						end)
+					end)
+					cb.MouseButton1Down:Connect(function()
+						tween(cb, 0.08, { Size = UDim2.fromOffset(54, ph - 4), Position = UDim2.fromOffset(px + bw + 8, py + 2) })
+					end)
+					cb.MouseButton1Up:Connect(function()
+						tween(cb, 0.12, { Size = UDim2.fromOffset(58, ph), Position = UDim2.fromOffset(px + bw + 6, py) }, Enum.EasingStyle.Back)
+					end)
+				end
 			end
 			y = y + ph + 6
 			pi = pi + n
@@ -8393,7 +8523,7 @@ end
 -- called once from CreateWindow
 function Window:_initFx()
 	local win = self
-	win.Fx = { Ripple = true, Glow = false, Scan = false, Breathe = true }
+	win.Fx = { Ripple = true, Glow = false, Scan = false, Breathe = true, Stagger = true, Hover = true }
 	local main = win.Main
 	-- overlay that holds ripples (clipped to the panel)
 	local layer = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ClipsDescendants = true, Active = false, ZIndex = 40 }, main)
@@ -8878,9 +9008,9 @@ function Window:CreateAITab(o)
 		["Designer"] = "Be a creative design assistant: palettes with hex codes, layouts, motion ideas, and bold original touches.",
 		["Debugger"] = "Be a calm debugging assistant: ask for the missing detail only if you must, list likely causes ranked, give the quickest test first.",
 	}
-	local opt = { deep = false, web = false, refine = false, reason = false }
+	local opt = { deep = false, web = true, refine = false, reason = false }
 	local persona = "Rebel (default)"
-	local replyLang = "English"
+	local replyLang = "Auto"
 	local AITOOLS = {}
 	local memory = ""
 	pcall(function()
@@ -8890,11 +9020,19 @@ function Window:CreateAITab(o)
 	end)
 
 	local SYSTEM = table.concat({
-		"You are Rebel AI, the assistant inside the Rebelwar panel (made by prorizz196), running in Roblox through an executor on a phone.",
-		"Talk like Claude: natural, warm, curious, honest and direct. Short paragraphs, plain words, no corporate filler, no lecturing, no begging for follow-ups.",
-		"Match the player's language and mood. Answer the actual question first, then add a spark of personality. Think carefully and be correct; if unsure, say so.",
-		"Keep replies compact (phones are small): usually under 120 words unless they ask for depth. Use **bold** and `code` sparingly. Code goes in fenced blocks.",
-		"How you work, every time: (1) Work out what the player really wants, including the unstated goal, and do exactly that: their format, length, language and limits beat your defaults. (2) If a missing detail would change the answer a lot, ask ONE short question instead of guessing; otherwise just answer. (3) Before you send, silently check it: facts, numbers, every step, and for code the syntax, variable names, that each Roblox API really exists, and that it runs on the client. Fix what is wrong before replying. (4) Never claim you did, ran or saw something you did not. If you are not sure, say so and say how to check. (5) Be kind and human: notice frustration or confusion and answer the person first, then the problem.",
+		"You are Rebel AI, the assistant inside the Rebelwar panel (made by prorizz196), running in Roblox through an executor, often on a phone.",
+		"YOUR RULES, every time:",
+		"1. Understand what the player really wants (including the goal they did not say) and DO it. Their format, length, language and limits beat your defaults. If one missing detail would change the answer a lot, ask ONE short question; otherwise act.",
+		"2. Language: reply in the language the player writes in, and switch when they switch. Keep code, commands and names unchanged.",
+		"3. Be clear first, detailed when needed: start with the direct answer, then explain. Be helpful but concise: no fluff, no overly formal language.",
+		"4. When solving a problem, think step by step and show the reasoning clearly (short numbered steps), then the final answer.",
+		"5. Be honest. If you are unsure, say so. Never guess or make up information, never invent facts about the game, the panel or an API. If something is outside your knowledge, say that clearly and say how to find out.",
+		"6. Structure helps: use **bold**, bullet points and short sections to organize information, but keep casual chat plain. Code goes in fenced blocks (```lua).",
+		"7. Always double-check before you send: facts, numbers, every step, and for code the syntax, variable names, that each Roblox API really exists and that it works on the client. Fix what is wrong first. Never claim you ran or saw something you did not.",
+		"8. Use web search results for anything current or checkable. If the player says not to search the web, do not rely on it and answer from what you know, saying so if it matters.",
+		"9. When you EXPLAIN something: start with a simple summary, break it down clearly, give examples when useful, and end with exactly: \"Let me know if you'd like more detail or clarification!\" (in the player's language). Do not add that line to short chat replies, code-only answers or jokes.",
+		"10. Tone: warm, professional and patient; respectful and neutral; encouraging (it is fine if things are complex); direct, with no over-promising or exaggerating. Notice frustration or confusion and answer the person first, then the problem.",
+		"Phones are small: keep replies compact (usually under 150 words) unless they ask for depth.",
 		"You love bizarre, original ideas: when asked for ideas, give surprising, specific, slightly absurd ones that could really be built or played (not generic lists).",
 		"You can help with Roblox, Luau, game ideas, school, life, jokes, stories, math, anything. Never invent facts about the game or the panel.",
 		"Hidden tags, put at the very end of a reply, never mention them: [[remember: one short fact about the player, only if it is durable and they said it]] and [[next: short follow-up 1 | short follow-up 2 | short follow-up 3]] (each under 28 characters, written as things the player might tap).",
@@ -8917,7 +9055,7 @@ function Window:CreateAITab(o)
 	end
 	local function system()
 		local s = SYSTEM .. " " .. PERSONAS[persona]
-		if replyLang ~= "English" then
+		if replyLang ~= "Auto" and replyLang ~= "Auto (match the player)" then
 			s ..= " Always reply in " .. replyLang .. " (keep code and command names as they are)."
 		end
 		if memory ~= "" then
@@ -9564,6 +9702,14 @@ function Window:CreateAITab(o)
 		end
 		task.spawn(function()
 			local it = intent(text)
+			local lowT = text:lower()
+			local noWeb = false
+			for _, ph in ipairs({ "don't search", "dont search", "do not search", "no search", "without search", "don't use the web", "dont use the web", "no web", "not to search", "stop searching", "offline", "jangan cari", "jangan search" }) do
+				if lowT:find(ph, 1, true) then
+					noWeb = true
+					break
+				end
+			end
 			local hard = it == "code" or it == "math" or opt.deep
 			local deep = hard or forceThink
 			local reply, err
@@ -9573,7 +9719,7 @@ function Window:CreateAITab(o)
 			elseif it == "hello" then
 				reply = "Hey! I'm **Rebel AI**. What are we doing today?"
 			else
-				reply, err = ask(history, { think = deep and 1024 or 0, max = deep and 2400 or 900, web = opt.web or forceWeb, hard = deep })
+				reply, err = ask(history, { think = deep and 1024 or 0, max = deep and 2400 or 900, web = (opt.web or forceWeb) and not noWeb and #text >= 12, hard = deep })
 				-- automatic double-check for Luau code: compile every ```lua block here (it is only compiled, never run).
 				-- A syntax error goes back to the AI once, with the exact error, so the code you get at least compiles.
 				if reply and deep and type(loadstring) == "function" then
@@ -9594,7 +9740,7 @@ function Window:CreateAITab(o)
 					end
 				end
 			end
-			if reply and opt.refine and #reply > 80 then
+			if reply and (opt.refine or hard) and #reply > 80 then
 				list = { "Double-checking my answer", "Hunting for mistakes", "Polishing it" }
 				local fixed = ask({ { role = "user", parts = { { text = "Review this draft answer to the player's message for mistakes, missing steps or anything unclear. Return ONLY the improved final answer (keep any [[...]] tags at the end). If it is already right, return it unchanged.\n\nPlayer: " .. text .. "\n\nDraft:\n" .. reply } } } }, { think = 512, max = 1600 })
 				if fixed then
@@ -9838,7 +9984,7 @@ function Window:CreateAITab(o)
 		AI:Toggle({ Name = "Think deeper", Description = "Slower, better on hard problems", Flag = "aiDeep", Callback = function(v)
 			opt.deep = v
 		end })
-		AI:Toggle({ Name = "Live web", Description = "Searches the web for fresh facts", Flag = "aiWeb", Callback = function(v)
+		AI:Toggle({ Name = "Live web", Description = "Searches the web for fresh facts (say \"don't search\" to skip it for one question)", Default = true, Flag = "aiWeb", Callback = function(v)
 			opt.web = v
 		end })
 		AI:Toggle({ Name = "Double-check answers", Description = "Reviews and fixes its own answer first", Flag = "aiRefine", Callback = function(v)
@@ -9884,7 +10030,7 @@ function Window:CreateAITab(o)
 		AI:Dropdown({ Name = "Style", Options = { "Rebel (default)", "Chaos gremlin", "Scripter", "Teacher", "Sarcastic", "Professional", "Roleplay", "Tutor", "Designer", "Debugger" }, Default = "Rebel (default)", Flag = "aiPersona", Callback = function(v)
 			persona = PERSONAS[v] and v or persona
 		end })
-		AI:Dropdown({ Name = "Reply language", Options = { "English", "Malay", "Indonesian", "Spanish", "French", "German", "Portuguese", "Arabic", "Hindi", "Japanese", "Korean", "Chinese", "Turkish", "Russian" }, Default = "English", Flag = "aiLang", Callback = function(v)
+		AI:Dropdown({ Name = "Reply language", Options = { "Auto (match the player)", "English", "Malay", "Indonesian", "Spanish", "French", "German", "Portuguese", "Arabic", "Hindi", "Japanese", "Korean", "Chinese", "Turkish", "Russian" }, Default = "Auto (match the player)", Flag = "aiLang", Callback = function(v)
 			replyLang = v
 		end })
 		AI:Button({ Name = "Forget what you know about me", Risky = true, Callback = function()
@@ -10269,7 +10415,27 @@ function Tab:Stats(items)
 	function obj:Set(k, value)
 		local l = vals[k] or byName[tostring(k)]
 		if l then
-			l.Text = tostring(value)
+			local from, to = tonumber(l.Text), tonumber(value)
+			if from and to and from ~= to and not win.ReduceMotion then
+				-- numbers count up (or down) instead of jumping
+				local token = {}
+				l._tok = token
+				task.spawn(function()
+					local steps = 14
+					for s = 1, steps do
+						if l._tok ~= token then
+							return
+						end
+						local e = 1 - (1 - s / steps) ^ 3
+						local v = from + (to - from) * e
+						l.Text = tostring(to % 1 == 0 and math.floor(v + 0.5) or math.floor(v * 100 + 0.5) / 100)
+						task.wait(0.03)
+					end
+					l.Text = tostring(value)
+				end)
+			else
+				l.Text = tostring(value)
+			end
 		end
 	end
 	return register(self, {}, obj, "Stats")
@@ -11587,6 +11753,93 @@ function Window:SetAmbient(on)
 			end
 		end)
 	end
+end
+
+-- ============================================================ more animation: rows rise in, skeleton loader, typewriter
+-- Rows rise in one after another when a tab opens (Win:SetFx({ Stagger = false }) to turn off).
+function Window:_stagger(page)
+	if not (self.Fx and self.Fx.Stagger) or self.ReduceMotion then
+		return
+	end
+	local rows = {}
+	for _, c in ipairs(page:GetChildren()) do
+		local ok, lo = pcall(function()
+			return c:IsA("GuiObject") and c.Visible and c.LayoutOrder
+		end)
+		if ok and lo then
+			rows[#rows + 1] = c
+		end
+	end
+	table.sort(rows, function(a, b)
+		return a.LayoutOrder < b.LayoutOrder
+	end)
+	for i = 1, math.min(#rows, 9) do
+		local c = rows[i]
+		local sc = c:FindFirstChild("RebelStag") or new("UIScale", { Name = "RebelStag", Scale = 1 }, c)
+		sc.Scale = 0.9
+		task.delay((i - 1) * 0.035, function()
+			tween(sc, 0.32, { Scale = 1 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+		end)
+	end
+end
+
+-- Tab:Skeleton({ Lines = 3 }): grey bars with a shimmer while you wait for data. obj:Remove() when it is ready.
+function Tab:Skeleton(o)
+	o = o or {}
+	local lines = math.clamp(o.Lines or 3, 1, 8)
+	local row = self:_row(14 + lines * 20)
+	local alive = true
+	local bars = {}
+	for i = 1, lines do
+		local w = i == lines and 0.55 or (0.9 - (i % 2) * 0.15)
+		local b = new("Frame", { Position = UDim2.fromOffset(10, 10 + (i - 1) * 20), Size = UDim2.new(w, -10, 0, 12), BackgroundColor3 = Color3.fromRGB(44, 44, 54), BorderSizePixel = 0, ClipsDescendants = true }, row)
+		corner(b, 6)
+		local sh = new("Frame", { Position = UDim2.fromScale(-0.4, 0), Size = UDim2.fromScale(0.4, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.85, BorderSizePixel = 0 }, b)
+		bars[i] = sh
+	end
+	task.spawn(function()
+		while alive and row.Parent do
+			for _, sh in ipairs(bars) do
+				sh.Position = UDim2.fromScale(-0.4, 0)
+				tween(sh, 0.9, { Position = UDim2.fromScale(1, 0) }, Enum.EasingStyle.Sine)
+			end
+			task.wait(1.2)
+		end
+	end)
+	local obj = {}
+	function obj:Remove()
+		alive = false
+		row:Destroy()
+	end
+	return register(self, {}, obj, "Skeleton")
+end
+
+-- Tab:Typewriter({ Text = "...", Speed = 40 }): a text row that types itself out. obj:Say("new text") types again.
+function Tab:Typewriter(o)
+	o = o or {}
+	local row = self:_row(30)
+	row.AutomaticSize = Enum.AutomaticSize.Y
+	local l = new("TextLabel", { Position = UDim2.fromOffset(10, 0), Size = UDim2.new(1, -20, 0, 30), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Text = "", Font = Enum.Font.Code, TextSize = 12, TextColor3 = C.Text, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left }, row)
+	local tok
+	local obj = {}
+	function obj:Say(text)
+		text = tostring(text or "")
+		local mine = {}
+		tok = mine
+		task.spawn(function()
+			local spd = o.Speed or 40
+			for i = 1, #text do
+				if tok ~= mine then
+					return
+				end
+				l.Text = text:sub(1, i) .. (i < #text and "_" or "")
+				task.wait(1 / spd)
+			end
+			l.Text = text
+		end)
+	end
+	obj:Say(o.Text or "")
+	return register(self, {}, obj, "Typewriter")
 end
 
 return RebelUI
