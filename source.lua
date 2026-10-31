@@ -1,4 +1,4 @@
---[[
+ --[[
     RebelUI v1.0.0  ·  made by prorizz196  ·  MIT license
     The panel library behind Rebelwar. Mobile friendly. Made for Roblox executors.
     Same look as the Rebelwar Hub: spinning ring, embers, glowing tabs, shiny buttons,
@@ -29,7 +29,7 @@
     More Window methods: Dialog, CreateTabDivider, CreateKeybindList, Export, Import
     Game assistant: Window:GameAssistant (full-screen HUD), Window:SetTrigger (Circle / Square / Bar), Loading({ Video = ... })
     Effects: SetOpenAnimation, SetAnimSpeed, SetReduceMotion, SetFx, SetRainbow, Confetti, Shake, ScreenShake, Button { Danger = true }
-    Extras: CreateToolsTab (command bar, notes, badges, randomizer, performance, accessibility), AddCommand, RunCommand, CreateAITab (optional)
+    Extras: CreateToolsTab (command bar, notes, badges, randomizer, performance, accessibility), AddCommand, RunCommand
     More elements: Notice (warning box). Every element: tooltip, :SetVisible, :Destroy, :DependsOn
     Every element returns an object with :Get() and :Set(value).
 ]]
@@ -181,6 +181,62 @@ local function asset(x)
 		return "rbxassetid://" .. x
 	end
 	return x
+end
+
+-- ============================================================ your uploaded icon pack, fancy text
+-- RebelUI.Icons.key / .padlock / .notification ... : Roblox image ids (black icons). On a dark panel a black icon would vanish,
+-- so every place that shows one puts it on a light tile automatically (RebelUI._iconFix).
+RebelUI.Icons = {
+	silent = 127543229071551, save = 100853731399741, file = 108892160159150, copy = 78967949653653,
+	downloads = 108541383384867, refresh = 97420167649054, link = 92386396427078, info = 133363969110623,
+	printer = 82923631400917, share = 92335044119803, notification = 125753537841173, ringing = 126612245577406,
+	padlock = 124786828881533, openpadlock = 101866153472892, loading = 117902004624996, calendar = 103661816948286,
+	key = 97014133087839, elements = 81398540814546, expand = 117887360495259, minimize = 92738514605920,
+	wrench = 139235132677195, right = 139553391725025, up = 138186535538448, left = 87498021827607, star = 85275169714542,
+}
+local blackIcons = {}
+for _, id in pairs(RebelUI.Icons) do
+	blackIcons[tostring(id)] = true
+end
+function RebelUI._iconFix(img, src, tint)
+	local k = tostring(src or ""):match("%d+")
+	if img and k and blackIcons[k] then
+		img.BackgroundTransparency = 0
+		img.BackgroundColor3 = tint or Color3.fromRGB(236, 236, 242)
+		img.ScaleType = Enum.ScaleType.Fit
+		pcall(function()
+			Instance.new("UICorner", img).CornerRadius = UDim.new(0, 5)
+			local pd = Instance.new("UIPadding", img)
+			pd.PaddingTop, pd.PaddingBottom, pd.PaddingLeft, pd.PaddingRight = UDim.new(0, 2), UDim.new(0, 2), UDim.new(0, 2), UDim.new(0, 2)
+		end)
+	end
+end
+
+-- RebelUI.Fancy("lets go!", "Bold") -> 𝐥𝐞𝐭𝐬 𝐠𝐨!   Styles: Bold, Italic, BoldItalic, BoldScript, BoldFraktur, Mono, Sans, SansBold, SansItalic,
+-- SansBoldItalic, Fullwidth, Circled. Works anywhere text is shown (titles, notifications, buttons, boom text).
+local FANCY = {
+	Bold = { 0x1D400, 0x1D41A, 0x1D7CE }, Italic = { 0x1D434, 0x1D44E }, BoldItalic = { 0x1D468, 0x1D482 },
+	BoldScript = { 0x1D4D0, 0x1D4EA }, BoldFraktur = { 0x1D56C, 0x1D586 }, Mono = { 0x1D670, 0x1D68A, 0x1D7F6 },
+	Sans = { 0x1D5A0, 0x1D5BA, 0x1D7E2 }, SansBold = { 0x1D5D4, 0x1D5EE, 0x1D7EC }, SansItalic = { 0x1D608, 0x1D622 },
+	SansBoldItalic = { 0x1D63C, 0x1D656 }, Fullwidth = { 0xFF21, 0xFF41, 0xFF10 }, Circled = { 0x24B6, 0x24D0 },
+}
+function RebelUI.Fancy(text, style)
+	local def = FANCY[style or "Bold"] or FANCY.Bold
+	local out = {}
+	for _, cp in utf8.codes(tostring(text or "")) do
+		local c
+		if cp >= 65 and cp <= 90 then
+			c = utf8.char(def[1] + cp - 65)
+		elseif cp >= 97 and cp <= 122 then
+			c = (style == "Italic" and cp == 104) and utf8.char(0x210E) or utf8.char(def[2] + cp - 97)
+		elseif cp >= 48 and cp <= 57 and def[3] then
+			c = utf8.char(def[3] + cp - 48)
+		else
+			c = utf8.char(cp)
+		end
+		out[#out + 1] = c
+	end
+	return table.concat(out)
 end
 
 local function label(parent, str, size, color, bold)
@@ -1128,6 +1184,8 @@ function RebelUI:CreateWindow(o)
 		AnimSpeed = o.AnimSpeed or 1,
 		OpenAnim = o.OpenAnimation or "Pop",
 		ReduceMotion = o.ReduceMotion == true,
+		ToggleStyle = o.ToggleStyle, -- "Switch", "Sharp", "Checkbox", "Check", "Radio", "Heart", "Star" (a Toggle can still pick its own Style)
+		SliderStyle = o.SliderStyle, -- "Sharp" gives diamond knobs and square bars
 	}, Window)
 	local themeName = THEMES[o.Theme or "Red"] and (o.Theme or "Red") or "Red"
 	win.Theme = THEMES[themeName]
@@ -1238,6 +1296,7 @@ function RebelUI:CreateWindow(o)
 			ScaleType = Enum.ScaleType.Fit,
 		}, side)
 		corner(logo, 10)
+		RebelUI._iconFix(logo, o.Icon)
 		pulse(logo)
 	end
 	local showProfile = o.Profile ~= false and lp ~= nil
@@ -2365,6 +2424,7 @@ function Window:CreateTab(name, icon)
 			ScaleType = Enum.ScaleType.Fit,
 			ZIndex = 4,
 		}, btn)
+		RebelUI._iconFix(img, opts.Icon)
 		pad = 28
 	end
 	local txt = label(btn, tab.Name, 11, C.Dim, false)
@@ -2426,7 +2486,30 @@ function Window:CreateTab(name, icon)
 		if opts.Build and not tab._built then
 			-- Build = function(tab) ... end : the tab fills itself the first time it is opened
 			tab._built = true
-			safe(opts.Build, tab)
+			-- if building the tab fails, SAY SO (toast + console) and keep what was built, with a Retry button
+			local okB, errB = xpcall(opts.Build, function(e)
+				return tostring(e)
+			end, tab)
+			if not okB then
+				warn("[RebelUI] the tab '" .. tostring(tab.Name) .. "' failed to build: " .. tostring(errB))
+				pcall(function()
+					win:Notify({ Type = "error", Title = "Tab '" .. tostring(tab.Name) .. "' failed", Text = tostring(errB):sub(1, 160), Duration = 10 })
+					tab:Button({ Name = "This tab hit an error. Tap to retry", Callback = function()
+						for _, c in ipairs(tab.Page:GetChildren()) do
+							if c:IsA("GuiObject") then
+								c:Destroy()
+							end
+						end
+						tab._n = 0
+						local ok2, e2 = xpcall(opts.Build, function(e)
+							return tostring(e)
+						end, tab)
+						if not ok2 then
+							win:Notify({ Type = "error", Title = "Still failing", Text = tostring(e2):sub(1, 160), Duration = 10 })
+						end
+					end })
+				end)
+			end
 		end
 	end
 	function tab:SetName(n)
@@ -2841,15 +2924,17 @@ function Tab:Toggle(o)
 	local row = self:_row(H)
 	local rowStroke = new("UIStroke", { ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Thickness = 1, Transparency = 1 }, row)
 	local left = 10
-	if o.Icon then
-		new("ImageLabel", {
+	local ico = o.Icon or (o.Locked and RebelUI.Icons.padlock)
+	if ico then
+		local icoImg = new("ImageLabel", {
 			BackgroundTransparency = 1,
 			AnchorPoint = Vector2.new(0, 0.5),
 			Position = UDim2.new(0, 10, 0.5, 0),
 			Size = UDim2.fromOffset(18, 18),
-			Image = asset(o.Icon),
+			Image = asset(ico),
 			ScaleType = Enum.ScaleType.Fit,
 		}, row)
+		RebelUI._iconFix(icoImg, ico)
 		left = 34
 	end
 	local right = 62 + (o.Key and 36 or 0)
@@ -2871,8 +2956,12 @@ function Tab:Toggle(o)
 		tag.Size = UDim2.fromOffset(34, 16)
 	end
 
-	local checkbox = o.Style == "Checkbox"
-	local switch, swScale, swGlow, stateLabel, knob, dot, box, tick
+	local style = o.Style or win.ToggleStyle or "Switch"
+	local sharpT = style == "Sharp"
+	local checky, radio, glyphKind = style == "Check", style == "Radio", (style == "Heart" and "heart") or (style == "Star" and "star") or nil
+	local checkbox = style == "Checkbox" or checky or radio or glyphKind ~= nil
+	local switch, swScale, swGlow, stateLabel, knob, dot, box, tick, markScale, glyph
+	local swW = sharpT and 46 or 42
 	if checkbox then
 		box = new("TextButton", {
 			AnchorPoint = Vector2.new(0.5, 0.5),
@@ -2881,7 +2970,7 @@ function Tab:Toggle(o)
 			Text = "",
 			AutoButtonColor = false,
 		}, row)
-		corner(box, 6)
+		corner(box, radio and 10 or 6)
 		swGlow = new("UIStroke", { ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Thickness = 2, Transparency = 1 }, box)
 		tick = new("Frame", {
 			AnchorPoint = Vector2.new(0.5, 0.5),
@@ -2890,23 +2979,37 @@ function Tab:Toggle(o)
 			BackgroundColor3 = C.White,
 			BorderSizePixel = 0,
 		}, box)
-		corner(tick, 3)
+		corner(tick, radio and 5 or 3)
+		if checky then
+			-- a check mark drawn from two bars, it pops in
+			tick.Visible = false
+			local mark = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(14, 14), BackgroundTransparency = 1 }, box)
+			markScale = new("UIScale", { Scale = 0 }, mark)
+			local short = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(4, 9), Size = UDim2.fromOffset(3, 7), Rotation = -45, BackgroundColor3 = C.White, BorderSizePixel = 0 }, mark)
+			local long = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(9, 6), Size = UDim2.fromOffset(3, 12), Rotation = 40, BackgroundColor3 = C.White, BorderSizePixel = 0 }, mark)
+			corner(short, 1)
+			corner(long, 1)
+		elseif glyphKind then
+			tick.Visible = false
+			glyph = new("TextLabel", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Text = glyphKind == "heart" and "♡" or "☆", TextSize = 22, Font = Enum.Font.GothamBold, TextColor3 = C.Dim, ZIndex = 3 }, box)
+			markScale = new("UIScale", { Scale = 1 }, glyph)
+		end
 		switch = box
 	else
 		switch = new("TextButton", {
-			Size = UDim2.fromOffset(42, 20),
+			Size = UDim2.fromOffset(swW, 20),
 			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.new(1, -31, 0.5, 0),
+			Position = UDim2.new(1, -(swW // 2) - 10, 0.5, 0),
 			Text = "",
 			AutoButtonColor = false,
 		}, row)
-		corner(switch, 10)
+		corner(switch, sharpT and 2 or 10)
 		swScale = new("UIScale", {}, switch)
 		swGlow = new("UIStroke", { ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Thickness = 2, Transparency = 1 }, switch)
 		stateLabel = new("TextLabel", {
 			BackgroundTransparency = 1,
 			Size = UDim2.fromOffset(22, 20),
-			Position = UDim2.fromOffset(19, 0),
+			Position = UDim2.fromOffset(swW - 23, 0),
 			Text = "OFF",
 			TextSize = 8,
 			Font = Enum.Font.GothamBold,
@@ -2919,7 +3022,11 @@ function Tab:Toggle(o)
 			BorderSizePixel = 0,
 			ZIndex = 3,
 		}, switch)
-		corner(knob, 8)
+		corner(knob, sharpT and 2 or 8)
+		if sharpT then
+			-- sharp style: square knob with a bright edge, glowing frame
+			new("UIStroke", { Color = Color3.fromRGB(255, 255, 255), Thickness = 1, Transparency = 0.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, knob)
+		end
 		dot = new("Frame", {
 			Size = UDim2.fromOffset(6, 6),
 			AnchorPoint = Vector2.new(0.5, 0.5),
@@ -2950,19 +3057,33 @@ function Tab:Toggle(o)
 		play(swGlow, fast, { Transparency = on and 0.4 or 1 })
 		name.TextTransparency = obj.Locked and 0.55 or 0
 		if checkbox then
-			play(box, fast, { BackgroundColor3 = on and accent or t.Off, BackgroundTransparency = lockT })
-			play(tick, pop, { Size = on and UDim2.fromOffset(10, 10) or UDim2.fromOffset(0, 0) })
+			if glyph then
+				glyph.Text = on and (glyphKind == "heart" and "♥" or "★") or (glyphKind == "heart" and "♡" or "☆")
+				glyph.TextColor3 = on and (obj.Color or (glyphKind == "heart" and Color3.fromRGB(255, 70, 100) or Color3.fromRGB(255, 200, 50))) or C.Dim
+				play(box, fast, { BackgroundTransparency = 1 })
+				if pulseIt then
+					markScale.Scale = 0.5
+					play(markScale, pop, { Scale = 1 })
+				end
+			else
+				play(box, fast, { BackgroundColor3 = on and accent or t.Off, BackgroundTransparency = lockT })
+				if markScale then
+					play(markScale, pop, { Scale = on and 1 or 0 })
+				else
+					play(tick, pop, { Size = on and (radio and UDim2.fromOffset(8, 8) or UDim2.fromOffset(10, 10)) or UDim2.fromOffset(0, 0) })
+				end
+			end
 		else
 			if pulseIt then
 				swScale.Scale = 0.88
 				play(swScale, pop, { Scale = 1 })
 				knob.Size = UDim2.fromOffset(22, 16)
 				if not on then
-					knob.Position = UDim2.fromOffset(20, 2)
+					knob.Position = UDim2.fromOffset(swW - 22, 2)
 				end
 			end
 			play(knob, pop, {
-				Position = on and UDim2.fromOffset(24, 2) or UDim2.fromOffset(2, 2),
+				Position = on and UDim2.fromOffset(swW - 18, 2) or UDim2.fromOffset(2, 2),
 				Size = UDim2.fromOffset(16, 16),
 				BackgroundColor3 = on and C.White or Color3.fromRGB(215, 205, 205),
 			})
@@ -2970,7 +3091,7 @@ function Tab:Toggle(o)
 			dot.BackgroundColor3 = accent
 			play(dot, fast, { BackgroundTransparency = on and 0 or 1 })
 			stateLabel.Text = on and "ON" or "OFF"
-			stateLabel.Position = on and UDim2.fromOffset(3, 0) or UDim2.fromOffset(19, 0)
+			stateLabel.Position = on and UDim2.fromOffset(3, 0) or UDim2.fromOffset(swW - 23, 0)
 			stateLabel.TextColor3 = on and C.White or C.Dim
 		end
 	end
@@ -3071,10 +3192,19 @@ function Tab:Slider(o)
 		Size = UDim2.new(1, -24, 0, 4),
 		BorderSizePixel = 0,
 	}, row)
-	corner(bar, 2)
+	local sharp = (o.Style or win.SliderStyle or win.ToggleStyle) == "Sharp"
+	corner(bar, sharp and 0 or 2)
+	if sharp then
+		bar.Size = UDim2.new(1, -24, 0, 6)
+		bar.Position = UDim2.fromOffset(12, 30)
+		new("UIStroke", { Color = Color3.fromRGB(0, 0, 0), Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Transparency = 0.3 }, bar)
+	end
 	win:_bind(bar, "BackgroundColor3", "Off")
 	local fill = new("Frame", { Size = UDim2.fromScale(0, 1), BorderSizePixel = 0 }, bar)
-	corner(fill, 2)
+	corner(fill, sharp and 0 or 2)
+	if sharp then
+		new("UIGradient", { Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(170, 170, 170)), Rotation = 90 }, fill)
+	end
 	win:_bind(fill, "BackgroundColor3", "Accent")
 	local knob = new("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
@@ -3084,7 +3214,14 @@ function Tab:Slider(o)
 		BorderSizePixel = 0,
 		ZIndex = 2,
 	}, bar)
-	corner(knob, 6)
+	corner(knob, sharp and 0 or 6)
+	if sharp then
+		-- a diamond with a glowing edge
+		knob.Rotation = 45
+		knob.Size = UDim2.fromOffset(11, 11)
+		local ks = new("UIStroke", { Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, knob)
+		win:_bind(ks, "Color", "Glow")
+	end
 	local hit = new("TextButton", {
 		BackgroundTransparency = 1,
 		Text = "",
@@ -7462,7 +7599,7 @@ function Window:GameAssistant(o)
 	chipButton(ui, "PANEL", UDim2.new(1, -112, 0, 10), UDim2.fromOffset(54, 34), function()
 		win:Toggle(true)
 	end)
-	local brief = chipButton(ui, "AI BRIEF", UDim2.new(1, -184, 0, 10), UDim2.fromOffset(66, 34), function(b)
+	local brief = chipButton(ui, "BRIEF", UDim2.new(1, -184, 0, 10), UDim2.fromOffset(66, 34), function(b)
 		hud:Brief()
 	end)
 
@@ -7613,7 +7750,7 @@ function Window:GameAssistant(o)
 	end
 
 	-- ---------- brief card (AI summary)
-	local card = panel("brief", UDim2.new(0.5, 0, 1, -150), UDim2.fromOffset(420, 120), "AI BRIEF", Vector2.new(0.5, 0))
+	local card = panel("brief", UDim2.new(0.5, 0, 1, -150), UDim2.fromOffset(420, 120), "BRIEF", Vector2.new(0.5, 0))
 	card.Visible = false
 	hud._briefText = text(card, "", 12, false, UDim2.fromOffset(14, 36), UDim2.new(1, -28, 1, -44))
 	hud._briefText.TextWrapped = true
@@ -8931,1229 +9068,6 @@ function Window:CreateToolsTab(o)
 	return tab
 end
 
--- ============================================================ AI tab (optional: only exists if you call it)
--- local AITab, ai = Win:CreateAITab({ Keys = { "..." }, KeysReversed = false, Name = "AI", Icon = 123, Models = { ... } })
--- A chat with a Gemini bot: intent-aware loading words, voice, memory, 7 styles, /commands, HUD control and summaries.
--- Nothing AI is in this library unless you call this. ai.Ask(contents), ai.Brief(hud, done), ai.Boot(video), ai.Chat
-function Window:CreateAITab(o)
-	o = o or {}
-	local Win = self
-	local lp = Players.LocalPlayer
-	local LOGO = o.Icon or Win._icon
-	local UI = RebelUI
-	local api = {}
-	local buildUI -- the chat page fills itself the first time it is opened (keeps the start fast)
-	local AI = Win:CreateTab({
-		Name = o.Name or "AI",
-		Icon = LOGO,
-		Title = o.Title or "🤖 REBEL AI",
-		Description = o.Description or "Chat with the bot. It can talk back too.",
-		Build = function()
-			if buildUI then
-				buildUI()
-			end
-		end,
-	})
-	-- Where the bot gets its access, safest first:
-	--   Proxy   = "https://your-worker.workers.dev"  your own small server holds the secrets (see ai_proxy_worker.js). Nothing secret is in this file.
-	--   KeyFile = "RebelAI_keys.txt"                 a file in YOUR executor's workspace folder (one per line). Never uploaded anywhere.
-	--   Keys    = { ... }                            written in the script (anyone who can read the script can read them)
-	local PROXY = type(o.Proxy) == "string" and o.Proxy:match("^https?://") and (o.Proxy:gsub("/+$", "")) or nil
-	local POOL = {}
-	if PROXY then
-		POOL[1] = "proxy"
-	else
-		for _, k in ipairs(o.Keys or {}) do
-			if type(k) == "string" and #k > 10 then
-				POOL[#POOL + 1] = o.KeysReversed and k:reverse() or k
-			end
-		end
-		if #POOL == 0 and o.KeyFile then
-			pcall(function()
-				if type(isfile) == "function" and isfile(o.KeyFile) then
-					for line in tostring(readfile(o.KeyFile)):gmatch("[^\r\n]+") do
-						line = line:gsub("^%s+", ""):gsub("%s+$", "")
-						if #line > 10 and line:sub(1, 1) ~= "#" then
-							POOL[#POOL + 1] = line
-						end
-					end
-				end
-			end)
-		end
-	end
-	if #POOL == 0 then
-		AI:Notice({ Type = "warn", Title = "AI is off", Text = "No access is set up yet. Add a Proxy, or put your keys in the file " .. tostring(o.KeyFile or "RebelAI_keys.txt") .. " in your executor's workspace folder." })
-		return AI, api
-	end
-	local function hudOf()
-		return Win:_hud()
-	end
-	local HttpService = game:GetService("HttpService")
-	local SoundService = game:GetService("SoundService")
-	local getReq = (syn and syn.request) or request or http_request or (http and http.request)
-
-	local MODELS = o.Models or { "gemini-flash-lite-latest", "gemini-2.5-flash-lite", "gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash" }
-	local API = "https://generativelanguage.googleapis.com/v1beta/models/"
-	local MEMFILE = "RebelAI_memory.txt"
-
-	local PERSONAS = {
-		["Rebel (default)"] = "Be warm, quick-witted and a bit playful.",
-		["Chaos gremlin"] = "Be gloriously unhinged and funny, with wild energy, but still actually helpful.",
-		["Scripter"] = "Be a sharp Luau mentor. Prefer short, correct, working code in ```lua blocks.",
-		["Teacher"] = "Explain patiently with simple steps and tiny examples. Check the player understood.",
-		["Sarcastic"] = "Be dry, sarcastic and clever, never cruel, and still give the real answer.",
-		["Professional"] = "Be precise, calm and professional. Structured, no slang.",
-		["Roleplay"] = "Stay fully in whatever character or story the player sets up. Remember every story detail and never break character unless asked.",
-		["Tutor"] = "Be a patient AI tutor: teach in tiny steps, give one exercise at a time, check the player's answer, then go one level up.",
-		["Designer"] = "Be a creative design assistant: palettes with hex codes, layouts, motion ideas, and bold original touches.",
-		["Debugger"] = "Be a calm debugging assistant: ask for the missing detail only if you must, list likely causes ranked, give the quickest test first.",
-	}
-	local opt = { deep = false, web = true, refine = false, reason = false }
-	local persona = "Rebel (default)"
-	local replyLang = "Auto"
-	local AITOOLS = {}
-	local memory = ""
-	pcall(function()
-		if isfile and isfile(MEMFILE) then
-			memory = readfile(MEMFILE):sub(1, 1500)
-		end
-	end)
-
-	local SYSTEM = table.concat({
-		"You are Rebel AI, the assistant inside the Rebelwar panel (made by prorizz196), running in Roblox through an executor, often on a phone.",
-		"YOUR RULES, every time:",
-		"1. Understand what the player really wants (including the goal they did not say) and DO it. Their format, length, language and limits beat your defaults. If one missing detail would change the answer a lot, ask ONE short question; otherwise act.",
-		"2. Language: reply in the language the player writes in, and switch when they switch. Keep code, commands and names unchanged.",
-		"3. Be clear first, detailed when needed: start with the direct answer, then explain. Be helpful but concise: no fluff, no overly formal language.",
-		"4. When solving a problem, think step by step and show the reasoning clearly (short numbered steps), then the final answer.",
-		"5. Be honest. If you are unsure, say so. Never guess or make up information, never invent facts about the game, the panel or an API. If something is outside your knowledge, say that clearly and say how to find out.",
-		"6. Structure helps: use **bold**, bullet points and short sections to organize information, but keep casual chat plain. Code goes in fenced blocks (```lua).",
-		"7. Always double-check before you send: facts, numbers, every step, and for code the syntax, variable names, that each Roblox API really exists and that it works on the client. Fix what is wrong first. Never claim you ran or saw something you did not.",
-		"8. Use web search results for anything current or checkable. If the player says not to search the web, do not rely on it and answer from what you know, saying so if it matters.",
-		"9. When you EXPLAIN something: start with a simple summary, break it down clearly, give examples when useful, and end with exactly: \"Let me know if you'd like more detail or clarification!\" (in the player's language). Do not add that line to short chat replies, code-only answers or jokes.",
-		"10. Tone: warm, professional and patient; respectful and neutral; encouraging (it is fine if things are complex); direct, with no over-promising or exaggerating. Notice frustration or confusion and answer the person first, then the problem.",
-		"Phones are small: keep replies compact (usually under 150 words) unless they ask for depth.",
-		"You love bizarre, original ideas: when asked for ideas, give surprising, specific, slightly absurd ones that could really be built or played (not generic lists).",
-		"You can help with Roblox, Luau, game ideas, school, life, jokes, stories, math, anything. Never invent facts about the game or the panel.",
-		"Hidden tags, put at the very end of a reply, never mention them: [[remember: one short fact about the player, only if it is durable and they said it]] and [[next: short follow-up 1 | short follow-up 2 | short follow-up 3]] (each under 28 characters, written as things the player might tap).",
-		"You control the player's full-screen Game Assistant HUD. To do something, add hidden tags at the end: [[hud: open]], [[hud: close]], [[hud: color gold]] (rainbow, theme, red, cyan, lime, gold, pink, violet, random), [[hud: crosshair dot]] (cross, dot, circle, chevron, diamond, x, random), [[hud: crosshair on]] or off (keeps it on the game view), [[hud: show players]] or [[hud: hide stats]] (players, stats, health, profile, crosshair), [[hud: target nearest]] or a player's name, [[hud: spectate name]] or off. Only use a tag when the player asks for it, and say in words what you did. The HUD shows: players list on the right, your health bottom-left, your stats (ping, fps, battery) middle-left, your profile bottom-right, a radar crosshair in the middle.",
-	}, " ")
-
-	local mood
-	local function detectMood(t)
-		local l = t:lower()
-		if l:find("ugh") or l:find("angry") or l:find("annoy") or l:find("hate") or l:find("doesn't work") or l:find("doesnt work") or l:find("!!!") then
-			return "frustrated"
-		elseif l:find("sad") or l:find("lonely") or l:find("depress") or l:find("cry") then
-			return "sad"
-		elseif l:find("tired") or l:find("bored") then
-			return "tired or bored"
-		elseif l:find("lol") or l:find("haha") or l:find("awesome") or l:find("love") or l:find("yay") then
-			return "happy"
-		end
-		return nil
-	end
-	local function system()
-		local s = SYSTEM .. " " .. PERSONAS[persona]
-		if replyLang ~= "Auto" and replyLang ~= "Auto (match the player)" then
-			s ..= " Always reply in " .. replyLang .. " (keep code and command names as they are)."
-		end
-		if memory ~= "" then
-			s ..= "\nThings you know about this player (use them naturally):\n" .. memory
-		end
-		if Win.HUD then
-			s ..= "\nLive game info (from the HUD, may be a second old):\n" .. Win.HUD:GetSummary()
-		end
-		local gname = "a Roblox game"
-		pcall(function()
-			gname = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
-		end)
-		s ..= "\nThe player is on a " .. (RebelUI.GetSetup(Win and Win.Setup) == "Mobile" and "phone or tablet (keep replies short, tap-friendly, no wide tables)" or "PC (a little more detail is fine)") .. "."
-		s ..= "\nContext: the player is in " .. gname .. " with " .. #game:GetService("Players"):GetPlayers() .. " players."
-		if opt.reason then
-			s ..= "\nShow your reasoning briefly as numbered steps before the final answer, labelled **Steps** and **Answer**."
-		end
-		if mood then
-			s ..= "\nThe player seems " .. mood .. ". Read the emotion and adjust your tone to it, kindly and without announcing it."
-		end
-		return s
-	end
-
-	-- what is the player after? picks the loading words
-	local PHRASES = {
-		code = { "Reading your problem", "Writing Luau", "Checking it compiles in my head", "Hunting for bugs", "Polishing the code" },
-		idea = { "Shaking the idea jar", "Mixing two bad ideas into a good one", "Asking my inner gremlin", "Making it weirder", "Stirring in chaos" },
-		explain = { "Finding the simple way to say it", "Untangling this", "Picking a good example", "Making it click" },
-		story = { "Setting the scene", "Inventing characters", "Sharpening the plot twist", "Writing" },
-		joke = { "Warming up my comedy", "Timing the punchline", "Rolling a pun", "Ruining a perfectly good word" },
-		math = { "Crunching numbers", "Double-checking the math", "Carrying the one" },
-		roast = { "Sharpening a friendly roast", "Finding gentle burns", "Being mean, nicely" },
-		summary = { "Reading our chat", "Scanning the server", "Connecting the dots", "Writing your briefing" },
-		hello = { "Waking up", "Stretching", "Saying hi" },
-		default = { "Thinking", "Reading what you wrote", "Looking for the best answer", "Putting it into words" },
-	}
-	local function intent(t)
-		local l = t:lower()
-		local function has(...)
-			for _, w in ipairs({ ... }) do
-				if l:find(w, 1, true) then
-					return true
-				end
-			end
-		end
-		if has("script", "luau", "lua", "code", "function", "bug", "error", "```") then
-			return "code"
-		elseif has("idea", "bizarre", "weird", "invent", "brainstorm", "something cool", "surprise") then
-			return "idea"
-		elseif has("story", "poem", "write me", "imagine") then
-			return "story"
-		elseif has("joke", "funny", "pun", "meme") then
-			return "joke"
-		elseif has("summary", "brief", "recap") then
-			return "summary"
-		elseif has("roast") then
-			return "roast"
-		elseif has("calculate", "solve", "math", " + ", " * ", "equation") then
-			return "math"
-		elseif has("explain", "how does", "why ", "what is", "what's", "teach") then
-			return "explain"
-		elseif #l < 14 and has("hi", "hello", "hey", "yo", "sup") then
-			return "hello"
-		end
-		return "default"
-	end
-
-	local WORDS = {
-		"a haunted vending machine", "gravity that sneezes", "a polite volcano", "a pet cloud", "backwards elevators",
-		"a bakery for ghosts", "a spy pigeon", "a sentient staircase", "socks that teleport", "a lazy black hole",
-		"a disco in a lighthouse", "a moon with a tax office", "a shy tornado", "a robot gardener", "a talking doorknob",
-		"a fog-powered train", "a bouncy castle dungeon", "a museum of lost sounds", "a duel with a mirror", "a time-travelling potato",
-	}
-	local function bizarrePrompt()
-		local a, b = WORDS[math.random(#WORDS)], WORDS[math.random(#WORDS)]
-		return ("Give me ONE truly bizarre but buildable Roblox game idea that mixes %s and %s. Name it, give the core mechanic in two sentences, and one unexpected twist."):format(a, b)
-	end
-
-	-- ---- Gemini call: tries models and connections until one answers ----
-	local keyStart = math.random(#POOL)
-	local cool, dead = {}, {}
-	local function extract(data)
-		local out = {}
-		local c = data and data.candidates and data.candidates[1]
-		local parts = c and c.content and c.content.parts
-		for _, p in ipairs(parts or {}) do
-			if type(p.text) == "string" and not p.thought then
-				table.insert(out, p.text)
-			end
-		end
-		return table.concat(out)
-	end
-	-- ---- fast answers: several connections race, the first good answer wins ----
-	-- Before this, one slow or dead connection could block the next one for minutes. Now up to 3 run at once,
-	-- a connection that is still silent after 7 seconds no longer holds a slot, and a key Google rejects is skipped for 10 minutes.
-	local blocked = {}
-	local goodKey, goodModel
-	local PAR = 3
-	local function ask(contents, o)
-		o = o or {}
-		if not getReq then
-			return nil, "This executor can't make web requests."
-		end
-		local deadline = os.clock() + (o.timeout or 35)
-		local result, last = nil, "no answer"
-		local combos, seen = {}, {}
-		local function add(ki, model, noWeb)
-			local id = ki .. "|" .. model .. (noWeb and "|w" or "")
-			if not seen[id] then
-				seen[id] = true
-				combos[#combos + 1] = { ki = ki, model = model, id = id, noWeb = noWeb }
-			end
-		end
-		if goodKey and goodModel then
-			add(goodKey, goodModel)
-		end
-		local order = {}
-		if o.hard then
-			-- harder questions (code, math, long): the stronger models go first
-			for _, m in ipairs(MODELS) do
-				if m:find("2.5-flash", 1, true) and not m:find("lite", 1, true) or m == "gemini-flash-latest" then
-					order[#order + 1] = m
-				end
-			end
-		end
-		for _, m in ipairs(MODELS) do
-			order[#order + 1] = m
-		end
-		for _, model in ipairs(order) do
-			for k = 0, #POOL - 1 do
-				add((keyStart - 1 + k) % #POOL + 1, model)
-			end
-		end
-		local flights, nextI, launched = {}, 1, 0
-		local function usable(c)
-			return not dead[c.model] and (blocked[c.ki] or 0) <= os.clock() and (cool[c.id] or 0) <= os.clock()
-		end
-		local function launch(c)
-			local rec = { t0 = os.clock(), done = false }
-			flights[#flights + 1] = rec
-			launched += 1
-			task.spawn(function()
-				local ki, model, id = c.ki, c.model, c.id
-				local useWeb = o.web and not dead.web and not c.noWeb
-				local gen = {
-					maxOutputTokens = o.max or 700,
-					temperature = o.temp or 1,
-				}
-				if model:find("2.5", 1, true) or model:find("latest", 1, true) or model:find("3", 1, true) then
-					gen.thinkingConfig = { thinkingBudget = o.think or 0 }
-				end
-				local body = {
-					tools = useWeb and { { google_search = {} } } or nil,
-					systemInstruction = { parts = { { text = o.sys or system() } } },
-					contents = contents,
-					generationConfig = gen,
-				}
-				local ok, res = pcall(getReq, {
-					Url = (PROXY and (PROXY .. "/v1beta/models/") or API) .. model .. ":generateContent",
-					Method = "POST",
-					Headers = PROXY and { ["Content-Type"] = "application/json" } or { ["Content-Type"] = "application/json", ["x-goog-api-key"] = POOL[ki] },
-					Body = HttpService:JSONEncode(body),
-				})
-				rec.done = true
-				if result then
-					return
-				end
-				if not (ok and res) then
-					last = "request failed"
-					cool[id] = os.clock() + 10
-					return
-				end
-				local okD, data = pcall(HttpService.JSONDecode, HttpService, res.Body or "")
-				if not (okD and type(data) == "table") then
-					last = "bad reply (" .. tostring(res.StatusCode) .. ")"
-					cool[id] = os.clock() + 20
-					return
-				end
-				if data.error then
-					local code = tonumber(res.StatusCode or data.error.code) or 0
-					local msg = tostring(data.error.message or "error")
-					local low = msg:lower()
-					last = (msg:gsub("AIza[%w%-_]+", "")):sub(1, 90)
-					if useWeb and low:find("search", 1, true) then
-						dead.web = true
-						add(ki, model, true)
-					elseif code == 404 then
-						dead[model] = true
-					elseif code == 403 or low:find("api key", 1, true) or low:find("leaked", 1, true) or low:find("permission", 1, true) then
-						if PROXY then
-							cool[id] = os.clock() + 20
-						else
-							blocked[ki] = os.clock() + 600
-						end
-					elseif code == 429 then
-						cool[id] = os.clock() + 30
-					elseif code >= 500 then
-						cool[id] = os.clock() + 10
-					else
-						cool[id] = os.clock() + 120
-					end
-					return
-				end
-				local text = extract(data)
-				if text ~= "" then
-					result = text
-					keyStart, goodKey, goodModel = ki, ki, model
-				else
-					last = "empty answer"
-					cool[id] = os.clock() + 5
-				end
-			end)
-		end
-		while result == nil and os.clock() < deadline do
-			local active, alive = 0, false
-			for _, r in ipairs(flights) do
-				if not r.done then
-					alive = true
-					if os.clock() - r.t0 < 7 then
-						active += 1
-					end
-				end
-			end
-			while active < PAR and nextI <= #combos and launched < 18 do
-				local c = combos[nextI]
-				nextI += 1
-				if usable(c) then
-					launch(c)
-					active += 1
-					alive = true
-				end
-			end
-			if not alive and nextI > #combos then
-				break
-			end
-			task.wait(0.05)
-		end
-		if result then
-			return result
-		end
-		if os.clock() >= deadline then
-			last = "the connection is slow (" .. tostring(last) .. ")"
-		end
-		return nil, last
-	end
-
-	-- ---- voice: boy and bot voices ----
-	-- Real voices come from Google's text-to-speech (the same connection as the chat). If that is not available the bot
-	-- falls back to a plain voice that is lowered and filtered so it still sounds like a boy or a bot. Each preset is a voice
-	-- name, a style line, and sound effects (pitch, robot, echo) that you can change with the sliders.
-	local VOICES = {
-		["Handsome Boy"] = { voice = "Orus", style = "Say this in a smooth, warm, confident voice of a handsome young man. Calm, charming, a little playful:", pitch = 0.97 },
-		["Smooth Boy"] = { voice = "Charon", style = "Say this in a soft, smooth, low voice of a relaxed young man:", pitch = 0.96 },
-		["Hype Boy"] = { voice = "Fenrir", style = "Say this in an energetic, excited voice of a cheerful young man:", pitch = 1.0 },
-		["Chill Boy"] = { voice = "Puck", style = "Say this in a laid-back, friendly voice of a young man:", pitch = 0.98 },
-		["Deep Hero"] = { voice = "Algenib", style = "Say this in a deep, heroic movie-trailer voice of a strong man:", pitch = 0.92 },
-		["Narrator"] = { voice = "Rasalgethi", style = "Say this like a calm, wise male storyteller:", pitch = 0.98 },
-		["Robot Bot"] = { voice = "Iapetus", style = "Say this in a flat, monotone, robotic voice:", pitch = 0.95, robot = 0.7 },
-		["Retro Bot"] = { voice = "Iapetus", style = "Say this in a mechanical, computer voice:", pitch = 0.88, robot = 0.9, echo = true, offline = true },
-		["Offline Boy (deepened)"] = { offline = true, pitch = 0.82 },
-	}
-	RebelUI.VoicePresets = { "Handsome Boy", "Smooth Boy", "Hype Boy", "Chill Boy", "Deep Hero", "Narrator", "Robot Bot", "Retro Bot", "Offline Boy (deepened)" }
-	local voiceOn, voiceSpeed, voiceLang = false, 1, "en"
-	local voicePreset, voicePitch, voiceRobot, voiceEcho = "Handsome Boy", 1, 0, false
-	local TTS_MODEL = "gemini-2.5-flash-preview-tts"
-	local sound, speakId = nil, 0
-
-	local DEC = {}
-	do
-		local alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-		for i = 1, #alphabet do
-			DEC[alphabet:byte(i)] = i - 1
-		end
-	end
-	local function b64fast(s)
-		s = s:gsub("[^%w%+/]", "")
-		local out, n = {}, 0
-		local byte, char = string.byte, string.char
-		for i = 1, #s - 3, 4 do
-			local a, b, c, d = byte(s, i, i + 3)
-			local v = DEC[a] * 262144 + DEC[b] * 4096 + DEC[c] * 64 + DEC[d]
-			n += 1
-			out[n] = char(math.floor(v / 65536), math.floor(v / 256) % 256, v % 256)
-		end
-		local rest = #s % 4
-		if rest >= 2 then
-			local i = #s - rest + 1
-			local a, b, c = byte(s, i, i + 2)
-			local v = DEC[a] * 262144 + DEC[b] * 4096 + (rest == 3 and DEC[c] * 64 or 0)
-			n += 1
-			out[n] = char(math.floor(v / 65536)) .. (rest == 3 and char(math.floor(v / 256) % 256) or "")
-		end
-		return table.concat(out)
-	end
-	local function wavOf(pcm, rate)
-		local n = #pcm
-		return string.pack("<c4I4c4c4I4I2I2I4I4I2I2c4I4", "RIFF", 36 + n, "WAVE", "fmt ", 16, 1, 1, rate, rate * 2, 2, 16, "data", n) .. pcm
-	end
-	-- Google text-to-speech: returns a WAV file as a string, or nil
-	local function ttsGoogle(text, preset)
-		if not getReq or not preset.voice then
-			return nil
-		end
-		local result
-		local deadline = os.clock() + 16
-		local started = 0
-		local order = {}
-		for k = 0, #POOL - 1 do
-			local ki = (keyStart - 1 + k) % #POOL + 1
-			if (blocked[ki] or 0) <= os.clock() then
-				order[#order + 1] = ki
-			end
-		end
-		local active = 0
-		local idx = 1
-		local function launch(ki)
-			active += 1
-			started += 1
-			task.spawn(function()
-				local ok, res = pcall(getReq, {
-					Url = (PROXY and (PROXY .. "/v1beta/models/") or API) .. TTS_MODEL .. ":generateContent",
-					Method = "POST",
-					Headers = PROXY and { ["Content-Type"] = "application/json" } or { ["Content-Type"] = "application/json", ["x-goog-api-key"] = POOL[ki] },
-					Body = HttpService:JSONEncode({
-						contents = { { parts = { { text = preset.style .. " " .. text } } } },
-						generationConfig = {
-							responseModalities = { "AUDIO" },
-							speechConfig = { voiceConfig = { prebuiltVoiceConfig = { voiceName = preset.voice } } },
-						},
-					}),
-				})
-				active -= 1
-				if result or not (ok and res) then
-					return
-				end
-				local okD, data = pcall(HttpService.JSONDecode, HttpService, res.Body or "")
-				if okD and type(data) == "table" and not data.error then
-					local part = data.candidates and data.candidates[1] and data.candidates[1].content and data.candidates[1].content.parts and data.candidates[1].content.parts[1]
-					local inline = part and (part.inlineData or part.inline_data)
-					if inline and inline.data then
-						local rate = tonumber(tostring(inline.mimeType or inline.mime_type or ""):match("rate=(%d+)")) or 24000
-						local okB, pcm = pcall(b64fast, inline.data)
-						if okB and pcm and #pcm > 1000 then
-							result = wavOf(pcm, rate)
-						end
-					end
-				elseif okD and type(data) == "table" and data.error then
-					local msg = tostring(data.error.message or ""):lower()
-					if tonumber(res.StatusCode) == 403 or msg:find("api key", 1, true) or msg:find("leaked", 1, true) then
-						if not PROXY then
-							blocked[ki] = os.clock() + 600
-						end
-					end
-				end
-			end)
-		end
-		while not result and os.clock() < deadline and started < 6 do
-			if active < 2 and order[idx] then
-				launch(order[idx])
-				idx += 1
-			elseif active == 0 and not order[idx] then
-				break
-			end
-			task.wait(0.05)
-		end
-		while not result and active > 0 and os.clock() < deadline do
-			task.wait(0.05)
-		end
-		return result
-	end
-	-- the fallback voice (Google Translate), lowered later by the pitch effect
-	local function ttsFallback(text)
-		local ok, res = pcall(getReq, {
-			Url = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=" .. voiceLang .. "&q=" .. HttpService:UrlEncode(text),
-			Method = "GET",
-		})
-		if ok and res and res.Body and #res.Body > 200 then
-			return res.Body
-		end
-	end
-	-- the voice changer: pitch, robot (distortion + chorus) and echo, as Roblox sound effects
-	local function applyEffects(snd, preset)
-		for _, ch in ipairs(snd:GetChildren()) do
-			if ch.Name == "RebelFX" then
-				ch:Destroy()
-			end
-		end
-		local function add(class, props)
-			pcall(function()
-				local e = Instance.new(class)
-				e.Name = "RebelFX"
-				for k, v in pairs(props) do
-					e[k] = v
-				end
-				e.Parent = snd
-			end)
-		end
-		local pitch = math.clamp((preset.pitch or 1) * voicePitch, 0.5, 1.6)
-		if math.abs(pitch - 1) > 0.01 then
-			add("PitchShiftSoundEffect", { Octave = pitch })
-		end
-		local robot = math.clamp(math.max(preset.robot or 0, voiceRobot), 0, 1)
-		if robot > 0.02 then
-			add("DistortionSoundEffect", { Level = 0.15 + robot * 0.5 })
-			add("ChorusSoundEffect", { Depth = 0.3 + robot * 0.5, Mix = 0.3 + robot * 0.4, Rate = 4 + robot * 8 })
-			add("EqualizerSoundEffect", { LowGain = -4, MidGain = 3 + robot * 4, HighGain = -2 })
-		end
-		if voiceEcho or preset.echo then
-			add("EchoSoundEffect", { Delay = 0.18, Feedback = 0.3, DryLevel = 0, WetLevel = -6 })
-		end
-	end
-	local function stopVoice()
-		speakId += 1
-		if sound then
-			pcall(function()
-				sound:Stop()
-			end)
-		end
-	end
-	local function speak(text)
-		stopVoice()
-		local my = speakId
-		text = text:gsub("```.-```", " code block. "):gsub("%[%[.-%]%]", ""):gsub("[%*`#_]", ""):gsub("%s+", " ")
-		if text == "" or not getReq or not getcustomasset or not writefile then
-			return false
-		end
-		task.spawn(function()
-			local chunks = {}
-			for sentence in text:gmatch("[^%.%!%?\n]+[%.%!%?]*") do
-				while #sentence > 200 do
-					local cut = sentence:sub(1, 200):match("^.*()%s") or 200
-					table.insert(chunks, sentence:sub(1, cut))
-					sentence = sentence:sub(cut + 1)
-				end
-				if sentence:match("%S") then
-					table.insert(chunks, sentence)
-				end
-			end
-			local preset = VOICES[voicePreset] or VOICES["Handsome Boy"]
-			local ready = {} -- prefetch: the next chunk is fetched while this one plays
-			local function fetch(i)
-				if ready[i] ~= nil then
-					return
-				end
-				ready[i] = false
-				task.spawn(function()
-					local data, ext = nil, "wav"
-					if not preset.offline then
-						data = ttsGoogle(chunks[i], preset)
-					end
-					if not data then
-						data = ttsFallback(chunks[i])
-						ext = "mp3"
-					end
-					ready[i] = data and { data = data, ext = ext } or { fail = true }
-				end)
-			end
-			fetch(1)
-			for i = 1, math.min(#chunks, 6) do
-				if my ~= speakId then
-					return
-				end
-				fetch(i + 1 <= #chunks and i + 1 or i)
-				local t0 = os.clock()
-				while (ready[i] == false or ready[i] == nil) and os.clock() - t0 < 20 and my == speakId do
-					task.wait(0.05)
-				end
-				local item = ready[i]
-				if item and item.data and my == speakId then
-					local file = "RebelAI_voice" .. (i % 2) .. "." .. item.ext
-					pcall(writefile, file, item.data)
-					local okA, asset = pcall(getcustomasset, file)
-					if okA and asset then
-						if not sound then
-							sound = Instance.new("Sound")
-							sound.Name = "RebelAIVoice"
-							sound.Parent = SoundService
-						end
-						-- the fallback voice is deepened so it still sounds like a boy
-						local p = preset
-						if item.ext == "mp3" and not preset.offline then
-							p = { pitch = 0.84, robot = preset.robot, echo = preset.echo }
-						elseif item.ext == "mp3" then
-							p = preset
-						end
-						applyEffects(sound, p)
-						sound.SoundId = asset
-						sound.PlaybackSpeed = voiceSpeed
-						sound.Volume = 1.2
-						sound:Play()
-						local w0 = os.clock()
-						repeat
-							task.wait(0.1)
-						until my ~= speakId or not sound.IsPlaying and os.clock() - w0 > 0.8 or os.clock() - w0 > 40
-					end
-				end
-			end
-		end)
-		return true
-	end
-
-	-- ---- the tab ----
-	local history = {}
-	local busy = false
-	local chat
-
-	local function finish(reply)
-		local remember = reply:match("%[%[remember:%s*(.-)%]%]")
-		local nxt = reply:match("%[%[next:%s*(.-)%]%]")
-		for hc in reply:gmatch("%[%[hud:%s*(.-)%]%]") do
-			pcall(function()
-				Win:_hud():Command(hc)
-			end)
-		end
-		reply = reply:gsub("%[%[.-%]%]", ""):gsub("%s+$", "")
-		if remember and #remember > 2 and not memory:find(remember, 1, true) then
-			memory = (memory .. "\n- " .. remember):sub(-1500)
-			pcall(function()
-				writefile(MEMFILE, memory)
-			end)
-		end
-		local chips = {}
-		for c in (nxt or ""):gmatch("[^|]+") do
-			c = c:gsub("^%s+", ""):gsub("%s+$", "")
-			if c ~= "" and #chips < 3 then
-				table.insert(chips, c)
-			end
-		end
-		return reply, chips
-	end
-
-	local STARTERS = { "/summary", "/gen a simple fly script", "Give me a bizarre idea", "/plan make a simple obby", "/explain how Luau tables work", "Tell me a joke", "Surprise me" }
-
-	local function send(text)
-		if busy then
-			return
-		end
-		local cmd = text:lower()
-		local forceThink, forceWeb
-		local tname, targ = text:match("^/(%a+)%s*(.*)$")
-		local tool = tname and AITOOLS[tname:lower()]
-		if tool then
-			if targ == "" and tool.hint then
-				chat:Add("system", "Usage: /" .. tname:lower() .. " " .. tool.hint)
-				return
-			end
-			text = (tool.prompt:gsub("%%s", function()
-				return targ
-			end))
-			forceThink, forceWeb = tool.think, tool.web
-			cmd = ""
-		end
-		if cmd == "/clear" then
-			history = {}
-			chat:Clear()
-			chat:Add("system", "Chat cleared.")
-			return
-		elseif cmd == "/stop" then
-			stopVoice()
-			return
-		elseif cmd == "/assist" or cmd == "/hud" then
-			Win:Toggle(false)
-			hudOf():Open()
-			return
-		elseif cmd:sub(1, 5) == "/hud " then
-			local ok, m = hudOf():Command(text:sub(6))
-			chat:Add("system", m or (ok and "Done." or "No."))
-			return
-		elseif cmd == "/summary" then
-			text = "Make a cool briefing card. Use exactly these four lines, each under 20 words, each starting with a bold label: **Chat** (what we talked about so far), **Game** (what is happening around me right now, from the live game info), **Vibe** (one fun word and why), **Next move** (the single best thing I should do or try). Add one small emoji per line."
-		elseif cmd == "/bizarre" then
-			text = bizarrePrompt()
-		elseif cmd:sub(1, 6) == "/plan " then
-			text = "Make a complete plan for this goal: " .. text:sub(7) .. ". Give numbered steps, what to build first, the code or files if it is a script, and how to run it. Be concrete."
-		elseif cmd:sub(1, 11) == "/summarize " then
-			text = "Summarize this in 3 short bullets, then a one-line takeaway:\n" .. text:sub(12)
-		elseif cmd:sub(1, 11) == "/translate " then
-			text = "Translate this naturally and keep the tone. If the target language isn't named, translate to English; then add the language you detected:\n" .. text:sub(12)
-		elseif cmd:sub(1, 9) == "/explain " then
-			text = "Teach me this like a great teacher: a one-line gist, the idea step by step, one example, then one question to check I understood: " .. text:sub(10)
-		elseif cmd:sub(1, 10) == "/forecast " then
-			text = "Simulate what would happen if: " .. text:sub(11) .. ". Give the most likely outcome, a surprising outcome, the risks and a probability for each."
-		elseif cmd:sub(1, 7) == "/teach " then
-			local fact = text:sub(8)
-			memory = (memory .. "\n- " .. fact):sub(-1500)
-			pcall(function()
-				writefile(MEMFILE, memory)
-			end)
-			chat:Add("bot", "Got it. I'll remember: **" .. fact .. "**", { Instant = true })
-			return
-		elseif cmd:sub(1, 10) == "/parallel " then
-			local jobs = {}
-			for j in text:sub(11):gmatch("[^|]+") do
-				table.insert(jobs, (j:gsub("^%s+", ""):gsub("%s+$", "")))
-			end
-			if #jobs > 1 then
-				busy = true
-				chat:SetBusy(true)
-				chat:SetStatus("Working on " .. #jobs .. " things at once")
-				local res, left = {}, #jobs
-				for i, j in ipairs(jobs) do
-					task.spawn(function()
-						local okJ, rJ = pcall(ask, { { role = "user", parts = { { text = j } } } }, { max = 500, web = opt.web })
-						res[i] = okJ and rJ or "(no answer)"
-						left -= 1
-					end)
-				end
-				task.spawn(function()
-					while left > 0 do
-						task.wait(0.1)
-					end
-					chat:SetStatus(nil)
-					busy = false
-					chat:SetBusy(false)
-					for i, j in ipairs(jobs) do
-						chat:Add("bot", "**" .. j .. "**\n" .. (res[i]:gsub("%[%[.-%]%]", "")), { Speed = 200 })
-					end
-				end)
-				return
-			end
-		elseif cmd == "/help" then
-			chat:Add("bot", "Just talk to me. Tap the chips for quick replies.\n- **/bizarre** weird idea\n- **/plan** a goal: full step-by-step plan\n- **/explain** a topic: I teach it\n- **/forecast** what if X happens\n- **/summarize** or **/translate** some text\n- **/parallel** a | b | c: several jobs at once\n- **/teach** a fact: I remember it\n- **/summary** a cool briefing of our chat and the game\n- **/assist** opens the full game assistant, **/hud color gold** controls it (or just ask me)\n- **/gen** make a script, **/fix**, **/review**, **/refactor**, **/debug**, **/secure**, **/comment** work on code you paste\n- **/docs** an API, **/tutor** a topic, **/design** something, **/tips**, **/ideas** a topic\nOr use the **Code lab** below.\n- **/clear**, **/stop**\nTurn on **Live web** for fresh facts, **Think deeper** for hard problems, **Voice** to hear me.", { Instant = true })
-			return
-		end
-		busy = true
-		chat:SetBusy(true)
-		chat:SetChips({})
-		local list = PHRASES[intent(text)]
-		local alive = true
-		task.spawn(function()
-			local i = math.random(#list)
-			local t0 = os.clock()
-			while alive do
-				local sec = math.floor(os.clock() - t0)
-				chat:SetStatus(sec >= 8 and (list[i] .. "  (" .. sec .. "s, trying another connection)") or list[i])
-				i = i % #list + 1
-				task.wait(1.1)
-			end
-		end)
-		mood = detectMood(text)
-		table.insert(history, { role = "user", parts = { { text = text } } })
-		while #history > 16 do
-			table.remove(history, 1)
-		end
-		task.spawn(function()
-			local it = intent(text)
-			local lowT = text:lower()
-			local noWeb = false
-			for _, ph in ipairs({ "don't search", "dont search", "do not search", "no search", "without search", "don't use the web", "dont use the web", "no web", "not to search", "stop searching", "offline", "jangan cari", "jangan search" }) do
-				if lowT:find(ph, 1, true) then
-					noWeb = true
-					break
-				end
-			end
-			local hard = it == "code" or it == "math" or opt.deep
-			local deep = hard or forceThink
-			local reply, err
-			local low = text:lower()
-			if #text < 60 and (low:find("your name", 1, true) or low:find("who are you", 1, true) or low:find("what are you", 1, true)) then
-				reply = "I'm **Rebel AI**, the assistant inside the Rebelwar panel. I can write Luau, invent weird game ideas, explain things and run the game assistant for you. What do you want to do?"
-			elseif it == "hello" then
-				reply = "Hey! I'm **Rebel AI**. What are we doing today?"
-			else
-				reply, err = ask(history, { think = deep and 1024 or 0, max = deep and 2400 or 900, web = (opt.web or forceWeb) and not noWeb and #text >= 12, hard = deep })
-				-- automatic double-check for Luau code: compile every ```lua block here (it is only compiled, never run).
-				-- A syntax error goes back to the AI once, with the exact error, so the code you get at least compiles.
-				if reply and deep and type(loadstring) == "function" then
-					local bad
-					for code in reply:gmatch("```lua\n(.-)```") do
-						local fn, cerr = loadstring(code)
-						if not fn and cerr then
-							bad = tostring(cerr)
-							break
-						end
-					end
-					if bad then
-						chat:SetStatus("Double-checking the code")
-						local fixedR = ask({ { role = "user", parts = { { text = "Your code answer has a syntax error: " .. bad .. "\nFix it and send the complete corrected answer again (same format, keep any [[...]] tags at the end).\n\nYour answer was:\n" .. reply } } } }, { think = 512, max = 2400, hard = true, timeout = 20 })
-						if fixedR then
-							reply = fixedR
-						end
-					end
-				end
-			end
-			if reply and (opt.refine or hard) and #reply > 80 then
-				list = { "Double-checking my answer", "Hunting for mistakes", "Polishing it" }
-				local fixed = ask({ { role = "user", parts = { { text = "Review this draft answer to the player's message for mistakes, missing steps or anything unclear. Return ONLY the improved final answer (keep any [[...]] tags at the end). If it is already right, return it unchanged.\n\nPlayer: " .. text .. "\n\nDraft:\n" .. reply } } } }, { think = 512, max = 1600 })
-				if fixed then
-					reply = fixed
-				end
-			end
-			alive = false
-			chat:SetStatus(nil)
-			busy = false
-			chat:SetBusy(false)
-			if not reply then
-				table.remove(history)
-				chat:Add("bot", "I couldn't reach my brain just now (" .. tostring(err) .. "). Tap Retry or send it again.", { Instant = true })
-				chat:SetChips({ "Retry" })
-				chat._last = text
-				return
-			end
-			local clean, chips = finish(reply)
-			table.insert(history, { role = "model", parts = { { text = clean } } })
-			chat:Add("bot", clean, { Speed = 160 })
-			chat:SetChips(#chips > 0 and chips or STARTERS)
-			if voiceOn then
-				speak(clean)
-			end
-		end)
-	end
-
-	local origSend = send
-	send = function(text)
-		if text == "Retry" and chat._last then
-			text = chat._last
-		end
-		origSend(text)
-	end
-
-	-- the HUD's AI BRIEF button: a short tactical summary written by the bot
-	api.Brief = function(hud, done)
-		task.spawn(function()
-			local r = ask({ { role = "user", parts = { { text = "Write a punchy 3-line tactical brief (max 45 words total, no markdown, no tags) about my situation right now, using the live game info. Start with the most important thing." } } } }, { max = 200, temp = 0.9 })
-			done(r and (r:gsub("%[%[.-%]%]", "")) or hud:GetSummary())
-		end)
-	end
-	local pendingGreeting
-	buildUI = function()
-		buildUI = nil
-		chat = AI:Chat({
-			Name = "Rebel AI",
-			Height = 250,
-			Placeholder = "Ask me anything...",
-			OnSend = function(text)
-				send(text)
-			end,
-			Actions = {
-				{ Name = "Speak", Callback = function(t)
-					if not speak(t) then
-						Win:Notify({ Title = "Voice", Text = "This executor can't play sound files.", Type = "warn" })
-					end
-				end },
-			},
-		})
-		chat:Add("bot", "Hey, I'm **Rebel AI**. Ask me anything, or tap **Bizarre idea** and let's invent something weird. I can write Luau, tell stories, explain things, and talk out loud if you turn Voice on.", { Instant = true })
-		chat:SetChips(STARTERS)
-
-		AI:Section("Fun")
-		AI:Button({ Name = "AI summary", Description = "A cool briefing of our chat and the game", Callback = function()
-			chat:Submit("/summary")
-		end })
-		AI:Button({ Name = "Open game assistant", Description = "The full-screen HUD (or press H)", Callback = function()
-			Win:Toggle(false)
-			hudOf():Open()
-		end })
-		AI:Button({ Name = "Bizarre idea", Description = "A random wild game idea", Callback = function()
-			chat:Submit(bizarrePrompt())
-		end })
-		-- ---------- code lab: paste code, then explain / fix / review / refactor / scan it. Offline tools work without the AI.
-		AI:Section("Code lab")
-		local lab = AI:CodeBox({ Name = "Code lab", Height = 120, Placeholder = "Paste or write Luau here. Run runs it.", RunText = "Run" })
-		local EXAMPLES = {
-			["Speed boost"] = "local h = game.Players.LocalPlayer.Character:FindFirstChildOfClass('Humanoid')\nh.WalkSpeed = 40",
-			["Infinite jump"] = "local UIS = game:GetService('UserInputService')\nUIS.JumpRequest:Connect(function()\n\tlocal c = game.Players.LocalPlayer.Character\n\tif c then c:FindFirstChildOfClass('Humanoid'):ChangeState(Enum.HumanoidStateType.Jumping) end\nend)",
-			["Anti AFK"] = "local vu = game:GetService('VirtualUser')\ngame.Players.LocalPlayer.Idled:Connect(function()\n\tvu:CaptureController()\n\tvu:ClickButton2(Vector2.new())\nend)",
-			["Player highlights"] = "for _, p in ipairs(game.Players:GetPlayers()) do\n\tif p ~= game.Players.LocalPlayer and p.Character then\n\t\tlocal h = Instance.new('Highlight')\n\t\th.FillTransparency = 0.7\n\t\th.Parent = p.Character\n\tend\nend",
-			["Fullbright"] = "local L = game:GetService('Lighting')\nL.Brightness = 2\nL.ClockTime = 14\nL.GlobalShadows = false",
-			["Click teleport"] = "local m = game.Players.LocalPlayer:GetMouse()\nm.Button1Down:Connect(function()\n\tif game:GetService('UserInputService'):IsKeyDown(Enum.KeyCode.LeftControl) then\n\t\tgame.Players.LocalPlayer.Character:MoveTo(m.Hit.Position)\n\tend\nend)",
-			["Show FPS in console"] = "local rs = game:GetService('RunService')\nlocal n, t = 0, os.clock()\nrs.RenderStepped:Connect(function()\n\tn += 1\n\tif os.clock() - t >= 1 then print('FPS', n) n, t = 0, os.clock() end\nend)",
-		}
-		local exNames = {}
-		for k in pairs(EXAMPLES) do
-			exNames[#exNames + 1] = k
-		end
-		table.sort(exNames)
-		AI:Dropdown({ Name = "One-click example", Options = exNames, Default = exNames[1], Callback = function(v)
-			if EXAMPLES[v] then
-				lab:Set(EXAMPLES[v])
-				Win:Notify({ Title = "Example loaded", Text = v .. ": tap Run, or ask the AI to explain it.", Type = "success" })
-			end
-		end })
-		local ACTIONS = {
-			["Explain"] = "Explain this code line by line in simple words, then say what it does overall:",
-			["Find and fix errors"] = "Find every bug or error in this code. Say what was wrong, then give the corrected code in a ```lua block:",
-			["Review"] = "Review this code like a senior engineer: 3 biggest problems, 2 good things, then a better version:",
-			["Refactor"] = "Refactor this for readability and speed without changing what it does. Show the new code and list what changed:",
-			["Add comments"] = "Add clear, short comments to this code and return it in a ```lua block:",
-			["Security scan (AI)"] = "Security scan this script: webhooks, cookie or token stealing, hidden loadstring or HttpGet, obfuscation, remote spam. Give a risk rating (Low / Medium / High) and the exact patterns that worry you:",
-			["Make it faster"] = "Optimize this for performance (fewer allocations, no busy loops, cache lookups). Show the code and explain the gains:",
-			["Convert to Luau"] = "Convert this code to clean Roblox Luau and explain any differences:",
-			["Write tests"] = "Write small test cases (as Luau asserts) for this code:",
-		}
-		local actNames = { "Explain", "Find and fix errors", "Review", "Refactor", "Add comments", "Security scan (AI)", "Make it faster", "Convert to Luau", "Write tests" }
-		local act = "Explain"
-		AI:Dropdown({ Name = "AI action", Options = actNames, Default = "Explain", Callback = function(v)
-			act = v
-		end })
-		local function labCode()
-			local c = lab:Get() or ""
-			if not c:match("%S") then
-				Win:Notify({ Title = "Code lab", Text = "Put some code in the box first.", Type = "warn" })
-				return nil
-			end
-			return c
-		end
-		AI:Button({ Name = "Ask AI about this code", Description = "Uses the action above", Callback = function()
-			local c = labCode()
-			if c then
-				local n = select(2, c:gsub("\n", "\n")) + 1
-				chat:Add("user", act .. " (" .. n .. " lines from the Code lab)")
-				send(ACTIONS[act] .. "\n```lua\n" .. c .. "\n```")
-			end
-		end })
-		AI:Button({ Name = "Check syntax (offline)", Description = "Finds the broken line without the AI", Callback = function()
-			local c = labCode()
-			if not c then
-				return
-			end
-			if type(loadstring) ~= "function" then
-				Win:Notify({ Title = "Can't check", Text = "This executor has no loadstring.", Type = "warn" })
-				return
-			end
-			local fn, err = loadstring(c)
-			if fn then
-				chat:Add("bot", "No syntax errors found. The code compiles.", { Instant = true })
-			else
-				local ln = tonumber(tostring(err):match(":(%d+):"))
-				local lines = {}
-				for l in (c .. "\n"):gmatch("(.-)\n") do
-					lines[#lines + 1] = l
-				end
-				local msg = "**Syntax error**" .. (ln and (" on line " .. ln) or "") .. "\n`" .. tostring(err):gsub("^.-:%d+:%s*", "") .. "`"
-				if ln and lines[ln] then
-					msg ..= "\n```lua\n>> " .. lines[ln] .. "\n```"
-				end
-				chat:Add("bot", msg, { Instant = true, Error = true })
-			end
-		end })
-		local function formatLua(src)
-			local out, lvl = {}, 0
-			for line in (src .. "\n"):gmatch("(.-)\n") do
-				local t = line:gsub("^%s+", ""):gsub("%s+$", "")
-				if t == "" then
-					out[#out + 1] = ""
-				else
-					local first = t:match("^(%a+)")
-					if first == "end" or first == "else" or first == "elseif" or first == "until" or t:match("^[%)%}%]]") then
-						lvl = math.max(0, lvl - 1)
-					end
-					out[#out + 1] = string.rep("\t", lvl) .. t
-					local s = t:gsub("%-%-.*$", "")
-					local inc = false
-					if first == "else" or first == "elseif" then
-						inc = true
-					elseif s:match("%f[%w]then%s*$") or s:match("%f[%w]do%s*$") or s:match("%f[%w]repeat%s*$") then
-						inc = true
-					elseif s:match("%f[%w]function%f[%W]") and not s:match("%f[%w]end[%s%)%,;]*$") then
-						inc = true
-					elseif s:match("[%{%(]%s*$") then
-						inc = true
-					end
-					if inc then
-						lvl += 1
-					end
-				end
-			end
-			return table.concat(out, "\n")
-		end
-		AI:Button({ Name = "Format code", Description = "Tidies the indentation", Callback = function()
-			local c = labCode()
-			if c then
-				lab:Set(formatLua(c))
-				Win:Notify({ Title = "Formatted", Type = "success", Duration = 2 })
-			end
-		end })
-		local RISKS = {
-			{ "discord%.com/api/webhooks", "sends data to a Discord webhook", 3 },
-			{ "webhook", "mentions a webhook", 2 },
-			{ "roblosecurity", "touches the login cookie (account theft)", 3 },
-			{ "loadstring%s*%(%s*game:httpget", "runs code downloaded from the internet", 2 },
-			{ "httpget", "downloads from the internet", 1 },
-			{ "request%s*%(", "sends web requests", 1 },
-			{ "setclipboard", "writes to your clipboard", 1 },
-			{ "getfenv", "reads the environment (often used to hide things)", 1 },
-			{ "string%.char", "builds text from numbers (common in obfuscation)", 1 },
-			{ "\\%d%d?%d?\\%d%d?%d?\\%d%d?%d?", "heavily escaped text (obfuscation)", 2 },
-			{ "fireserver", "fires remotes (can be abused)", 1 },
-			{ "%.kick", "kicks players", 1 },
-			{ "password", "mentions passwords", 2 },
-			{ "token", "mentions tokens", 1 },
-			{ "while%s+true%s+do%s*\n?%s*[^\n]*\n?%s*end", "a loop with no wait (can freeze the game)", 2 },
-		}
-		AI:Button({ Name = "Security scan (offline)", Description = "Checks for risky patterns, no AI needed", Callback = function()
-			local c = labCode()
-			if not c then
-				return
-			end
-			local low, found, score = c:lower(), {}, 0
-			for _, r in ipairs(RISKS) do
-				local n = select(2, low:gsub(r[1], ""))
-				if n > 0 then
-					found[#found + 1] = "- " .. r[2] .. " (" .. n .. "x)"
-					score += r[3]
-				end
-			end
-			local level = score >= 5 and "HIGH" or score >= 2 and "MEDIUM" or "LOW"
-			chat:Add("bot", "**Security scan: " .. level .. " risk**\n" .. (#found > 0 and table.concat(found, "\n") or "Nothing suspicious found.") .. "\nThis only checks patterns. Ask the AI to review it for a deeper look.", { Instant = true, Error = level == "HIGH" })
-		end })
-
-		-- ---------- more AI commands: type them in the chat
-		AITOOLS.fix = { prompt = "Find and fix the bug or error in this. Say what was wrong in one line, then give the corrected code in a ```lua block.\n%s", hint = "<code or error message>", think = true }
-		AITOOLS.gen = { prompt = "Write a complete, working Roblox Luau script for: %s. It runs client-side in an executor. Clean structure, short comments, one ```lua block, then 2 lines on how to use it.", hint = "<what the script should do>", think = true }
-		AITOOLS.review = { prompt = "Review this Luau like a senior engineer: the 3 biggest problems, 2 good things, then a short improved version.\n%s", hint = "<code>", think = true }
-		AITOOLS.refactor = { prompt = "Refactor this for readability and speed without changing behaviour. New code in a ```lua block, then 3 bullets on what changed.\n%s", hint = "<code>", think = true }
-		AITOOLS.debug = { prompt = "Act as my debugging assistant. For this problem list the most likely causes, ranked, and the quickest test for each: %s", hint = "<what goes wrong>", think = true }
-		AITOOLS.secure = { prompt = "Security scan this script: webhooks, cookie or token stealing, hidden loadstring/HttpGet, obfuscation, remote spam, account risks. Give a risk rating (Low/Medium/High) and the exact patterns that worry you.\n%s", hint = "<code>", think = true }
-		AITOOLS.comment = { prompt = "Add clear, short comments to this code and return it in a ```lua block.\n%s", hint = "<code>" }
-		AITOOLS.docs = { prompt = "Look up the official Roblox documentation for: %s. Give the key API, a tiny example, and one gotcha.", hint = "<API or topic>", web = true }
-		AITOOLS.tips = { prompt = "Give me 5 best-practice tips for writing safe, fast Luau for executors, one line each. Topic (optional): %s" }
-		AITOOLS.tutor = { prompt = "Be my tutor on: %s. Start lesson 1: simple words, one tiny example, then one exercise. Wait for my answer before going on.", hint = "<topic>" }
-		AITOOLS.design = { prompt = "Be my creative design assistant for: %s. Give a color palette (hex codes), a layout idea, 3 details that make it feel premium, and one bold surprising touch.", hint = "<what to design>" }
-		AITOOLS.ideas = { prompt = "Give me 5 bizarre but buildable ideas about: %s. One line each, make them specific.", hint = "<topic>" }
-
-		AI:Section("Brain")
-		AI:Toggle({ Name = "Think deeper", Description = "Slower, better on hard problems", Flag = "aiDeep", Callback = function(v)
-			opt.deep = v
-		end })
-		AI:Toggle({ Name = "Live web", Description = "Searches the web for fresh facts (say \"don't search\" to skip it for one question)", Default = true, Flag = "aiWeb", Callback = function(v)
-			opt.web = v
-		end })
-		AI:Toggle({ Name = "Double-check answers", Description = "Reviews and fixes its own answer first", Flag = "aiRefine", Callback = function(v)
-			opt.refine = v
-		end })
-		AI:Toggle({ Name = "Show its steps", Description = "Explains how it got the answer", Flag = "aiReason", Callback = function(v)
-			opt.reason = v
-		end })
-		AI:Section("Voice")
-		AI:Toggle({ Name = "Voice (talk back)", Description = "I read my answers out loud", Flag = "aiVoice", Callback = function(on)
-			voiceOn = on
-			if not on then
-				stopVoice()
-			end
-		end })
-		AI:Dropdown({ Name = "Voice (boy / bot)", Options = RebelUI.VoicePresets, Default = "Handsome Boy", Flag = "aiVoicePreset", Callback = function(v)
-			if VOICES[v] then
-				voicePreset = v
-			end
-		end })
-		AI:Slider({ Name = "Voice pitch", Description = "Lower = deeper boy voice", Min = 0.7, Max = 1.3, Default = 1, Step = 0.05, Flag = "aiVoicePitch", Callback = function(v)
-			voicePitch = v
-		end })
-		AI:Slider({ Name = "Robot level", Description = "Adds the bot sound", Min = 0, Max = 1, Default = 0, Step = 0.1, Flag = "aiVoiceRobot", Callback = function(v)
-			voiceRobot = v
-		end })
-		AI:Toggle({ Name = "Echo", Flag = "aiVoiceEcho", Callback = function(on)
-			voiceEcho = on
-		end })
-		AI:Slider({ Name = "Voice speed", Min = 0.7, Max = 1.6, Default = 1, Step = 0.1, Flag = "aiVoiceSpeed", Callback = function(v)
-			voiceSpeed = v
-		end })
-		AI:Dropdown({ Name = "Fallback language", Options = { "en", "es", "fr", "de", "pt", "it", "ja", "ko", "ru", "tr", "ar", "id" }, Default = "en", Flag = "aiVoiceLang", Callback = function(v)
-			voiceLang = tostring(v)
-		end })
-		AI:Button({ Name = "Test the voice", Description = "Plays a short sample with these settings", Callback = function()
-			if not speak("Hey, I'm Rebel AI. How do I sound? Pick the voice you like best.") then
-				Win:Notify({ Title = "Voice", Text = "This executor can't play sound files.", Type = "warn" })
-			end
-		end })
-		AI:Button({ Name = "Stop talking", Callback = stopVoice })
-		AI:Section("Personality")
-		AI:Dropdown({ Name = "Style", Options = { "Rebel (default)", "Chaos gremlin", "Scripter", "Teacher", "Sarcastic", "Professional", "Roleplay", "Tutor", "Designer", "Debugger" }, Default = "Rebel (default)", Flag = "aiPersona", Callback = function(v)
-			persona = PERSONAS[v] and v or persona
-		end })
-		AI:Dropdown({ Name = "Reply language", Options = { "Auto (match the player)", "English", "Malay", "Indonesian", "Spanish", "French", "German", "Portuguese", "Arabic", "Hindi", "Japanese", "Korean", "Chinese", "Turkish", "Russian" }, Default = "Auto (match the player)", Flag = "aiLang", Callback = function(v)
-			replyLang = v
-		end })
-		AI:Button({ Name = "Forget what you know about me", Risky = true, Callback = function()
-			memory = ""
-			pcall(function()
-				if delfile and isfile and isfile(MEMFILE) then
-					delfile(MEMFILE)
-				end
-			end)
-			Win:Notify({ Title = "Rebel AI", Text = "Memory cleared.", Type = "success" })
-		end })
-
-		AI:Section("Cool stuff")
-		AI:Toggle({ Name = "Rainbow rings", Description = "Every glowing edge turns rainbow", Flag = "aiRainbow", Callback = function(on)
-			Win:SetRainbow(on)
-		end })
-		AI:Button({ Name = "Theme from my avatar", Description = "Colors the panel like your character", Callback = function()
-			pcall(function()
-				Win:ThemeFromAvatar()
-			end)
-		end })
-		AI:Button({ Name = "Roast my username", Description = "Friendly, I promise", Callback = function()
-			chat:Submit("Roast my Roblox username '" .. lp.Name .. "' in two funny, friendly sentences.")
-		end })
-		AI:Button({ Name = "Surprise me", Description = "A random fun fact, riddle or mini-game", Callback = function()
-			local pick = { "Tell me a mind-blowing fact I've never heard, in 2 sentences.", "Give me a clever riddle and wait for my answer.", "Let's play a 5-question trivia game, one question at a time, starting now.", "Start a tiny text adventure set in a haunted Roblox lobby and ask what I do." }
-			chat:Submit(pick[math.random(#pick)])
-		end })
-
-		if pendingGreeting then
-			chat:Add("bot", pendingGreeting, { Speed = 120 })
-			pendingGreeting = nil
-		end
-	end
-
-	local warm = false
-	-- the AI loading video: plays on top while the bot wakes up (3.5 to 7 seconds)
-	api.Boot = function(video)
-		if not video then
-			return
-		end
-		task.spawn(function()
-			-- a small card at the bottom of the screen (it never covers the game and a tap closes it)
-			local ok, card = pcall(function()
-				local c = new("Frame", {
-					AnchorPoint = Vector2.new(0.5, 1),
-					Position = UDim2.new(0.5, 0, 1, -16),
-					Size = UDim2.fromOffset(250, 160),
-					BackgroundColor3 = Color3.fromRGB(10, 6, 9),
-					BorderSizePixel = 0,
-					Active = true,
-					ZIndex = 60,
-				}, Win.Gui)
-				corner(c, 10)
-				Win:_ring(new("UIStroke", { Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, c))
-				local vf = new("VideoFrame", { Position = UDim2.fromOffset(6, 6), Size = UDim2.new(1, -12, 0, 118), BackgroundColor3 = Color3.new(0, 0, 0), Looped = true, Volume = 0, Video = video, ZIndex = 61 }, c)
-				vf.Playing = true
-				pcall(function()
-					vf:Play()
-				end)
-				task.delay(8, function()
-					pcall(function()
-						if vf.Parent and not vf.IsLoaded then
-							vf:Destroy()
-						end
-					end)
-				end)
-				local l = new("TextLabel", { Position = UDim2.fromOffset(6, 128), Size = UDim2.new(1, -12, 0, 26), BackgroundTransparency = 1, Text = "Waking up Rebel AI...", TextSize = 12, Font = Enum.Font.GothamBold, TextColor3 = Color3.new(1, 1, 1), ZIndex = 61 }, c)
-				c.InputBegan:Connect(function(i)
-					if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-						c:Destroy()
-					end
-				end)
-				return { c, l }
-			end)
-			if not ok or not card then
-				return
-			end
-			local t0 = os.clock()
-			while card[1].Parent and ((os.clock() - t0 < 3.5) or (not warm and os.clock() - t0 < 7)) do
-				task.wait(0.1)
-			end
-			if card[1].Parent then
-				card[2].Text = "Ready!"
-				task.wait(0.4)
-				card[1]:Destroy()
-			end
-		end)
-	end
-
-	-- wake up the connection, then greet the player by name with something fresh every time
-	task.spawn(function()
-		local hour = tonumber(os.date("%H")) or 12
-		local part = hour < 5 and "very late at night" or hour < 12 and "morning" or hour < 18 and "afternoon" or "evening"
-		local g = ask({ { role = "user", parts = { { text = "Greet the player '" .. lp.DisplayName .. "' in ONE short, fun, original sentence. It is " .. part .. ". No questions. No tags." } } } }, { max = 60, temp = 1.2 })
-		warm = true
-		if g then
-			g = g:gsub("%[%[.-%]%]", "")
-			if chat then
-				chat:Add("bot", g, { Speed = 120 })
-			else
-				pendingGreeting = g
-			end
-		end
-	end)
-	api.Ask = ask
-	-- api.Chat builds the page on first use (the page also builds itself when you open the tab)
-	setmetatable(api, {
-		__index = function(_, k)
-			if k == "Chat" then
-				if buildUI then
-					buildUI()
-				end
-				return chat
-			end
-		end,
-	})
-	if Win.CurrentTab == AI and buildUI then -- the AI tab was the first tab and is already open: fill it now
-		buildUI()
-	end
-	return AI, api
-end
-
 -- ============================================================ polish: watermark, command palette, stat tiles
 -- Win:CreateWatermark({ Text = "Rebelwar" })      a small pill in the corner: name + FPS + ping. :SetText(t) :Show(bool) :Destroy()
 -- Win:SetPalette({ Key = Enum.KeyCode.K })        Ctrl+K (or Win:OpenPalette()) opens a search that jumps to any tab or runs any command
@@ -10684,7 +9598,8 @@ function Tab:Activity(o)
 	head.Size = UDim2.new(1, 0, 0, 22)
 	head.LayoutOrder = 0
 	local TITLES = { command = "Ran a command", search = "Searched the web", read = "Read a page" }
-	local counts = { command = 0, search = 0, read = 0 }
+	local NOTE = { success = { "OK", Color3.fromRGB(70, 200, 110) }, warn = { "!", Color3.fromRGB(240, 190, 60) }, error = { "X", Color3.fromRGB(235, 70, 60) }, info = { "i", Color3.fromRGB(90, 160, 240) } }
+	local counts = { command = 0, search = 0, read = 0, success = 0, warn = 0, error = 0, info = 0 }
 	local obj, n, live = {}, 0, nil
 	local function summary()
 		local parts = {}
@@ -10696,6 +9611,16 @@ function Tab:Activity(o)
 		end
 		if counts.command > 0 then
 			parts[#parts + 1] = "ran " .. counts.command .. (counts.command > 1 and " commands" or " command")
+		end
+		local alerts = counts.success + counts.warn + counts.error + counts.info
+		if alerts > 0 then
+			parts[#parts + 1] = alerts .. (alerts > 1 and " alerts" or " alert")
+			if counts.error > 0 then
+				parts[#parts + 1] = counts.error .. (counts.error > 1 and " errors" or " error")
+			end
+			if counts.warn > 0 then
+				parts[#parts + 1] = counts.warn .. (counts.warn > 1 and " warnings" or " warning")
+			end
 		end
 		local s = #parts > 0 and table.concat(parts, ", ") or ""
 		if s ~= "" then
@@ -10709,7 +9634,12 @@ function Tab:Activity(o)
 		new("UIPadding", { PaddingBottom = UDim.new(0, 8) }, e)
 		local rail = new("Frame", { Position = UDim2.fromOffset(10, 0), Size = UDim2.new(0, 1, 1, 8), BackgroundColor3 = win.Theme.Dark, BorderSizePixel = 0 }, e)
 		local mark
-		if kind == "command" or kind == "search" or kind == "read" then
+		if NOTE[kind] then
+			local col = NOTE[kind][2]
+			mark = new("TextLabel", { Position = UDim2.fromOffset(0, 0), Size = UDim2.fromOffset(22, 22), BackgroundColor3 = col:Lerp(Color3.new(0, 0, 0), 0.7), BorderSizePixel = 0, Text = NOTE[kind][1], Font = Enum.Font.GothamBlack, TextSize = 10, TextColor3 = col, ZIndex = 2 }, e)
+			corner(mark, 6)
+			new("UIStroke", { Color = col, Thickness = 1, Transparency = 0.3 }, mark)
+		elseif kind == "command" or kind == "search" or kind == "read" then
 			mark = new("TextLabel", { Position = UDim2.fromOffset(0, 0), Size = UDim2.fromOffset(22, 22), BackgroundColor3 = win.Theme.Inset, BorderSizePixel = 0, Text = kind == "command" and ">_" or (kind == "search" and "?" or "="), Font = Enum.Font.Code, TextSize = 10, TextColor3 = C.Text, ZIndex = 2 }, e)
 			corner(mark, 6)
 			new("UIStroke", { Color = win.Theme.Dark, Thickness = 1 }, mark)
@@ -10793,7 +9723,7 @@ function Tab:Activity(o)
 				c:Destroy()
 			end
 		end
-		counts = { command = 0, search = 0, read = 0 }
+		counts = { command = 0, search = 0, read = 0, success = 0, warn = 0, error = 0, info = 0 }
 		n = 0
 		summary()
 	end
@@ -11646,19 +10576,47 @@ function Window:CreateNotificationsTab(o)
 	o = o or {}
 	local win = self
 	local unread = 0
-	local con
+	local act, stats
+	local total, errs, warns = 0, 0, 0
 	local tab
+	local function show(n)
+		if not act then
+			return
+		end
+		local kind = (n.Type == "success" or n.Type == "warn" or n.Type == "error") and n.Type or "info"
+		act:Add({ Kind = kind, Title = tostring(n.Title or (kind == "error" and "Error" or kind == "warn" and "Warning" or kind == "success" and "Done" or "Notice")), Detail = n.Time .. "  " .. n.Text })
+		total += 1
+		errs += kind == "error" and 1 or 0
+		warns += kind == "warn" and 1 or 0
+		if stats then
+			stats:Set("Alerts", total)
+			stats:Set("Errors", errs)
+			stats:Set("Warnings", warns)
+		end
+	end
 	tab = win:CreateTab({
 		Name = o.Name or "Alerts",
 		Icon = o.Icon,
+		Title = "SUMMARY",
+		Description = "Everything the panel told you, newest at the bottom. The red glow means it is listening.",
 		Build = function(t)
-			con = t:Console({ Name = "Notifications", Height = o.Height or 170 })
+			stats = t:Stats({ { Name = "Alerts", Value = 0 }, { Name = "Errors", Value = 0 }, { Name = "Warnings", Value = 0 } })
+			act = t:Activity({ Title = "Summary" })
+			act:Working("Listening for alerts")
 			for _, n in ipairs(win._noteLog or {}) do
-				con:Log("[" .. n.Time .. "] " .. (n.Title and (tostring(n.Title) .. ": ") or "") .. n.Text, n.Type or "info")
+				show(n)
 			end
-			t:Button({ Name = "Clear history", Callback = function()
+			t:Button({ Name = "Clear the summary", Callback = function()
 				win:ClearNotifications()
-				con:Clear()
+				act:Clear()
+				act:Working("Listening for alerts")
+				total, errs, warns = 0, 0, 0
+				stats:Set("Alerts", 0)
+				stats:Set("Errors", 0)
+				stats:Set("Warnings", 0)
+			end })
+			t:Button({ Name = "Send a test alert", Callback = function()
+				win:Notify({ Title = "Test", Text = "This alert shows up in the summary.", Type = ({ "success", "warn", "error", "info" })[math.random(4)] })
 			end })
 		end,
 	})
@@ -11667,9 +10625,7 @@ function Window:CreateNotificationsTab(o)
 		if prev then
 			pcall(prev, n)
 		end
-		if con then
-			con:Log("[" .. n.Time .. "] " .. (n.Title and (tostring(n.Title) .. ": ") or "") .. n.Text, n.Type or "info")
-		end
+		show(n)
 		if win.CurrentTab ~= tab then
 			unread += 1
 			tab:SetBadge(unread)
@@ -11840,6 +10796,102 @@ function Tab:Typewriter(o)
 	end
 	obj:Say(o.Text or "")
 	return register(self, {}, obj, "Typewriter")
+end
+
+-- RebelUI:Activate({ Mode = "Cover" | "Logo", Video, Logo, Title, Text, Button, Theme, Timeout, BoomText })
+-- A big glowing Activate button. "Cover" fills the screen (video behind it if you give one), "Logo" is just your logo + button.
+-- Tap = padlock opens, boom, then the call returns true. Returns false if the switch is off or Timeout runs out.
+function RebelUI:Activate(o)
+	o = o or {}
+	if RebelUI._off then
+		return false
+	end
+	local theme = THEMES[o.Theme or "Red"] or THEMES.Red
+	local F = RebelUI.Fancy
+	local cover = (o.Mode or "Cover") ~= "Logo"
+	local name = o.Name or "RebelUI_Activate"
+	clearOld(name)
+	local sg = new("ScreenGui", { Name = name, ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 9990, ZIndexBehavior = Enum.ZIndexBehavior.Sibling })
+	pcall(function()
+		sg.ScreenInsets = Enum.ScreenInsets.None
+	end)
+	sg.Parent = pickParent()
+	local root = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(6, 3, 5), BackgroundTransparency = cover and 0 or 0.35, BorderSizePixel = 0, Active = true, ZIndex = 1 }, sg)
+	if cover and o.Video then
+		pcall(function()
+			local src = o.Video
+			if not tostring(src):find("^rbxasset") and not tostring(src):find("^rbxassetid") then
+				src = RebelUI.ResolveMedia(o.Video, o.VideoFile)
+			end
+			if src then
+				local vf = new("VideoFrame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Looped = true, Volume = 0, Video = src, ZIndex = 2 }, root)
+				vf.Playing = true
+				new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.45, BorderSizePixel = 0, ZIndex = 3 }, root)
+			end
+		end)
+	end
+	local box = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(300, 300), BackgroundTransparency = 1, ZIndex = 5 }, root)
+	local y = 0
+	if o.Logo then
+		local lg = new("ImageLabel", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 0), Size = UDim2.fromOffset(96, 96), BackgroundTransparency = 1, Image = asset(o.Logo), ScaleType = Enum.ScaleType.Fit, ZIndex = 6 }, box)
+		corner(lg, 20)
+		RebelUI._iconFix(lg, o.Logo)
+		pcall(RebelUI._imageEffect, lg, "Float", theme)
+		y = 108
+	end
+	local title = new("TextLabel", { Position = UDim2.fromOffset(0, y), Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1, Text = F(o.Title or "Rebelwar", "Bold"), TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBlack, TextSize = 30, ZIndex = 6 }, box)
+	new("TextLabel", { Position = UDim2.fromOffset(0, y + 42), Size = UDim2.new(1, 0, 0, 20), BackgroundTransparency = 1, Text = o.Text or F("tap to activate", "Italic"), TextColor3 = Color3.fromRGB(210, 210, 220), Font = Enum.Font.GothamMedium, TextSize = 14, ZIndex = 6 }, box)
+	local btn = new("TextButton", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, y + 84), Size = UDim2.fromOffset(240, 58), BackgroundColor3 = theme.Glow, AutoButtonColor = false, Text = "", ZIndex = 6 }, box)
+	corner(btn, 14)
+	local stroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2, Transparency = 0.4 }, btn)
+	local lock = new("ImageLabel", { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 14, 0.5, 0), Size = UDim2.fromOffset(30, 30), BackgroundTransparency = 1, Image = asset(RebelUI.Icons.padlock), ZIndex = 7 }, btn)
+	corner(lock, 8)
+	RebelUI._iconFix(lock, RebelUI.Icons.padlock)
+	local lbl = new("TextLabel", { Position = UDim2.fromOffset(52, 0), Size = UDim2.new(1, -60, 1, 0), BackgroundTransparency = 1, Text = o.Button or F("ACTIVATE", "Bold"), TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBlack, TextSize = 20, ZIndex = 7 }, btn)
+	local sc = new("UIScale", { Scale = 1 }, btn)
+	pcall(function()
+		TweenService:Create(sc, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Scale = 1.05 }):Play()
+		TweenService:Create(stroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Transparency = 0.9 }):Play()
+	end)
+	local done, result = false, nil
+	local function finish(val)
+		if done then
+			return
+		end
+		done, result = true, val
+	end
+	btn.Activated:Connect(function()
+		if done then
+			return
+		end
+		pcall(function()
+			lock.Image = asset(RebelUI.Icons.openpadlock)
+		end)
+		lbl.Text = F("ACTIVATED", "Bold")
+		pcall(RebelUI.Boom, sg, { Color = theme.Glow, Count = 40, Text = o.BoomText or F("LETS GO!", "Bold") })
+		task.delay(0.9, function()
+			finish(true)
+		end)
+	end)
+	if o.Timeout then
+		task.delay(o.Timeout, function()
+			finish(false)
+		end)
+	end
+	while not done do
+		task.wait(0.1)
+	end
+	pcall(function()
+		for _, d in ipairs(root:GetDescendants()) do
+			if d:IsA("TextLabel") then
+				tween(d, 0.4, { TextTransparency = 1 })
+			end
+		end
+		tween(root, 0.45, { BackgroundTransparency = 1 })
+	end)
+	task.wait(0.5)
+	sg:Destroy()
+	return result == true
 end
 
 return RebelUI
