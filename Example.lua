@@ -102,11 +102,11 @@ local function keyGateOptions(save)
 		NoteIcon = "📌",
 		NoteColor = "Gold", -- Green, Blue, Red, Gold, Purple, Pink, Orange, Cyan, Gray or a Color3
 		Setup = SETUP, -- Auto / Mobile / PC: the key panel sizes itself for the device
-		Link = GET_KEY_LINK,
-		LinkName = "Get key (LootLabs)",
-		LinkColor = "Green",
+		Video = VIDEO, -- a silent looping video at the top-left of the card (set USE_VIDEOS = true above). nil = just the picture
+		ProviderStyle = "Row", -- "Row" = a picture button + its own colored Copy button per line, "Grid" = compact picture tiles
 		-- the four picture buttons (images load from the repo Assets folder). Put your own link in each one.
 		Providers = {
+			{ "LootLabs", GET_KEY_LINK }, -- picture loads from imgur
 			{ "Linkvertise", "https://linkvertise.com/your-link-here" },
 			{ "Platoboost", "https://auth.platoboost.com/your-link-here" },
 			{ "Rekonise", "https://rekonise.com/your-link-here" },
@@ -259,6 +259,12 @@ local function buildElements(Elements)
 	Elements:Chips({ "Legit", "Rage", "Closet" }, { Closable = true, Callback = function(name, what) Win:Notify({ Title = what, Text = name }) end })
 	local steps = Elements:Steps({ "Pick", "Tune", "Go" }, 1)
 	Elements:Button({ Name = "Next step", Callback = function() steps:Next() end })
+	-- more animation: a shimmering placeholder while loading, and text that types itself
+	Elements:Typewriter({ Text = "Rows rise in, tap squishes, numbers count up..." })
+	local skel = Elements:Skeleton({ Lines = 2 })
+	task.delay(3, function()
+		skel:Remove()
+	end)
 	-- a live "Summary" feed: finished steps, notes, and a red glowing step while something is still working
 	local feed = Elements:Activity({ Title = "Summary" })
 	Elements:Button({ Name = "Run the Summary demo", Description = "Red glow = still working", Callback = function()
@@ -534,21 +540,9 @@ if USE_AI then
 		Title = "🤖 REBEL AI",
 		-- No secret is in this file (it is public). Pick ONE:
 		Proxy = AI_PROXY, -- your own small server that holds the keys (see ai_proxy_worker.js), or
-		KeyFile = "RebelAI_keys.txt", -- a file in YOUR executor's workspace folder: one key per line, never uploaded
-		-- Built-in keys (stored backwards). They only work if you obfuscate this file before you share it. Remove them if you don't.
-		KeysReversed = true,
-		Keys = {
-			"Qe7VCPk2tG-5--dMYlwo2D9D7kPPrVs8CCf_xj2dSVkJ6NR8bA.QA",
-			"gIJbzk6XotUerVQy1HuG-snKir_9kQcKZgbxfxZISbBK6NR8bA.QA",
-			"g2RSc8fHu0h6IyGPInRMLW22_cNZsvUiEF79MGO8hUZJ6NR8bA.QA",
-			"gcrylMA30qSQpkAHDqGmpwB8ZgGwzjMhVec8fJOto8vK6NR8bA.QA",
-			"w7QVde22yW_oF4b-p79RvRaxDCGi5Xp-W7V4DO1NLjkI6NR8bA.QA",
-			"ADi6Cbk_xHKvQlyt5-tJwepDUQ7HIAY9N3s7R3YDkMHJ6NR8bA.QA",
-			"gVI5dhdJ35FkDZBbiPBl4_w8AtlREmcBAKTTAW4HRBfK6NR8bA.QA",
-			"w8pGU-XAIOqIdbSDTqjRk1fU2bUdo8BknRtP4m5HctDI6NR8bA.QA",
-			"wzEk3D0TFqBq14rtF-Q1M-iO4J-jwNSuPQuaruoXN7JK6NR8bA.QA",
-			"gN32JjDlTJxCUzuAQ_XmGtH2v29wy1qRvohynudfZkkK6NR8bA.QA",
-		},
+		-- ON HOLD: the old keys are not used any more (not in this file, and their old key file is no longer read).
+		-- When you have new keys, put them one per line in this NEW file inside your executor's workspace folder:
+		KeyFile = "RebelAI_newkeys.txt",
 	})
 end
 stage("Building the tools tab...", 0.85)
