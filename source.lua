@@ -489,6 +489,181 @@ local function resolveMedia(src, file)
 end
 RebelUI.ResolveMedia = resolveMedia
 
+-- ============================================================ device, images, developer switch
+-- RebelUI.Device() -> "Mobile" (touch, no keyboard) or "PC". Windows, key panels and buttons size themselves from it.
+function RebelUI.Device()
+	local touch, kb = false, false
+	pcall(function()
+		touch = UIS.TouchEnabled
+		kb = UIS.KeyboardEnabled
+	end)
+	if touch and not kb then
+		return "Mobile"
+	end
+	return "PC"
+end
+-- RebelUI.Setup = "Auto" | "Mobile" | "PC": force a setup (Auto = detect). Read it with RebelUI.GetSetup().
+RebelUI.Setup = "Auto"
+function RebelUI.GetSetup(pref)
+	pref = pref or RebelUI.Setup
+	if pref == "Mobile" or pref == "PC" then
+		return pref
+	end
+	return RebelUI.Device()
+end
+
+-- Roblox can't show a web picture directly. This downloads it once, keeps it in the workspace folder and returns a
+-- local asset you can put in any ImageLabel.Image. Numbers and rbxassetid:// strings are returned as they are.
+-- Returns nil when it can't (then show a color or text instead).
+local imgCache = {}
+function RebelUI.ResolveImage(src, file)
+	src = tostring(src or "")
+	if src == "" then
+		return nil
+	end
+	if not src:match("^https?://") then
+		return asset(src)
+	end
+	if imgCache[src] then
+		return imgCache[src]
+	end
+	local gca = getcustomasset or get_custom_asset
+	if not gca or type(writefile) ~= "function" then
+		return nil
+	end
+	if not file then
+		local h = 0
+		for i = 1, #src do
+			h = (h * 31 + src:byte(i)) % 1000000007
+		end
+		file = "RebelUI_img_" .. h .. ".png"
+	end
+	local function tryAsset()
+		if type(isfile) == "function" and isfile(file) then
+			local okS, sz = pcall(function()
+				return #readfile(file)
+			end)
+			if okS and sz > 200 then
+				local ok, a = pcall(gca, file)
+				if ok and a then
+					return a
+				end
+			end
+		end
+	end
+	local a = tryAsset()
+	if a then
+		imgCache[src] = a
+		return a
+	end
+	local req = (syn and syn.request) or request or http_request
+	local body
+	if req then
+		local ok, res = pcall(req, { Url = src, Method = "GET" })
+		if ok and res and type(res.Body) == "string" and (res.StatusCode == nil or res.StatusCode == 200) then
+			body = res.Body
+		end
+	end
+	if not body then
+		local ok, b = pcall(function()
+			return game:HttpGet(src)
+		end)
+		body = ok and type(b) == "string" and b or nil
+	end
+	-- a real picture starts with the PNG or JPEG signature, a web page does not
+	if body and #body > 200 and (body:sub(2, 4) == "PNG" or body:sub(1, 2) == "\255\216") then
+		pcall(writefile, file, body)
+		a = tryAsset()
+		if a then
+			imgCache[src] = a
+			return a
+		end
+	end
+	return nil
+end
+-- Put a picture in an ImageLabel/ImageButton from anything: asset id, rbxassetid://, or a web link (loads in the background).
+function RebelUI.SetImage(obj, src, onLoaded)
+	if src == nil or src == "" then
+		return
+	end
+	src = tostring(src)
+	if not src:match("^https?://") then
+		obj.Image = asset(src)
+		if onLoaded then
+			onLoaded(true)
+		end
+		return
+	end
+	task.spawn(function()
+		local a = RebelUI.ResolveImage(src)
+		if a then
+			pcall(function()
+				obj.Image = a
+			end)
+		end
+		if onLoaded then
+			onLoaded(a ~= nil)
+		end
+	end)
+end
+
+-- Developer switch. ON: the script works. OFF: it does nothing when someone runs it.
+--   local UI = loadstring(game:HttpGet(".../source.lua"))()
+--   if not UI:Switch({ On = true, Url = "https://.../switch.txt" }) then return end
+-- Url (optional): a text file you edit any time, saying on / off (also true/false/1/0/enabled/disabled), so you can shut
+-- the script off for everyone without re-uploading it. If the Url can't be read, FailOpen decides (default true = keep working).
+function RebelUI:Switch(o)
+	if type(o) == "boolean" then
+		o = { On = o }
+	end
+	o = o or {}
+	local on = o.On ~= false
+	if on and o.Url then
+		local ok, body = pcall(function()
+			return game:HttpGet(tostring(o.Url) .. (tostring(o.Url):find("?", 1, true) and "&" or "?") .. "t=" .. tostring(os.time()))
+		end)
+		if ok and type(body) == "string" then
+			local w = body:lower():match("^%s*([%a%d]+)")
+			if w == "off" or w == "false" or w == "0" or w == "disabled" or w == "no" or w == "stop" then
+				on = false
+			elseif w == "on" or w == "true" or w == "1" or w == "enabled" or w == "yes" then
+				on = true
+			elseif o.FailOpen == false then
+				on = false
+			end
+		elseif o.FailOpen == false then
+			on = false
+		end
+	end
+	RebelUI._off = not on
+	if not on then
+		warn("[" .. tostring(o.Name or "RebelUI") .. "] " .. tostring(o.Message or "This script is switched OFF by the developer."))
+		if o.Toast ~= false then
+			pcall(function()
+				pcall(function()
+					game:GetService("StarterGui"):SetCore("SendNotification", { Title = tostring(o.Name or "RebelUI"), Text = tostring(o.Message or "Switched OFF by the developer."), Duration = 5 })
+				end)
+			end)
+		end
+	end
+	return on
+end
+-- a quiet stand-in returned by CreateWindow while the switch is OFF, so a script that forgot to return keeps working without a panel
+local function quietStub()
+	local stub
+	stub = setmetatable({ Flags = {}, Open = false }, {
+		__index = function(_, k)
+			if k == "Flags" then
+				return {}
+			end
+			return function(self2, ...)
+				return stub
+			end
+		end,
+	})
+	return stub
+end
+
 -- ============================================================ loading screen
 local function fadeOut(root, dur)
 	local info = TweenInfo.new(dur, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
@@ -929,6 +1104,9 @@ end
 -- ============================================================ window
 function RebelUI:CreateWindow(o)
 	o = o or {}
+	if RebelUI._off then
+		return quietStub()
+	end
 	local win = setmetatable({
 		_conns = {},
 		_fns = {},
@@ -966,8 +1144,12 @@ function RebelUI:CreateWindow(o)
 	if vp.X < 200 or vp.Y < 150 then
 		vp = Vector2.new(800, 450) -- some executors report 0 right after joining
 	end
-	local width = math.floor(math.min(o.Width or 420, math.max(300, vp.X * 0.9)))
-	local height = math.floor(math.min(o.Height or 340, math.max(200, vp.Y * 0.85)))
+	-- Setup = "Auto" (detect), "Mobile" or "PC". Mobile: a compact panel and a big thumb-sized open button.
+	-- PC: a wider, taller panel. Width/Height you pass always win.
+	win.Setup = RebelUI.GetSetup(o.Setup)
+	local pc = win.Setup == "PC"
+	local width = math.floor(math.min(o.Width or (pc and 560 or 420), math.max(300, vp.X * (pc and 0.7 or 0.9))))
+	local height = math.floor(math.min(o.Height or (pc and 380 or 340), math.max(200, vp.Y * (pc and 0.78 or 0.85))))
 	win._baseSize = { width, height }
 
 	local gui = new("ScreenGui", {
@@ -1166,9 +1348,10 @@ function RebelUI:CreateWindow(o)
 	win._notes = notes
 
 	-- ---------- round button that opens the panel (only shown when there is no top bar)
+	local fabSize = pc and 44 or 54
 	local fab = new("TextButton", {
-		Position = UDim2.new(0, 12, 0.5, -22),
-		Size = UDim2.fromOffset(44, 44),
+		Position = UDim2.new(0, 12, 0.5, -fabSize // 2),
+		Size = UDim2.fromOffset(fabSize, fabSize),
 		Text = "",
 		BackgroundColor3 = Color3.new(1, 1, 1),
 		BorderSizePixel = 0,
@@ -1176,7 +1359,8 @@ function RebelUI:CreateWindow(o)
 		AutoButtonColor = false,
 		ZIndex = 20,
 	}, gui)
-	win._fabCorner = corner(fab, 22)
+	win._fabCorner = corner(fab, fabSize // 2)
+	win._fabSize = fabSize
 	local fabG = new("UIGradient", { Rotation = 90 }, fab)
 	local fabRing = new("UIStroke", { Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, fab)
 	win:_ring(fabRing)
@@ -1185,22 +1369,22 @@ function RebelUI:CreateWindow(o)
 			BackgroundTransparency = 1,
 			Size = UDim2.fromScale(1, 1),
 			Text = "R",
-			TextSize = 20,
+			TextSize = pc and 20 or 24,
 			Font = Enum.Font.GothamBlack,
 			TextColor3 = C.Text,
 			ZIndex = 21,
 		}, fab)
 	end
 	if o.Icon then
+		-- the picture fills the whole button (cropped, no empty edges) and follows the shape: circle or square
 		local fi = new("ImageLabel", {
 			BackgroundTransparency = 1,
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(0.5, 0.5),
-			Size = UDim2.fromOffset(28, 28),
-			Image = asset(o.Icon),
+			Size = UDim2.fromScale(1, 1),
+			ScaleType = Enum.ScaleType.Crop,
 			ZIndex = 21,
 		}, fab)
-		corner(fi, 14)
+		RebelUI.SetImage(fi, o.Icon)
+		win._fabImgCorner = corner(fi, fabSize // 2)
 	end
 	do
 		local down, moved, startPos, startMouse = false, 0, nil, nil
@@ -1427,6 +1611,12 @@ function RebelUI:CreateWindow(o)
 	if o.Trigger then
 		win:SetTrigger(o.Trigger)
 	end
+	if win.Setup == "Mobile" and win.EnableSwipe then
+		win:EnableSwipe()
+	end
+	if o.Ambient and win.SetAmbient then
+		win:SetAmbient(true)
+	end
 	return win
 end
 
@@ -1641,6 +1831,15 @@ function Window:Notify(o)
 		return { SetTitle = nop, SetText = nop, Progress = nop, Close = nop }
 	end
 	self._noteN = (self._noteN or 0) + 1
+	-- remember it: Window:GetNotifications(), or a Notifications tab with an unread badge (Window:CreateNotificationsTab)
+	self._noteLog = self._noteLog or {}
+	table.insert(self._noteLog, { Time = os.date("%H:%M:%S"), Title = o.Title, Text = tostring(o.Text or ""), Type = o.Type })
+	if #self._noteLog > 60 then
+		table.remove(self._noteLog, 1)
+	end
+	if self._onNote then
+		pcall(self._onNote, self._noteLog[#self._noteLog])
+	end
 	local dur = o.Duration or self.NotifyTime or 4
 	local kinds = { success = C.Green, warn = C.Yellow, error = C.Bad }
 	self:_playClick()
@@ -5050,13 +5249,15 @@ function Window:CreateBar(o)
 				if name == "Logo" then
 					if logo then
 						local img = new("ImageLabel", {
-							Size = UDim2.fromOffset(24, 24),
+							Size = UDim2.fromOffset(26, 26),
 							BackgroundTransparency = 1,
-							Image = asset(logo),
-							ScaleType = Enum.ScaleType.Fit,
+							ScaleType = Enum.ScaleType.Crop,
 							LayoutOrder = order * 2,
 						}, frame)
-						corner(img, 12)
+						RebelUI.SetImage(img, logo)
+						corner(img, o.LogoShape == "Square" and 6 or 13)
+						local ls = new("UIStroke", { Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, img)
+						win:_bind(ls, "Color", "Glow")
 						pulse(img)
 					else
 						local r = label(frame, "R", 17, C.Text, true)
@@ -6247,8 +6448,29 @@ end
 --   local ok = UI:KeyGate({ Title = "My Script", Keys = { "ABC-123" }, Link = "https://discord.gg/..." })
 --   if not ok then return end
 -- Use Check = function(key) return true/false end to ask your own server (for example an HttpGet).
+-- The four get-key buttons (pictures live in the repo Assets folder). Use them as Providers = { {"Linkvertise", url}, ... }
+local ASSET_BASE = "https://raw.githubusercontent.com/rizqadeeb38-dev/Rebelwar_UI/main/Assets/"
+RebelUI.Providers = {
+	linkvertise = { Label = "Linkvertise", Color = Color3.fromRGB(255, 106, 0), Image = ASSET_BASE .. "Linkvertise_Getkey.png" },
+	platoboost = { Label = "Platoboost", Color = Color3.fromRGB(104, 78, 235), Image = ASSET_BASE .. "Platoboast_Getkey.png" },
+	rekonise = { Label = "Rekonise", Color = Color3.fromRGB(28, 186, 166), Image = ASSET_BASE .. "Rekonise_Getkey.png" },
+	workink = { Label = "Work.ink", Color = Color3.fromRGB(47, 128, 237), Image = ASSET_BASE .. "Work.ink_Getkey.png" },
+}
+local function providerInfo(name)
+	local k = tostring(name or ""):lower():gsub("[^%w]", "")
+	if k == "platoboast" then
+		k = "platoboost"
+	end
+	return RebelUI.Providers[k]
+end
+
 function RebelUI:KeyGate(o)
 	o = o or {}
+	if RebelUI._off then
+		return false
+	end
+	local setup = RebelUI.GetSetup(o.Setup)
+	local pcSetup = setup == "PC"
 	local theme = THEMES[o.Theme or "Red"] or THEMES.Red
 	local clean = tostring(o.Name or o.Title or "RebelUI"):gsub("[^%w]", "")
 	local file = o.File or ("RebelUI_" .. (clean == "" and "Script" or clean) .. "_key.txt")
@@ -6309,8 +6531,8 @@ function RebelUI:KeyGate(o)
 	}, gui)
 	-- ---------- a wide card: picture on the left, the form on the right (one column when there is no picture)
 	local vp = (workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize) or Vector2.new(800, 450)
-	local LW = (o.Image or o.Logo) and (o.SideWidth or 210) or 0
-	local FW = o.FormWidth or 340
+	local LW = (o.Image or o.Logo) and (o.SideWidth or (pcSetup and 250 or 210)) or 0
+	local FW = o.FormWidth or (pcSetup and 430 or 340)
 	local CARD_W = LW + FW
 	local card = new("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
@@ -6528,6 +6750,99 @@ function RebelUI:KeyGate(o)
 		y = y + 40
 		i = i + n
 	end
+	-- get-key picture buttons (Linkvertise, Platoboost, Rekonise, Work.ink or your own: {Name, Link, Image, Color})
+	local provs = {}
+	for _, pdef in ipairs(o.Providers or {}) do
+		local nm, lk, img, col
+		if type(pdef) == "table" then
+			nm, lk, img, col = pdef.Name or pdef[1], pdef.Link or pdef[2], pdef.Image, pdef.Color
+		else
+			nm = pdef
+		end
+		local info = providerInfo(nm)
+		provs[#provs + 1] = {
+			Name = (info and info.Label) or tostring(nm),
+			Link = lk,
+			Image = img or (info and info.Image),
+			Color = col and pickColor(col, BTN.Gray) or (info and info.Color) or BTN.Gray,
+			Callback = type(pdef) == "table" and pdef.Callback or nil,
+		}
+	end
+	if #provs > 0 then
+		local cap = label(card, o.ProvidersText or "Get your key", 10, C.Dim, true)
+		cap.Position = UDim2.fromOffset(fx, y)
+		cap.Size = UDim2.fromOffset(fw, 14)
+		cap.ZIndex = 6
+		y = y + 17
+		local per = o.ProvidersPerRow or ((pcSetup and #provs >= 4) and 4 or 2)
+		local ph = pcSetup and 44 or 40
+		local pi = 1
+		while pi <= #provs do
+			local n = math.min(per, #provs - pi + 1)
+			local bw = math.floor((fw - (n - 1) * 6) / n)
+			for k = 0, n - 1 do
+				local def = provs[pi + k]
+				local px, py = fx + k * (bw + 6), y
+				local pb = new("TextButton", {
+					Position = UDim2.fromOffset(px, py),
+					Size = UDim2.fromOffset(bw, ph),
+					BackgroundColor3 = def.Color,
+					BorderSizePixel = 0,
+					Text = def.Name,
+					TextColor3 = Color3.new(1, 1, 1),
+					TextSize = 12,
+					Font = Enum.Font.GothamBlack,
+					AutoButtonColor = false,
+					ClipsDescendants = true,
+					ZIndex = 6,
+				}, card)
+				corner(pb, 9)
+				new("UIStroke", { Color = def.Color:Lerp(Color3.new(1, 1, 1), 0.4), Thickness = 1.2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, pb)
+				if def.Image then
+					-- the picture fills the whole button; if it can't load you still see the colored name
+					local pimg = new("ImageLabel", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ScaleType = Enum.ScaleType.Crop, ZIndex = 7 }, pb)
+					corner(pimg, 9)
+					RebelUI.SetImage(pimg, def.Image, function(okLoad)
+						if okLoad then
+							pcall(function()
+								pb.Text = ""
+							end)
+						else
+							pimg:Destroy()
+						end
+					end)
+				end
+				pb.MouseEnter:Connect(function()
+					tween(pb, 0.14, { Position = UDim2.fromOffset(px, py - 2), Size = UDim2.fromOffset(bw, ph + 2) }, Enum.EasingStyle.Back)
+				end)
+				pb.MouseLeave:Connect(function()
+					tween(pb, 0.14, { Position = UDim2.fromOffset(px, py), Size = UDim2.fromOffset(bw, ph) })
+				end)
+				pb.MouseButton1Down:Connect(function()
+					tween(pb, 0.08, { Position = UDim2.fromOffset(px + 2, py + 2), Size = UDim2.fromOffset(bw - 4, ph - 4) })
+				end)
+				pb.MouseButton1Up:Connect(function()
+					tween(pb, 0.12, { Position = UDim2.fromOffset(px, py), Size = UDim2.fromOffset(bw, ph) }, Enum.EasingStyle.Back)
+				end)
+				pb.MouseButton1Click:Connect(function()
+					if def.Callback then
+						task.spawn(def.Callback)
+					end
+					if def.Link then
+						local okc = type(setclipboard) == "function" and pcall(setclipboard, tostring(def.Link))
+						status.TextColor3 = C.Dim
+						status.Text = okc and (def.Name .. " link copied. Paste it in your browser.") or tostring(def.Link)
+					else
+						status.TextColor3 = C.Bad
+						status.Text = def.Name .. " has no link yet."
+					end
+				end)
+			end
+			y = y + ph + 6
+			pi = pi + n
+		end
+		y = y + 2
+	end
 	local foot = label(card, o.Footer or "", 9, C.Dim, false)
 	foot.Position = UDim2.fromOffset(fx, y)
 	foot.Size = UDim2.fromOffset(fw, 14)
@@ -6537,6 +6852,53 @@ function RebelUI:KeyGate(o)
 	tween(scl, 0.4, { Scale = fitScale(H) }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 
 	local result, savedKey
+	-- ---------- animation: the form slides in one row after another, a line draws under the title,
+	-- the ring pulses and a shine sweeps across the Continue button. Turn off with ReduceMotion = true.
+	if not o.ReduceMotion then
+		local rows = {}
+		for _, ch in ipairs(card:GetChildren()) do
+			local okP, ps = pcall(function()
+				return ch:IsA("GuiObject") and ch.Position
+			end)
+			if okP and typeof(ps) == "UDim2" and ch ~= closeB and ps.X.Scale == 0 and ps.X.Offset >= fx - 1 and ps.Y.Scale == 0 then
+				rows[#rows + 1] = ch
+			end
+		end
+		table.sort(rows, function(a, b)
+			return a.Position.Y.Offset < b.Position.Y.Offset
+		end)
+		for idx, ch in ipairs(rows) do
+			local final = ch.Position
+			ch.Position = UDim2.new(final.X.Scale, final.X.Offset + 36, final.Y.Scale, final.Y.Offset)
+			task.delay(0.12 + idx * 0.045, function()
+				tween(ch, 0.45, { Position = final }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+			end)
+		end
+		local lineF = new("Frame", { Position = UDim2.fromOffset(fx, 57), Size = UDim2.fromOffset(0, 2), BackgroundColor3 = theme.Glow, BorderSizePixel = 0, ZIndex = 6 }, card)
+		corner(lineF, 1)
+		task.delay(0.3, function()
+			tween(lineF, 0.7, { Size = UDim2.fromOffset(math.floor(fw * 0.45), 2) }, Enum.EasingStyle.Quint)
+		end)
+		local shine = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(-0.3, 0.5), Size = UDim2.new(0, 30, 1.6, 0), Rotation = 20, BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.78, BorderSizePixel = 0, ZIndex = 9 }, go)
+		go.ClipsDescendants = true
+		task.spawn(function()
+			task.wait(0.9)
+			local pulseOut = true
+			while gui.Parent and result == nil do
+				shine.Position = UDim2.fromScale(-0.2, 0.5)
+				tween(shine, 0.8, { Position = UDim2.fromScale(1.2, 0.5) }, Enum.EasingStyle.Quad)
+				tween(ring, 0.9, { Thickness = pulseOut and 3.2 or 2 }, Enum.EasingStyle.Sine)
+				pulseOut = not pulseOut
+				task.wait(1.8)
+			end
+		end)
+		if o.OpenBoom ~= false then
+			task.delay(0.28, function()
+				pcall(RebelUI.Boom, gui, { Color = theme.Glow, Count = 18 })
+			end)
+		end
+	end
+
 	local busy = false
 	local tries = 0
 	local function submit()
@@ -6570,6 +6932,14 @@ function RebelUI:KeyGate(o)
 				tries += 1
 				status.TextColor3 = C.Bad
 				status.Text = k == "" and "Type your key first." or "That key is not right. Try again."
+				if not o.ReduceMotion then
+					task.spawn(function()
+						for _, dx in ipairs({ -9, 9, -6, 6, 0 }) do
+							card.Position = UDim2.new(0.5, dx, 0.5, 0)
+							task.wait(0.04)
+						end
+					end)
+				end
 				if o.MaxTries and tries >= o.MaxTries then
 					task.wait(0.8)
 					result = false
@@ -6626,8 +6996,12 @@ function Window:SetTrigger(style, barOpts)
 			self._bar:Show(false)
 		end
 		self._hasBar = false
+		local rad = style == "Circle" and math.floor((self._fabSize or 44) / 2) or 8
 		if self._fabCorner then
-			self._fabCorner.CornerRadius = UDim.new(0, style == "Circle" and 22 or 8)
+			self._fabCorner.CornerRadius = UDim.new(0, rad)
+		end
+		if self._fabImgCorner then
+			self._fabImgCorner.CornerRadius = UDim.new(0, rad)
 		end
 		self._fab.Visible = not self.Open
 	end
@@ -8520,6 +8894,7 @@ function Window:CreateAITab(o)
 		"Talk like Claude: natural, warm, curious, honest and direct. Short paragraphs, plain words, no corporate filler, no lecturing, no begging for follow-ups.",
 		"Match the player's language and mood. Answer the actual question first, then add a spark of personality. Think carefully and be correct; if unsure, say so.",
 		"Keep replies compact (phones are small): usually under 120 words unless they ask for depth. Use **bold** and `code` sparingly. Code goes in fenced blocks.",
+		"How you work, every time: (1) Work out what the player really wants, including the unstated goal, and do exactly that: their format, length, language and limits beat your defaults. (2) If a missing detail would change the answer a lot, ask ONE short question instead of guessing; otherwise just answer. (3) Before you send, silently check it: facts, numbers, every step, and for code the syntax, variable names, that each Roblox API really exists, and that it runs on the client. Fix what is wrong before replying. (4) Never claim you did, ran or saw something you did not. If you are not sure, say so and say how to check. (5) Be kind and human: notice frustration or confusion and answer the person first, then the problem.",
 		"You love bizarre, original ideas: when asked for ideas, give surprising, specific, slightly absurd ones that could really be built or played (not generic lists).",
 		"You can help with Roblox, Luau, game ideas, school, life, jokes, stories, math, anything. Never invent facts about the game or the panel.",
 		"Hidden tags, put at the very end of a reply, never mention them: [[remember: one short fact about the player, only if it is durable and they said it]] and [[next: short follow-up 1 | short follow-up 2 | short follow-up 3]] (each under 28 characters, written as things the player might tap).",
@@ -8555,6 +8930,7 @@ function Window:CreateAITab(o)
 		pcall(function()
 			gname = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
 		end)
+		s ..= "\nThe player is on a " .. (RebelUI.GetSetup(Win and Win.Setup) == "Mobile" and "phone or tablet (keep replies short, tap-friendly, no wide tables)" or "PC (a little more detail is fine)") .. "."
 		s ..= "\nContext: the player is in " .. gname .. " with " .. #game:GetService("Players"):GetPlayers() .. " players."
 		if opt.reason then
 			s ..= "\nShow your reasoning briefly as numbered steps before the final answer, labelled **Steps** and **Answer**."
@@ -8658,7 +9034,19 @@ function Window:CreateAITab(o)
 		if goodKey and goodModel then
 			add(goodKey, goodModel)
 		end
-		for _, model in ipairs(MODELS) do
+		local order = {}
+		if o.hard then
+			-- harder questions (code, math, long): the stronger models go first
+			for _, m in ipairs(MODELS) do
+				if m:find("2.5-flash", 1, true) and not m:find("lite", 1, true) or m == "gemini-flash-latest" then
+					order[#order + 1] = m
+				end
+			end
+		end
+		for _, m in ipairs(MODELS) do
+			order[#order + 1] = m
+		end
+		for _, model in ipairs(order) do
 			for k = 0, #POOL - 1 do
 				add((keyStart - 1 + k) % #POOL + 1, model)
 			end
@@ -9185,7 +9573,26 @@ function Window:CreateAITab(o)
 			elseif it == "hello" then
 				reply = "Hey! I'm **Rebel AI**. What are we doing today?"
 			else
-				reply, err = ask(history, { think = deep and 1024 or 0, max = deep and 2400 or 900, web = opt.web or forceWeb })
+				reply, err = ask(history, { think = deep and 1024 or 0, max = deep and 2400 or 900, web = opt.web or forceWeb, hard = deep })
+				-- automatic double-check for Luau code: compile every ```lua block here (it is only compiled, never run).
+				-- A syntax error goes back to the AI once, with the exact error, so the code you get at least compiles.
+				if reply and deep and type(loadstring) == "function" then
+					local bad
+					for code in reply:gmatch("```lua\n(.-)```") do
+						local fn, cerr = loadstring(code)
+						if not fn and cerr then
+							bad = tostring(cerr)
+							break
+						end
+					end
+					if bad then
+						chat:SetStatus("Double-checking the code")
+						local fixedR = ask({ { role = "user", parts = { { text = "Your code answer has a syntax error: " .. bad .. "\nFix it and send the complete corrected answer again (same format, keep any [[...]] tags at the end).\n\nYour answer was:\n" .. reply } } } }, { think = 512, max = 2400, hard = true, timeout = 20 })
+						if fixedR then
+							reply = fixedR
+						end
+					end
+				end
 			end
 			if reply and opt.refine and #reply > 80 then
 				list = { "Double-checking my answer", "Hunting for mistakes", "Polishing it" }
@@ -10092,6 +10499,141 @@ function Tab:Timeline(events)
 	return register(self, {}, obj, "Timeline")
 end
 
+-- A "Summary" feed like an AI app shows while it works: finished steps ("Ran a command" + the command), notes,
+-- and one live step with a pulsing red glow dot and shimmering text while something is still running.
+--   local act = tab:Activity({ Title = "Summary" })
+--   act:Working("Sleuthing")                         -- red glow = still working
+--   act:Add({ Kind = "command", Detail = "cd /tmp && ls" })   -- Kind: command, search, read, note (or any word)
+--   act:Note("Adding a log of notifications.")
+--   act:Done()                                       -- the glow stops
+function Tab:Activity(o)
+	o = o or {}
+	local win = self.Win
+	local row = self:_row(10)
+	row.AutomaticSize = Enum.AutomaticSize.Y
+	row.Size = UDim2.new(1, 0, 0, 10)
+	new("UIListLayout", { Padding = UDim.new(0, 0), SortOrder = Enum.SortOrder.LayoutOrder }, row)
+	new("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 10) }, row)
+	local head = label(row, "", 11, C.Dim, true)
+	head.Size = UDim2.new(1, 0, 0, 22)
+	head.LayoutOrder = 0
+	local TITLES = { command = "Ran a command", search = "Searched the web", read = "Read a page" }
+	local counts = { command = 0, search = 0, read = 0 }
+	local obj, n, live = {}, 0, nil
+	local function summary()
+		local parts = {}
+		if counts.search > 0 then
+			parts[#parts + 1] = "Searched the web" .. (counts.search > 1 and (" " .. counts.search .. " times") or "")
+		end
+		if counts.read > 0 then
+			parts[#parts + 1] = "read " .. counts.read .. (counts.read > 1 and " pages" or " page")
+		end
+		if counts.command > 0 then
+			parts[#parts + 1] = "ran " .. counts.command .. (counts.command > 1 and " commands" or " command")
+		end
+		local s = #parts > 0 and table.concat(parts, ", ") or ""
+		if s ~= "" then
+			s = s:sub(1, 1):upper() .. s:sub(2)
+		end
+		head.Text = (o.Title or "Summary") .. (s ~= "" and ("  ·  " .. s) or "")
+	end
+	summary()
+	local function entry(kind, title, detail, order)
+		local e = new("Frame", { Size = UDim2.new(1, 0, 0, 30), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = order }, row)
+		new("UIPadding", { PaddingBottom = UDim.new(0, 8) }, e)
+		local rail = new("Frame", { Position = UDim2.fromOffset(10, 0), Size = UDim2.new(0, 1, 1, 8), BackgroundColor3 = win.Theme.Dark, BorderSizePixel = 0 }, e)
+		local mark
+		if kind == "command" or kind == "search" or kind == "read" then
+			mark = new("TextLabel", { Position = UDim2.fromOffset(0, 0), Size = UDim2.fromOffset(22, 22), BackgroundColor3 = win.Theme.Inset, BorderSizePixel = 0, Text = kind == "command" and ">_" or (kind == "search" and "?" or "="), Font = Enum.Font.Code, TextSize = 10, TextColor3 = C.Text, ZIndex = 2 }, e)
+			corner(mark, 6)
+			new("UIStroke", { Color = win.Theme.Dark, Thickness = 1 }, mark)
+		else
+			mark = new("Frame", { Position = UDim2.fromOffset(6, 7), Size = UDim2.fromOffset(9, 9), BackgroundColor3 = Color3.fromRGB(80, 80, 88), BorderSizePixel = 0, ZIndex = 2 }, e)
+			corner(mark, 5)
+		end
+		local t = new("TextLabel", { Position = UDim2.fromOffset(32, 0), Size = UDim2.new(1, -32, 0, 22), BackgroundTransparency = 1, Text = title, Font = (kind == "note" or kind == "live") and Enum.Font.Gotham or Enum.Font.GothamBold, TextSize = 12, TextColor3 = C.Text, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, AutomaticSize = Enum.AutomaticSize.Y }, e)
+		if detail and detail ~= "" then
+			new("TextLabel", { Position = UDim2.fromOffset(32, 22), Size = UDim2.new(1, -32, 0, 12), BackgroundTransparency = 1, Text = detail, Font = Enum.Font.Code, TextSize = 10, TextColor3 = C.Dim, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, AutomaticSize = Enum.AutomaticSize.Y }, e)
+			e.Size = UDim2.new(1, 0, 0, 42)
+		end
+		return e, mark, t, rail
+	end
+	local function stopLive()
+		if live then
+			live.on = false
+			pcall(function()
+				live.mark.BackgroundColor3 = Color3.fromRGB(80, 80, 88)
+				live.glow.Visible = false
+				live.text.TextTransparency = 0
+			end)
+			live = nil
+		end
+	end
+	function obj:Add(a, b)
+		if type(a) == "string" then
+			a = { Kind = "command", Title = a, Detail = b }
+		end
+		a = a or {}
+		local kind = tostring(a.Kind or "command"):lower()
+		local was = live and live.text.Text
+		local wasObj = live
+		if wasObj then
+			wasObj.e:Destroy()
+			live = nil
+		end
+		n += 1
+		if counts[kind] ~= nil then
+			counts[kind] += 1
+		end
+		entry(kind, a.Title or TITLES[kind] or kind, a.Detail, n)
+		summary()
+		if wasObj then
+			obj:Working(was)
+		end
+	end
+	function obj:Note(text)
+		obj:Add({ Kind = "note", Title = tostring(text or "") })
+	end
+	function obj:Working(text)
+		stopLive()
+		local e, mark, t = entry("live", tostring(text or "Working"), nil, 1000000)
+		mark.BackgroundColor3 = Color3.fromRGB(235, 70, 55)
+		local glow = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(mark.Position.X.Offset + 4, mark.Position.Y.Offset + 4), Size = UDim2.fromOffset(9, 9), BackgroundColor3 = Color3.fromRGB(235, 70, 55), BackgroundTransparency = 0.5, BorderSizePixel = 0, ZIndex = 1 }, e)
+		corner(glow, 14)
+		live = { on = true, e = e, mark = mark, glow = glow, text = t }
+		local me = live
+		task.spawn(function()
+			while me.on and e.Parent do
+				tween(glow, 0.7, { Size = UDim2.fromOffset(22, 22), BackgroundTransparency = 1 }, Enum.EasingStyle.Sine)
+				tween(t, 0.7, { TextTransparency = 0.55 }, Enum.EasingStyle.Sine)
+				task.wait(0.7)
+				glow.Size = UDim2.fromOffset(9, 9)
+				glow.BackgroundTransparency = 0.5
+				tween(t, 0.7, { TextTransparency = 0 }, Enum.EasingStyle.Sine)
+				task.wait(0.7)
+			end
+		end)
+	end
+	function obj:Done()
+		stopLive()
+	end
+	function obj:IsWorking()
+		return live ~= nil
+	end
+	function obj:Clear()
+		stopLive()
+		for _, c in ipairs(row:GetChildren()) do
+			if c:IsA("Frame") then
+				c:Destroy()
+			end
+		end
+		counts = { command = 0, search = 0, read = 0 }
+		n = 0
+		summary()
+	end
+	return register(self, {}, obj, "Activity")
+end
+
 function Tab:List(o)
 	o = o or {}
 	local win = self.Win
@@ -10924,6 +11466,127 @@ function Window:SetBackgroundOpacity(v)
 		self._bgImg.ImageTransparency = 1 - math.clamp(tonumber(v) or 0.2, 0, 1)
 	end
 	return self
+end
+
+-- ============================================================ notification history, swipe tabs, ambient glow
+function Window:GetNotifications()
+	return self._noteLog or {}
+end
+function Window:ClearNotifications()
+	self._noteLog = {}
+end
+-- A tab that lists every toast you have seen, with a number badge for the unread ones. Opening it clears the badge.
+function Window:CreateNotificationsTab(o)
+	o = o or {}
+	local win = self
+	local unread = 0
+	local con
+	local tab
+	tab = win:CreateTab({
+		Name = o.Name or "Alerts",
+		Icon = o.Icon,
+		Build = function(t)
+			con = t:Console({ Name = "Notifications", Height = o.Height or 170 })
+			for _, n in ipairs(win._noteLog or {}) do
+				con:Log("[" .. n.Time .. "] " .. (n.Title and (tostring(n.Title) .. ": ") or "") .. n.Text, n.Type or "info")
+			end
+			t:Button({ Name = "Clear history", Callback = function()
+				win:ClearNotifications()
+				con:Clear()
+			end })
+		end,
+	})
+	local prev = win._onNote
+	win._onNote = function(n)
+		if prev then
+			pcall(prev, n)
+		end
+		if con then
+			con:Log("[" .. n.Time .. "] " .. (n.Title and (tostring(n.Title) .. ": ") or "") .. n.Text, n.Type or "info")
+		end
+		if win.CurrentTab ~= tab then
+			unread += 1
+			tab:SetBadge(unread)
+		end
+	end
+	local sel = tab.Select
+	tab.Select = function(self2, ...)
+		unread = 0
+		tab:SetBadge(nil)
+		return sel(self2, ...)
+	end
+	return tab
+end
+
+-- Swipe left or right on the panel to change tab (on by default for the Mobile setup).
+function Window:EnableSwipe()
+	if self._swipe then
+		return
+	end
+	self._swipe = true
+	local win = self
+	local startPos
+	win._conns[#win._conns + 1] = UIS.InputBegan:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.Touch and win.Open then
+			startPos = i.Position
+		end
+	end)
+	win._conns[#win._conns + 1] = UIS.InputEnded:Connect(function(i)
+		if i.UserInputType ~= Enum.UserInputType.Touch or not startPos then
+			return
+		end
+		local d = i.Position - startPos
+		startPos = nil
+		local c = win._content
+		if not c or not win.Open or math.abs(d.X) < 110 or math.abs(d.X) < math.abs(d.Y) * 2 then
+			return
+		end
+		local ok, inside = pcall(function()
+			local p, s = c.AbsolutePosition, c.AbsoluteSize
+			return i.Position.X >= p.X and i.Position.X <= p.X + s.X and i.Position.Y >= p.Y and i.Position.Y <= p.Y + s.Y
+		end)
+		if ok and inside == false then
+			return
+		end
+		local idx
+		for n, t in ipairs(win._tabs) do
+			if t == win.CurrentTab then
+				idx = n
+			end
+		end
+		if idx then
+			local nxt = win._tabs[idx + (d.X < 0 and 1 or -1)]
+			if nxt and nxt.Select then
+				nxt:Select()
+			end
+		end
+	end)
+end
+
+-- Two soft glowing circles drift slowly behind everything (CreateWindow({ Ambient = true }) or Win:SetAmbient(true)).
+function Window:SetAmbient(on)
+	if self._orbHolder then
+		self._orbHolder.Visible = on and true or false
+		return
+	end
+	if not on or self.ReduceMotion or not self.Main then
+		return
+	end
+	local win = self
+	local holder = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ClipsDescendants = true, ZIndex = 1, Active = false }, win.Main)
+	corner(holder, 10)
+	win._orbHolder = holder
+	for k = 1, 2 do
+		local orb = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(k == 1 and 0.2 or 0.8, k == 1 and 0.25 or 0.8), Size = UDim2.fromOffset(150, 150), BackgroundColor3 = win.Theme.Glow, BackgroundTransparency = 0.88, BorderSizePixel = 0, ZIndex = 1, Active = false }, holder)
+		corner(orb, 75)
+		win:_bind(orb, "BackgroundColor3", "Glow")
+		task.spawn(function()
+			while orb.Parent and holder.Parent do
+				tween(orb, 5, { Position = UDim2.fromScale(0.15 + math.random() * 0.7, 0.15 + math.random() * 0.7), BackgroundTransparency = 0.82 + math.random() * 0.1 }, Enum.EasingStyle.Sine)
+				task.wait(5)
+			end
+		end)
+	end
 end
 
 return RebelUI
